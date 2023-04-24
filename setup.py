@@ -31,7 +31,7 @@ setup(
     license = 'Copyright by the California Institute of Technology.'
                 'All rights reserved',
     url = 'http://nisar.jpl.nasa.gov',
-    version = '3.0.0',
+    version = '3.0.1',
 
     # Gather all packages located under `src`.
     # (A package is a directory containing an __init__.py file.)
