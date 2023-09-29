@@ -317,7 +317,9 @@ class UNWHSIImageParamGroup(HSIImageParamGroup):
         super().__post_init__()
 
         # validate rewrap
-        if not isinstance(self.rewrap, (float, int, types.NoneType)):
+        if not isinstance(self.rewrap, (float, int)) and (
+            self.rewrap is not None
+        ):
             raise TypeError(
                 f"{self.rewrap=} is {type(self.rewrap)}; "
                 "must be float, int, or None."
