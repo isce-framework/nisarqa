@@ -22,7 +22,7 @@ Step 1) Install the conda package manager.
 
 Step 2) Clone the `nisarqa` repo and `cd` into the top level directory.
 ```
-git clone git@github.com:isce-framework/nisarqa.git
+git clone https://github.com/isce-framework/nisarqa.git
 cd nisarqa
 ```
 
