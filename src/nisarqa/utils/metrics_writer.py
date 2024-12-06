@@ -629,9 +629,7 @@ def copy_non_insar_imagery_metrics(
                             metrics.append(val_name_descr)
                     else:
                         # get tuple of (val, name, descr)
-                        val_name_descr = img.get_stat_val_name_descr(
-                            stat=m
-                        )
+                        val_name_descr = img.get_stat_val_name_descr(stat=m)
                         metrics.append(val_name_descr)
 
                     for val, name, descr in metrics:

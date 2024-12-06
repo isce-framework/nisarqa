@@ -889,12 +889,12 @@ def _post_process_s_avg(
     fft_shift : bool, optional
         True to shift `S_out` to correspond to frequency bins that are
         continuous from negative (min) -> positive (max) values.
-        
+
         False to leave `S_out` unshifted, such that the values correspond to
         `numpy.fft.fftfreq()`, where this discrete FFT operation orders values
         from 0 -> max positive -> min negative -> 0- . (This creates
         a discontinuity in the interval's values.)
-        
+
         Defaults to True.
 
     Returns

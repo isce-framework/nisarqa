@@ -192,7 +192,7 @@ def elements_to_datasets(
                 f" Using the first occurrence. Dataset: {dataset.name}"
             )
             continue
-        
+
         datasets[dataset.name] = dataset
 
     return datasets

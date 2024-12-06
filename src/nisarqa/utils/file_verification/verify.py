@@ -60,9 +60,7 @@ def verify_file_against_xml(
                 " but must be an iterable."
             )
             raise TypeError(msg)
-        elif not all(
-            isinstance(n, str) for n in layer_groups
-        ):
+        elif not all(isinstance(n, str) for n in layer_groups):
             msg = (
                 f"`{layer_groups=}`, but must be an iterable of strings"
                 " for ROFF and GOFF products."
@@ -91,7 +89,7 @@ def verify_file_against_xml(
                 " check that this is intended; if not, set `layer_numbers` to"
                 " None."
             )
-    
+
     if product_type in ("roff", "goff"):
         log.info(
             f"Verification of HDF5 against XML will check for these numbered"
