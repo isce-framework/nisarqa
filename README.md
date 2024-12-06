@@ -20,10 +20,10 @@ See `environment.yaml` for required packages.
 
 Step 1) Install the conda package manager.
 
-Step 2) Clone the `QualityAssurance` repo and `cd` into the top level directory.
+Step 2) Clone the `nisarqa` repo and `cd` into the top level directory.
 ```
-git clone git@github-fn.jpl.nasa.gov:NISAR-ADT/QualityAssurance.git
-cd QualityAssurance
+git clone git@github.com:isce-framework/nisarqa.git
+cd nisarqa
 ```
 
 Step 3) Create a conda environment with the correct packages for QA.
