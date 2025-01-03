@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 import functools
-import os
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from typing import Optional
 
 import h5py
@@ -23,51 +22,29 @@ objects_to_skip = nisarqa.get_all(name=__name__)
 
 
 def verify_rslc(
-    user_rncfg: Mapping[str, Mapping], verbose: bool = False
+    root_params: nisarqa.RSLCRootParamGroup, verbose: bool = False
 ) -> None:
     """
-    Verify an RSLC product based on the input file, parameters, etc.
-    specified in the input runconfig file.
+    Perform verification checks and quality assurance on a NISAR RSLC product.
 
     This is the main function for running the entire QA workflow. It will
-    run based on the options supplied in the input runconfig file.
-    The input runconfig file must follow the standard RSLC QA runconfig
-    format. Run the command line command 'nisar_qa dumpconfig rslc'
-    for an example template with default parameters (where available).
+    run based on the options supplied in the input parameters.
 
     Parameters
     ----------
-    user_rncfg : nested dict
-        A dictionary whose structure matches this product's QA runconfig
-        YAML file and which contains the parameters needed to run its QA SAS.
+    root_params : nisarqa.RSLCRootParamGroup
+        Input parameters to run this QA SAS.
     verbose : bool, optional
         True to stream log messages to console (stderr) in addition to the
         log file. False to only stream to the log file. (Initial log messages
         during setup will stream to console regardless.) Defaults to False.
     """
     log = nisarqa.get_logger()
-    log.info("Begin parsing of runconfig for user-provided QA parameters.")
-
-    # Build the RSLCRootParamGroup parameters per the runconfig
-    try:
-        root_params = nisarqa.build_root_params(
-            product_type="rslc", user_rncfg=user_rncfg
-        )
-    except nisarqa.ExitEarly:
-        # No workflows were requested. Exit early.
-        log.info(
-            "All `workflows` set to `False` in the runconfig, "
-            "so no QA outputs will be generated. This is not an error."
-        )
-        return
 
     # Start logging in the log file
     out_dir = root_params.get_output_dir()
     log_file_txt = out_dir / root_params.get_log_filename()
-    log.info(
-        "Parsing of runconfig for QA parameters complete. Complete log"
-        " continues in the output log file."
-    )
+    log.info("Log outputs now switching from stderr to the log file...")
     nisarqa.set_logger_handler(log_file=log_file_txt, verbose=verbose)
 
     # Log the values of the parameters.

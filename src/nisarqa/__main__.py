@@ -152,7 +152,7 @@ def dumpconfig(product_type, indent=4):
         )
 
 
-def load_user_runconfig(runconfig_yaml):
+def load_user_runconfig(runconfig_yaml: str) -> dict[str, dict]:
     """
     Load a QA Runconfig yaml file into a dict format.
 
@@ -163,7 +163,7 @@ def load_user_runconfig(runconfig_yaml):
 
     Returns
     -------
-    user_rncfg : dict
+    user_rncfg : nested dict of str
         `runconfig_yaml` loaded into a dict format
     """
     # parse runconfig into a dict structure
@@ -171,6 +171,71 @@ def load_user_runconfig(runconfig_yaml):
     with open(runconfig_yaml, "r") as f:
         user_rncfg = parser.load(f)
     return user_rncfg
+
+
+def generate_root_params(
+    runconfig_yaml: str, product_type: str
+) -> (
+    nisarqa.RSLCRootParamGroup
+    | nisarqa.GSLCRootParamGroup
+    | nisarqa.GCOVRootParamGroup
+    | nisarqa.RIFGRootParamGroup
+    | nisarqa.RUNWRootParamGroup
+    | nisarqa.GUNWRootParamGroup
+    | nisarqa.ROFFRootParamGroup
+    | nisarqa.GOFFRootParamGroup
+):
+    """
+    Generate a *RootParamGroup for `product_type` from a QA Runconfig yaml file.
+
+    The input runconfig file must follow the standard QA runconfig
+    format for `product_type`.
+    For an example runconfig template with default parameters (where available),
+    run the command line command 'nisar_qa dumpconfig <product_type>'.
+    (Ex: Use 'nisarqa dumpconfig rslc' for the RSLC runconfig template.)
+
+    Parameters
+    ----------
+    runconfig_yaml : str
+        Filename (with path) to a QA runconfig yaml file for `product_type`.
+    product_type : str
+        One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'.
+
+    Returns
+    -------
+    root_params : nisarqa.RSLCRootParamGroup or nisarqa.GSLCRootParamGroup
+                  or nisarqa.GCOVRootParamGroup or nisarqa.RIFGRootParamGroup
+                  or nisarqa.RUNWRootParamGroup or nisarqa.GUNWRootParamGroup
+                  or nisarqa.ROFFRootParamGroup or nisarqa.GOFFRootParamGroup
+        An instance of *RootParamGroup corresponding to `product_type`.
+
+    Raises
+    ------
+    nisarqa.ExitEarly
+        If all `workflows` were set to False in the runconfig.
+    """
+    if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
+        raise ValueError(
+            f"`product_type` is {product_type}; must one of:"
+            f" {nisarqa.LIST_OF_NISAR_PRODUCTS}"
+        )
+
+    # parse runconfig into a dict structure
+    log = nisarqa.get_logger()
+    log.info(f"Begin loading user runconfig yaml to dict: {runconfig_yaml}")
+    user_rncfg = load_user_runconfig(runconfig_yaml)
+
+    log.info("Begin parsing of runconfig for user-provided QA parameters.")
+
+    # Build the *RootParamGroup parameters per the runconfig
+    # (Raises an ExitEarly exception if all workflows in runconfig are
+    # set to False)
+    root_params = nisarqa.build_root_params(
+        product_type=product_type, user_rncfg=user_rncfg
+    )
+    log.info("Loading of user runconfig complete.")
+
+    return root_params
 
 
 def run():
@@ -184,42 +249,43 @@ def run():
         dumpconfig(product_type=args.product_type, indent=args.indent)
         return
 
-    # parse runconfig into a dict structure
     log = nisarqa.get_logger()
+
+    # Generate the *RootParamGroup object from the runconfig
+    product_type = subcommand.replace("_qa", "")
+    try:
+        root_params = generate_root_params(args.runconfig_yaml, product_type)
+    except nisarqa.ExitEarly:
+        # No workflows were requested. Exit early.
+        log.info(
+            "All `workflows` set to `False` in the runconfig, "
+            "so no QA outputs will be generated. This is not an error."
+        )
+        return
+
     log.info(
-        f"Begin loading user runconfig yaml to dict: {args.runconfig_yaml}"
-    )
-    user_rncfg = load_user_runconfig(args.runconfig_yaml)
-    log.info(
-        "Loading of user runconfig complete. Beginning QA for"
-        f" {subcommand.replace('_qa', '').upper()} input product."
+        "Parsing of runconfig complete. Beginning QA for"
+        f" {product_type.upper()} input product."
     )
 
+    # Run QA SAS
     if subcommand == "rslc_qa":
-        nisarqa.rslc.verify_rslc(user_rncfg=user_rncfg, verbose=args.verbose)
+        nisarqa.rslc.verify_rslc(root_params=root_params, verbose=args.verbose)
     elif subcommand == "gslc_qa":
-        nisarqa.gslc.verify_gslc(user_rncfg=user_rncfg, verbose=args.verbose)
+        nisarqa.gslc.verify_gslc(root_params=root_params, verbose=args.verbose)
     elif subcommand == "gcov_qa":
-        nisarqa.gcov.verify_gcov(user_rncfg=user_rncfg, verbose=args.verbose)
-    elif subcommand == "rifg_qa":
+        nisarqa.gcov.verify_gcov(root_params=root_params, verbose=args.verbose)
+    elif subcommand in ("rifg_qa", "runw_qa", "gunw_qa"):
         nisarqa.igram.verify_igram(
-            user_rncfg=user_rncfg, product_type="rifg", verbose=args.verbose
+            root_params=root_params,
+            product_type=product_type,
+            verbose=args.verbose,
         )
-    elif subcommand == "runw_qa":
-        nisarqa.igram.verify_igram(
-            user_rncfg=user_rncfg, product_type="runw", verbose=args.verbose
-        )
-    elif subcommand == "gunw_qa":
-        nisarqa.igram.verify_igram(
-            user_rncfg=user_rncfg, product_type="gunw", verbose=args.verbose
-        )
-    elif subcommand == "roff_qa":
+    elif subcommand in ("roff_qa", "goff_qa"):
         nisarqa.offsets.verify_offset(
-            user_rncfg=user_rncfg, product_type="roff", verbose=args.verbose
-        )
-    elif subcommand == "goff_qa":
-        nisarqa.offsets.verify_offset(
-            user_rncfg=user_rncfg, product_type="goff", verbose=args.verbose
+            root_params=root_params,
+            product_type=product_type,
+            verbose=args.verbose,
         )
     else:
         raise ValueError(f"Unknown subcommand: {subcommand}")

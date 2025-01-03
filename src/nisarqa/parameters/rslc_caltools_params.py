@@ -16,8 +16,8 @@ from nisarqa import (
     HDF5ParamGroup,
     InputFileGroupParamGroup,
     ProductPathGroupParamGroup,
-    RSLCPointTargetAnalyzerParamGroup,
     RootParamGroup,
+    RSLCPointTargetAnalyzerParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
     YamlAttrs,
@@ -1214,6 +1214,11 @@ def build_root_params(product_type, user_rncfg):
         *RootParamGroup object for the specified product type. This will be
         populated with runconfig values where provided,
         and default values for missing runconfig parameters.
+
+    Raises
+    ------
+    nisarqa.ExitEarly
+        If all `workflows` were set to False in the runconfig.
     """
     if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
         raise ValueError(
