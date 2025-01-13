@@ -12,7 +12,7 @@ def verify_gcov(
     root_params: nisarqa.GCOVRootParamGroup, verbose: bool = False
 ) -> None:
     """
-    Perform verification checks and quality assurance on a NISAR RSLC product.
+    Perform verification checks and quality assurance on a NISAR GCOV product.
 
     This is the main function for running the entire QA workflow. It will
     run based on the options supplied in the input parameters.

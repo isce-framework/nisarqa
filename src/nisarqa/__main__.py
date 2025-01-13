@@ -186,11 +186,11 @@ def generate_root_params(
     | nisarqa.GOFFRootParamGroup
 ):
     """
-    Generate a *RootParamGroup for `product_type` from a QA Runconfig yaml file.
+    Generate a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
 
     The input runconfig file must follow the standard QA runconfig
     format for `product_type`.
-    For an example runconfig template with default parameters (where available),
+    For an example runconfig template with default parameters,
     run the command line command 'nisar_qa dumpconfig <product_type>'.
     (Ex: Use 'nisarqa dumpconfig rslc' for the RSLC runconfig template.)
 
@@ -207,7 +207,9 @@ def generate_root_params(
                   or nisarqa.GCOVRootParamGroup or nisarqa.RIFGRootParamGroup
                   or nisarqa.RUNWRootParamGroup or nisarqa.GUNWRootParamGroup
                   or nisarqa.ROFFRootParamGroup or nisarqa.GOFFRootParamGroup
-        An instance of *RootParamGroup corresponding to `product_type`.
+        An instance of *RootParamGroup (i.e. a subtype of `nisarqa.RootParamGroup`)
+        corresponding to `product_type`. For example, if `product_type` is 'gcov',
+        the return type will be `nisarqa.GCOVRootParamGroup`.
 
     Raises
     ------
