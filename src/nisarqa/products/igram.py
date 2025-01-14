@@ -55,7 +55,7 @@ def verify_igram(
     # Start logging in the log file
     out_dir = root_params.get_output_dir()
     log_file_txt = out_dir / root_params.get_log_filename()
-    log.info("Log outputs now switching from stderr to the log file...")
+    log.info(f"Log messages now directed to the log file: {log_file_txt}")
     nisarqa.set_logger_handler(log_file=log_file_txt, verbose=verbose)
 
     # Log the values of the parameters.
