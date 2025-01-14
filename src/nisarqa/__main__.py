@@ -226,7 +226,7 @@ def generate_root_params(
     # Build the *RootParamGroup parameters per the runconfig
     # (Raises an ExitEarly exception if all workflows in runconfig are
     # set to False)
-    root_params = nisarqa.build_root_params(
+    root_params = nisarqa.RootParamGroup.build_root_params(
         product_type=product_type, user_rncfg=user_rncfg
     )
     log.info("Loading of user runconfig complete.")

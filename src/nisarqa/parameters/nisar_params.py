@@ -9,7 +9,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields
 from pathlib import Path
-from typing import Any, ClassVar, Optional, Union
+from typing import Any, ClassVar, Optional, Type, Union
 
 import h5py
 from ruamel.yaml import YAML, CommentedMap, CommentedSeq
@@ -1529,6 +1529,180 @@ class RootParamGroup(ABC):
         # return Path(f{self._get_input_file_basename_stripped}_QA_LOG.txt")
 
         return Path("LOG.txt")
+
+    @classmethod
+    def build_root_params(cls, product_type, user_rncfg):
+        """
+        Build the *RootParamGroup object for the specified product type.
+
+        Parameters
+        ----------
+        product_type : str
+            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'
+        user_rncfg : dict
+            A dictionary whose structure matches `product_type`'s QA runconfig
+            YAML file and which contains the parameters needed to run its QA SAS.
+
+        Returns
+        -------
+        root_param_group : RSLCRootParamGroup
+            *RootParamGroup object for the specified product type. This will be
+            populated with runconfig values where provided,
+            and default values for missing runconfig parameters.
+
+        Raises
+        ------
+        nisarqa.ExitEarly
+            If all `workflows` were set to False in the runconfig.
+        """
+        if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
+            raise ValueError(
+                f"{product_type=} but must one of: {nisarqa.LIST_OF_NISAR_PRODUCTS}"
+            )
+
+        if product_type == "rslc":
+            workflows_param_cls_obj = nisarqa.RSLCWorkflowsParamGroup
+            root_param_class_obj = nisarqa.RSLCRootParamGroup
+        elif product_type == "gslc":
+            workflows_param_cls_obj = nisarqa.SLCWorkflowsParamGroup
+            root_param_class_obj = nisarqa.GSLCRootParamGroup
+        elif product_type == "gcov":
+            workflows_param_cls_obj = WorkflowsParamGroup
+            root_param_class_obj = nisarqa.GCOVRootParamGroup
+        elif product_type == "rifg":
+            workflows_param_cls_obj = nisarqa.RIFGWorkflowsParamGroup
+            root_param_class_obj = nisarqa.RIFGRootParamGroup
+        elif product_type == "runw":
+            workflows_param_cls_obj = nisarqa.RUNWWorkflowsParamGroup
+            root_param_class_obj = nisarqa.RUNWRootParamGroup
+        elif product_type == "gunw":
+            workflows_param_cls_obj = nisarqa.GUNWWorkflowsParamGroup
+            root_param_class_obj = nisarqa.GUNWRootParamGroup
+        elif product_type == "roff":
+            workflows_param_cls_obj = nisarqa.ROFFWorkflowsParamGroup
+            root_param_class_obj = nisarqa.ROFFRootParamGroup
+        elif product_type == "goff":
+            workflows_param_cls_obj = nisarqa.GOFFWorkflowsParamGroup
+            root_param_class_obj = nisarqa.GOFFRootParamGroup
+        else:
+            raise NotImplementedError(
+                f"{product_type} code not implemented yet."
+            )
+
+        # Dictionary to hold the *ParamGroup objects. Will be used as
+        # kwargs for the *RootParamGroup instance.
+        root_inputs = {}
+
+        # Construct *WorkflowsParamGroup dataclass (necessary for all workflows)
+        try:
+            root_inputs["workflows"] = (
+                cls._get_param_group_instance_from_runcfg(
+                    param_grp_cls_obj=workflows_param_cls_obj,
+                    user_rncfg=user_rncfg,
+                )
+            )
+
+        except KeyError as e:
+            raise KeyError(
+                "`workflows` group is a required runconfig group"
+            ) from e
+        # If all functionality is off (i.e. all workflows are set to false),
+        # then exit early. We will not need any of the other runconfig groups.
+        if not root_inputs["workflows"].at_least_one_wkflw_requested():
+            raise nisarqa.ExitEarly("All `workflows` were set to False.")
+
+        workflows = root_inputs["workflows"]
+
+        wkflws2params_mapping = (
+            root_param_class_obj.get_mapping_of_workflows2param_grps(
+                workflows=workflows
+            )
+        )
+
+        for param_grp in wkflws2params_mapping:
+            if param_grp.flag_param_grp_req:
+                populated_rncfg_group = (
+                    cls._get_param_group_instance_from_runcfg(
+                        param_grp_cls_obj=param_grp.param_grp_cls_obj,
+                        user_rncfg=user_rncfg,
+                    )
+                )
+
+                root_inputs[param_grp.root_param_grp_attr_name] = (
+                    populated_rncfg_group
+                )
+
+        # Construct and return *RootParamGroup
+        return root_param_class_obj(**root_inputs)
+
+    @staticmethod
+    def _get_param_group_instance_from_runcfg(
+        param_grp_cls_obj: Type[YamlParamGroup],
+        user_rncfg: Optional[dict] = None,
+    ):
+        """
+        Generate an instance of a YamlParamGroup subclass) object
+        where the values from a user runconfig take precedence.
+
+        Parameters
+        ----------
+        param_grp_cls_obj : Type[YamlParamGroup]
+            A class instance of a subclass of YamlParamGroup.
+            For example, `HistogramParamGroup`.
+        user_rncfg : nested dict, optional
+            A dict containing the user's runconfig values that (at minimum)
+            correspond to the `param_grp_cls_obj` parameters. (Other values
+            will be ignored.) For example, a QA runconfig yaml loaded directly
+            into a dict would be a perfect input for `user_rncfg`.
+            The nested structure of `user_rncfg` must match the structure
+            of the QA runconfig yaml file for this parameter group.
+            To see the expected yaml structure for e.g. RSLC, run
+            `nisarqa dumpconfig rslc` from the command line.
+            If `user_rncfg` contains entries that do not correspond to attributes
+            in `param_grp_cls_obj`, they will be ignored.
+            If `user_rncfg` is either None, an empty dict, or does not contain
+            values for `param_grp_cls_obj` in a nested structure that matches
+            the QA runconfig group that corresponds to `param_grp_cls_obj`,
+            then an instance with all default values will be returned.
+
+        Returns
+        -------
+        param_grp_instance : `param_grp_cls_obj` instance
+            An instance of `param_grp_cls_obj` that is fully instantiated
+            using default values and the arguments provided in `user_rncfg`.
+            The values in `user_rncfg` have precedence over the defaults.
+        """
+
+        if not user_rncfg:
+            # If user_rncfg is None or is an empty dict, then return the default
+            return param_grp_cls_obj()
+
+        # Get the runconfig path for this *ParamGroup
+        rncfg_path = param_grp_cls_obj.get_path_to_group_in_runconfig()
+
+        try:
+            runcfg_grp_dict = nisarqa.get_nested_element_in_dict(
+                user_rncfg, rncfg_path
+            )
+        except KeyError:
+            # Group was not found, so construct an instance using all defaults.
+            # If a dataclass has a required parameter, this will (correctly)
+            # throw another error.
+            return param_grp_cls_obj()
+        else:
+            # Get the relevant yaml runconfig parameters for this ParamGroup
+            yaml_names = param_grp_cls_obj.get_dict_of_yaml_names()
+
+            # prune extraneous fields from the runconfig group
+            # (aka keep only the runconfig fields that are relevant to QA)
+            # The "if..." logic will allow us to skip missing runconfig fields.
+            user_input_args = {
+                cls_attr_name: runcfg_grp_dict[yaml_name]
+                for cls_attr_name, yaml_name in yaml_names.items()
+                if yaml_name in runcfg_grp_dict
+            }
+
+            return param_grp_cls_obj(**user_input_args)
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
