@@ -1531,22 +1531,24 @@ class RootParamGroup(ABC):
         return Path("LOG.txt")
 
     @classmethod
-    def build_root_params(cls, product_type, user_rncfg):
+    def from_runconfig_dict(
+        cls, product_type: str, user_rncfg: nisarqa.RunConfigDict
+    ) -> nisarqa.RootParamGroup:
         """
-        Build the *RootParamGroup object for the specified product type.
+        Build a *RootParamGroup for `product_type` from a QA Runconfig dict.
 
         Parameters
         ----------
         product_type : str
             One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
             or 'goff'.
-        user_rncfg : dict
+        user_rncfg : nisarqa.RunConfigDict
             A dictionary whose structure matches `product_type`'s QA runconfig
             YAML file and that contains the parameters needed to run its QA SAS.
 
         Returns
         -------
-        root_param_group : RSLCRootParamGroup
+        root_params : nisarqa.RootParamGroup
             *RootParamGroup object for the specified product type. This will be
             populated with runconfig values where provided,
             and default values for missing runconfig parameters.
@@ -1707,7 +1709,7 @@ class RootParamGroup(ABC):
             return param_grp_cls_obj(**user_input_args)
 
     @classmethod
-    def build_root_params_from_runconfig(
+    def from_runconfig_file(
         cls, runconfig_yaml: str | os.PathLike, product_type: str
     ) -> nisarqa.RootParamGroup:
         """
@@ -1732,7 +1734,9 @@ class RootParamGroup(ABC):
         root_params : nisarqa.RootParamGroup
             An instance of *RootParamGroup corresponding to `product_type`.
             For example, if `product_type` is 'gcov', the return type
-            will be `nisarqa.GCOVRootParamGroup`.
+            will be `nisarqa.GCOVRootParamGroup`. This will be
+            populated with runconfig values where provided,
+            and default values for missing runconfig parameters.
 
         Raises
         ------
