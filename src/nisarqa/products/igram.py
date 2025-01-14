@@ -20,7 +20,6 @@ def verify_igram(
         | nisarqa.RUNWRootParamGroup
         | nisarqa.GUNWRootParamGroup
     ),
-    product_type: str,
     verbose: bool = False,
 ) -> None:
     """
@@ -34,20 +33,24 @@ def verify_igram(
     ----------
     root_params : nisarqa.RIFGRootParamGroup or nisarqa.RUNWRootParamGroup
                         or nisarqa.GUNWRootParamGroup
-        Input parameters to run this QA SAS. The instance type
-        should correspond to the `product_type`.
-    product_type : str
-        One of: "rifg", "runw", or "gunw". Should correspond to the type
-        of `root_params`.
+        Input parameters to run this QA SAS. The type of the input product
+        to be verified (RIFG, RUNW, or GUNW) will be inferred from the type
+        of this argument.
     verbose : bool, optional
         True to stream log messages to console (stderr) in addition to the
         log file. False to only stream to the log file. (Initial log messages
         during setup will stream to console regardless.) Defaults to False.
     """
-    supported_product_types = ("rifg", "runw", "gunw")
-    if product_type not in supported_product_types:
-        raise ValueError(
-            f"{product_type=}, must be one of {supported_product_types}."
+    if isinstance(root_params, nisarqa.RIFGRootParamGroup):
+        product_type = "rifg"
+    elif isinstance(root_params, nisarqa.RUNWRootParamGroup):
+        product_type = "runw"
+    elif isinstance(root_params, nisarqa.GUNWRootParamGroup):
+        product_type = "gunw"
+    else:
+        raise TypeError(
+            f"`root_params` has type {type(root_params)}, must be one of"
+            " RIFGRootParamGroup, RUNWRootParamGroup, or GUNWRootParamGroup."
         )
 
     log = nisarqa.get_logger()

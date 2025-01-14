@@ -156,7 +156,9 @@ def dumpconfig(product_type, indent=4):
         )
 
 
-def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> nisarqa.RunConfigDict:
+def load_user_runconfig(
+    runconfig_yaml: str | os.PathLike,
+) -> nisarqa.RunConfigDict:
     """
     Load a QA Runconfig yaml file into a dict format.
 
@@ -263,24 +265,17 @@ def run():
     )
 
     # Run QA SAS
+    verbose = args.verbose
     if subcommand == "rslc_qa":
-        nisarqa.rslc.verify_rslc(root_params=root_params, verbose=args.verbose)
+        nisarqa.rslc.verify_rslc(root_params=root_params, verbose=verbose)
     elif subcommand == "gslc_qa":
-        nisarqa.gslc.verify_gslc(root_params=root_params, verbose=args.verbose)
+        nisarqa.gslc.verify_gslc(root_params=root_params, verbose=verbose)
     elif subcommand == "gcov_qa":
-        nisarqa.gcov.verify_gcov(root_params=root_params, verbose=args.verbose)
+        nisarqa.gcov.verify_gcov(root_params=root_params, verbose=verbose)
     elif subcommand in ("rifg_qa", "runw_qa", "gunw_qa"):
-        nisarqa.igram.verify_igram(
-            root_params=root_params,
-            product_type=product_type,
-            verbose=args.verbose,
-        )
+        nisarqa.igram.verify_igram(root_params=root_params, verbose=verbose)
     elif subcommand in ("roff_qa", "goff_qa"):
-        nisarqa.offsets.verify_offset(
-            root_params=root_params,
-            product_type=product_type,
-            verbose=args.verbose,
-        )
+        nisarqa.offsets.verify_offset(root_params=root_params, verbose=verbose)
     else:
         raise ValueError(f"Unknown subcommand: {subcommand}")
 

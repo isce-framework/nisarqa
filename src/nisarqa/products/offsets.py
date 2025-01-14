@@ -12,7 +12,6 @@ objects_to_skip = nisarqa.get_all(name=__name__)
 
 def verify_offset(
     root_params: nisarqa.ROFFRootParamGroup | nisarqa.GOFFRootParamGroup,
-    product_type: str,
     verbose: bool = False,
 ) -> None:
     """
@@ -25,17 +24,23 @@ def verify_offset(
     Parameters
     ----------
     root_params : nisarqa.ROFFRootParamGroup or nisarqa.GOFFRootParamGroup
-        Input parameters to run this QA SAS. The instance type
-        should correspond to the `product_type`.
-    product_type : str
-        One of: "roff" or "goff". Should correspond to the `root_params` type.
+        Input parameters to run this QA SAS. The type of the input product
+        to be verified (ROFF or GOFF) will be inferred from the type
+        of this argument.
     verbose : bool, optional
         True to stream log messages to console (stderr) in addition to the
         log file. False to only stream to the log file. (Initial log messages
         during setup will stream to console regardless.) Defaults to False.
     """
-    if product_type not in ("roff", "goff"):
-        raise ValueError(f"{product_type=}, must be one of 'roff' or 'goff'.")
+    if isinstance(root_params, nisarqa.ROFFRootParamGroup):
+        product_type = "roff"
+    elif isinstance(root_params, nisarqa.GOFFRootParamGroup):
+        product_type = "goff"
+    else:
+        raise TypeError(
+            f"`root_params` has type {type(root_params)}, must be one of"
+            " ROFFRootParamGroup or GOFFRootParamGroup."
+        )
 
     log = nisarqa.get_logger()
 
