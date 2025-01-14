@@ -1538,10 +1538,11 @@ class RootParamGroup(ABC):
         Parameters
         ----------
         product_type : str
-            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'
+            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
+            or 'goff'.
         user_rncfg : dict
             A dictionary whose structure matches `product_type`'s QA runconfig
-            YAML file and which contains the parameters needed to run its QA SAS.
+            YAML file and that contains the parameters needed to run its QA SAS.
 
         Returns
         -------
@@ -1557,7 +1558,8 @@ class RootParamGroup(ABC):
         """
         if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
             raise ValueError(
-                f"{product_type=} but must one of: {nisarqa.LIST_OF_NISAR_PRODUCTS}"
+                f"{product_type=}, must be one of:"
+                f" {nisarqa.LIST_OF_NISAR_PRODUCTS}"
             )
 
         if product_type == "rslc":
@@ -1658,8 +1660,8 @@ class RootParamGroup(ABC):
             of the QA runconfig yaml file for this parameter group.
             To see the expected yaml structure for e.g. RSLC, run
             `nisarqa dumpconfig rslc` from the command line.
-            If `user_rncfg` contains entries that do not correspond to attributes
-            in `param_grp_cls_obj`, they will be ignored.
+            If `user_rncfg` contains entries that do not correspond to
+            attributes in `param_grp_cls_obj`, they will be ignored.
             If `user_rncfg` is either None, an empty dict, or does not contain
             values for `param_grp_cls_obj` in a nested structure that matches
             the QA runconfig group that corresponds to `param_grp_cls_obj`,
@@ -1703,6 +1705,56 @@ class RootParamGroup(ABC):
             }
 
             return param_grp_cls_obj(**user_input_args)
+
+    @classmethod
+    def build_root_params_from_runconfig(
+        cls, runconfig_yaml: str | os.PathLike, product_type: str
+    ) -> nisarqa.RootParamGroup:
+        """
+        Get a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
+
+        The input runconfig file must follow the standard QA runconfig
+        format for `product_type`.
+        For an example runconfig template with default parameters,
+        run the command line command 'nisar_qa dumpconfig <product_type>'.
+        (Ex: Use 'nisarqa dumpconfig rslc' for the RSLC runconfig template.)
+
+        Parameters
+        ----------
+        runconfig_yaml : path-like
+            Filename (with path) to a QA runconfig yaml file for `product_type`.
+        product_type : str
+            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
+            or 'goff'.
+
+        Returns
+        -------
+        root_params : nisarqa.RootParamGroup
+            An instance of *RootParamGroup corresponding to `product_type`.
+            For example, if `product_type` is 'gcov', the return type
+            will be `nisarqa.GCOVRootParamGroup`.
+
+        Raises
+        ------
+        nisarqa.ExitEarly
+            If all `workflows` were set to False in the runconfig.
+        """
+        # parse runconfig into a dict structure
+        log = nisarqa.get_logger()
+        log.info(f"Begin loading user runconfig yaml to dict: {runconfig_yaml}")
+        user_rncfg = nisarqa.load_user_runconfig(runconfig_yaml)
+
+        log.info("Begin parsing of runconfig for user-provided QA parameters.")
+
+        # Build the *RootParamGroup parameters per the runconfig
+        # (Raises an ExitEarly exception if all workflows in runconfig are
+        # set to False)
+        root_params = cls.build_root_params(
+            product_type=product_type, user_rncfg=user_rncfg
+        )
+        log.info("Loading of user runconfig complete.")
+
+        return root_params
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

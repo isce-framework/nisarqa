@@ -11,8 +11,6 @@ import matplotlib
 matplotlib.use("Agg")
 import argparse
 
-from ruamel.yaml import YAML
-
 import nisarqa
 
 
@@ -156,84 +154,6 @@ def dumpconfig(product_type, indent=4):
         )
 
 
-def load_user_runconfig(
-    runconfig_yaml: str | os.PathLike,
-) -> nisarqa.RunConfigDict:
-    """
-    Load a QA Runconfig yaml file into a dict format.
-
-    Parameters
-    ----------
-    runconfig_yaml : path-like
-        Filename (with path) to a QA runconfig yaml file.
-
-    Returns
-    -------
-    user_rncfg : nisarqa.RunConfigDict
-        `runconfig_yaml` loaded into a dict format
-    """
-    # parse runconfig into a dict structure
-    parser = YAML(typ="safe")
-    with open(runconfig_yaml, "r") as f:
-        user_rncfg = parser.load(f)
-    return user_rncfg
-
-
-def generate_root_params(
-    runconfig_yaml: str | os.PathLike, product_type: str
-) -> nisarqa.RootParamGroup:
-    """
-    Generate a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
-
-    The input runconfig file must follow the standard QA runconfig
-    format for `product_type`.
-    For an example runconfig template with default parameters,
-    run the command line command 'nisar_qa dumpconfig <product_type>'.
-    (Ex: Use 'nisarqa dumpconfig rslc' for the RSLC runconfig template.)
-
-    Parameters
-    ----------
-    runconfig_yaml : path-like
-        Filename (with path) to a QA runconfig yaml file for `product_type`.
-    product_type : str
-        One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'.
-
-    Returns
-    -------
-    root_params : nisarqa.RootParamGroup
-        An instance of *RootParamGroup corresponding to `product_type`.
-        For example, if `product_type` is 'gcov', the return type
-        will be `nisarqa.GCOVRootParamGroup`.
-
-    Raises
-    ------
-    nisarqa.ExitEarly
-        If all `workflows` were set to False in the runconfig.
-    """
-    if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
-        raise ValueError(
-            f"`product_type` is {product_type}; must one of:"
-            f" {nisarqa.LIST_OF_NISAR_PRODUCTS}"
-        )
-
-    # parse runconfig into a dict structure
-    log = nisarqa.get_logger()
-    log.info(f"Begin loading user runconfig yaml to dict: {runconfig_yaml}")
-    user_rncfg = load_user_runconfig(runconfig_yaml)
-
-    log.info("Begin parsing of runconfig for user-provided QA parameters.")
-
-    # Build the *RootParamGroup parameters per the runconfig
-    # (Raises an ExitEarly exception if all workflows in runconfig are
-    # set to False)
-    root_params = nisarqa.RootParamGroup.build_root_params(
-        product_type=product_type, user_rncfg=user_rncfg
-    )
-    log.info("Loading of user runconfig complete.")
-
-    return root_params
-
-
 def run():
     # parse the args
     args = parse_cli_args()
@@ -250,7 +170,9 @@ def run():
     # Generate the *RootParamGroup object from the runconfig
     product_type = subcommand.replace("_qa", "")
     try:
-        root_params = generate_root_params(args.runconfig_yaml, product_type)
+        root_params = nisarqa.RootParamGroup.build_root_params_from_runconfig(
+            args.runconfig_yaml, product_type
+        )
     except nisarqa.ExitEarly:
         # No workflows were requested. Exit early.
         log.info(

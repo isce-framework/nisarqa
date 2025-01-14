@@ -10,6 +10,7 @@ from typing import Optional
 import h5py
 import numpy as np
 from numpy.typing import ArrayLike
+from ruamel.yaml import YAML
 
 import nisarqa
 
@@ -490,6 +491,29 @@ def ignore_runtime_warnings() -> Iterator[None]:
             category=RuntimeWarning,
         )
         yield
+
+
+def load_user_runconfig(
+    runconfig_yaml: str | os.PathLike,
+) -> nisarqa.RunConfigDict:
+    """
+    Load a QA Runconfig yaml file into a dict format.
+
+    Parameters
+    ----------
+    runconfig_yaml : path-like
+        Filename (with path) to a QA runconfig yaml file.
+
+    Returns
+    -------
+    user_rncfg : nisarqa.RunConfigDict
+        `runconfig_yaml` loaded into a dict format
+    """
+    # parse runconfig into a dict structure
+    parser = YAML(typ="safe")
+    with open(runconfig_yaml, "r") as f:
+        user_rncfg = parser.load(f)
+    return user_rncfg
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
