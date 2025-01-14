@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Union
 
-RunConfigScalar = str | bool | int | float | None
-RunConfigList = Sequence[RunConfigScalar | "RunConfigList" | "RunConfigDict"]
-RunConfigDict = Mapping[str, RunConfigScalar | RunConfigList | "RunConfigDict"]
+RunConfigScalar = Union[str, bool, int, float, None]
+RunConfigList = Sequence[RunConfigScalar, "RunConfigList", "RunConfigDict"]
+RunConfigDict = Mapping[
+    str, Union[RunConfigScalar, RunConfigList, "RunConfigDict"]
+]
 
 
 # The are global constants and not functions nor classes,
