@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
+from __future__ import annotations
+
+import os
+
+import matplotlib
+
 # Switch backend to one that doesn't require DISPLAY to be set since we're
 # just plotting to file anyway. (Some compute notes do not allow X connections)
 # This needs to be set prior to opening any matplotlib objects.
-import matplotlib
-
 matplotlib.use("Agg")
 import argparse
 
@@ -152,13 +156,13 @@ def dumpconfig(product_type, indent=4):
         )
 
 
-def load_user_runconfig(runconfig_yaml: str) -> dict[str, dict]:
+def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> dict[str, dict]:
     """
     Load a QA Runconfig yaml file into a dict format.
 
     Parameters
     ----------
-    runconfig_yaml : str
+    runconfig_yaml : path-like
         Filename (with path) to a QA runconfig yaml file.
 
     Returns
@@ -174,7 +178,7 @@ def load_user_runconfig(runconfig_yaml: str) -> dict[str, dict]:
 
 
 def generate_root_params(
-    runconfig_yaml: str, product_type: str
+    runconfig_yaml: str | os.PathLike, product_type: str
 ) -> (
     nisarqa.RSLCRootParamGroup
     | nisarqa.GSLCRootParamGroup
@@ -196,7 +200,7 @@ def generate_root_params(
 
     Parameters
     ----------
-    runconfig_yaml : str
+    runconfig_yaml : path-like
         Filename (with path) to a QA runconfig yaml file for `product_type`.
     product_type : str
         One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'.
