@@ -179,16 +179,7 @@ def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> nisarqa.RunConfigD
 
 def generate_root_params(
     runconfig_yaml: str | os.PathLike, product_type: str
-) -> (
-    nisarqa.RSLCRootParamGroup
-    | nisarqa.GSLCRootParamGroup
-    | nisarqa.GCOVRootParamGroup
-    | nisarqa.RIFGRootParamGroup
-    | nisarqa.RUNWRootParamGroup
-    | nisarqa.GUNWRootParamGroup
-    | nisarqa.ROFFRootParamGroup
-    | nisarqa.GOFFRootParamGroup
-):
+) -> nisarqa.RootParamGroup:
     """
     Generate a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
 
@@ -207,13 +198,10 @@ def generate_root_params(
 
     Returns
     -------
-    root_params : nisarqa.RSLCRootParamGroup or nisarqa.GSLCRootParamGroup
-                  or nisarqa.GCOVRootParamGroup or nisarqa.RIFGRootParamGroup
-                  or nisarqa.RUNWRootParamGroup or nisarqa.GUNWRootParamGroup
-                  or nisarqa.ROFFRootParamGroup or nisarqa.GOFFRootParamGroup
-        An instance of *RootParamGroup (i.e. a subtype of `nisarqa.RootParamGroup`)
-        corresponding to `product_type`. For example, if `product_type` is 'gcov',
-        the return type will be `nisarqa.GCOVRootParamGroup`.
+    root_params : nisarqa.RootParamGroup
+        An instance of *RootParamGroup corresponding to `product_type`.
+        For example, if `product_type` is 'gcov', the return type
+        will be `nisarqa.GCOVRootParamGroup`.
 
     Raises
     ------
