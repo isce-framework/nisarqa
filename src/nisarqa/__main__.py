@@ -156,7 +156,7 @@ def dumpconfig(product_type, indent=4):
         )
 
 
-def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> dict[str, dict]:
+def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> nisarqa.RunConfigDict:
     """
     Load a QA Runconfig yaml file into a dict format.
 
@@ -167,7 +167,7 @@ def load_user_runconfig(runconfig_yaml: str | os.PathLike) -> dict[str, dict]:
 
     Returns
     -------
-    user_rncfg : nested dict of str
+    user_rncfg : nisarqa.RunConfigDict
         `runconfig_yaml` loaded into a dict format
     """
     # parse runconfig into a dict structure
