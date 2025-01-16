@@ -1535,7 +1535,7 @@ class RootParamGroup(ABC):
         cls, product_type: str, user_rncfg: nisarqa.RunConfigDict
     ) -> nisarqa.RootParamGroup:
         """
-        Build a *RootParamGroup for `product_type` from a QA Runconfig dict.
+        Build a *RootParamGroup for `product_type` from a QA runconfig dict.
 
         Parameters
         ----------
@@ -1590,7 +1590,7 @@ class RootParamGroup(ABC):
             root_param_class_obj = nisarqa.GOFFRootParamGroup
         else:
             raise NotImplementedError(
-                f"{product_type} code not implemented yet."
+                f"{product_type} code not implemented."
             )
 
         # Dictionary to hold the *ParamGroup objects. Will be used as
@@ -1724,7 +1724,7 @@ class RootParamGroup(ABC):
         Parameters
         ----------
         runconfig_yaml : path-like
-            Filename (with path) to a QA runconfig yaml file for `product_type`.
+            Filename (with path) to a QA runconfig YAML file for `product_type`.
         product_type : str
             One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
             or 'goff'.

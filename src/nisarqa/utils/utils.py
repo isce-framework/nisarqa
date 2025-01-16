@@ -497,12 +497,12 @@ def load_user_runconfig(
     runconfig_yaml: str | os.PathLike,
 ) -> nisarqa.RunConfigDict:
     """
-    Load a QA Runconfig yaml file into a dict format.
+    Load a QA runconfig YAML file into a dict format.
 
     Parameters
     ----------
     runconfig_yaml : path-like
-        Filename (with path) to a QA runconfig yaml file.
+        Filename (with path) to a QA runconfig YAML file.
 
     Returns
     -------
