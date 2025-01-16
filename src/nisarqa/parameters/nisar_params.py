@@ -1589,9 +1589,7 @@ class RootParamGroup(ABC):
             workflows_param_cls_obj = nisarqa.GOFFWorkflowsParamGroup
             root_param_class_obj = nisarqa.GOFFRootParamGroup
         else:
-            raise NotImplementedError(
-                f"{product_type} code not implemented."
-            )
+            raise NotImplementedError(f"{product_type} code not implemented.")
 
         # Dictionary to hold the *ParamGroup objects. Will be used as
         # kwargs for the *RootParamGroup instance.
