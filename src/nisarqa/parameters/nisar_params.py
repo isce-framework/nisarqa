@@ -1532,19 +1532,19 @@ class RootParamGroup(ABC):
 
     @classmethod
     def from_runconfig_dict(
-        cls, product_type: str, user_rncfg: nisarqa.RunConfigDict
+        cls, user_rncfg: nisarqa.RunConfigDict, product_type: str
     ) -> nisarqa.RootParamGroup:
         """
         Build a *RootParamGroup for `product_type` from a QA runconfig dict.
 
         Parameters
         ----------
-        product_type : str
-            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
-            or 'goff'.
         user_rncfg : nisarqa.RunConfigDict
             A dictionary whose structure matches `product_type`'s QA runconfig
             YAML file and that contains the parameters needed to run its QA SAS.
+        product_type : str
+            One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff',
+            or 'goff'.
 
         Returns
         -------
@@ -1760,7 +1760,7 @@ class RootParamGroup(ABC):
         # (Raises an ExitEarly exception if all workflows in runconfig are
         # set to False)
         root_params = cls.from_runconfig_dict(
-            product_type=product_type, user_rncfg=user_rncfg
+            user_rncfg=user_rncfg, product_type=product_type
         )
         log.info("Loading of user runconfig complete.")
 
