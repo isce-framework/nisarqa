@@ -1557,6 +1557,10 @@ class RootParamGroup(ABC):
         ------
         nisarqa.ExitEarly
             If all `workflows` were set to False in the runconfig.
+
+        See Also
+        --------
+        RootParamGroup.from_runconfig_file
         """
         if product_type not in nisarqa.LIST_OF_NISAR_PRODUCTS:
             raise ValueError(
@@ -1740,6 +1744,10 @@ class RootParamGroup(ABC):
         ------
         nisarqa.ExitEarly
             If all `workflows` were set to False in the runconfig.
+
+        See Also
+        --------
+        RootParamGroup.from_runconfig_dict
         """
         # parse runconfig into a dict structure
         log = nisarqa.get_logger()
@@ -1751,7 +1759,7 @@ class RootParamGroup(ABC):
         # Build the *RootParamGroup parameters per the runconfig
         # (Raises an ExitEarly exception if all workflows in runconfig are
         # set to False)
-        root_params = cls.build_root_params(
+        root_params = cls.from_runconfig_dict(
             product_type=product_type, user_rncfg=user_rncfg
         )
         log.info("Loading of user runconfig complete.")

@@ -170,7 +170,7 @@ def run():
     # Generate the *RootParamGroup object from the runconfig
     product_type = subcommand.replace("_qa", "")
     try:
-        root_params = nisarqa.RootParamGroup.build_root_params_from_runconfig(
+        root_params = nisarqa.RootParamGroup.from_runconfig_file(
             args.runconfig_yaml, product_type
         )
     except nisarqa.ExitEarly:

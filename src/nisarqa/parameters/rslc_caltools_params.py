@@ -1049,7 +1049,7 @@ class RSLCRootParamGroup(RootParamGroup):
         # To help QA behave "as the User expects", let's update the `workflows`
         # so that these two workflows are `False`. Doing this step during
         # __post_init__ means that the corresponding runconfig groups will
-        # never be parsed during the call to `build_root_params()`,
+        # never be parsed during the call to `from_runconfig_dict()`,
         # and (more importantly) that QA-generated stats.h5 file will never
         # have groups (directories) created and populated for these two tools
         # during the call to `root_params.save_processing_params_to_stats_h5()`
@@ -1081,7 +1081,7 @@ class RSLCRootParamGroup(RootParamGroup):
                 #       attribute will be None, so there will be no params to
                 #       add to the h5 file."
                 # In nominal cases, these groups are set to None during
-                # `build_root_params()`. But, that step occurs prior to
+                # `from_runconfig_dict()`. But, that step occurs prior to
                 # checking whether a corner reflector file was provided,
                 # so we need to manually update the
                 # corresponding param groups to False.
