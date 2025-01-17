@@ -1532,8 +1532,10 @@ class RootParamGroup(ABC):
 
     @classmethod
     def from_runconfig_dict(
-        cls, user_rncfg: nisarqa.RunConfigDict, product_type: str
-    ) -> nisarqa.RootParamGroup:
+        cls: type[nisarqa.RootParamGroupT],
+        user_rncfg: nisarqa.RunConfigDict,
+        product_type: str,
+    ) -> nisarqa.RootParamGroupT:
         """
         Build a *RootParamGroup for `product_type` from a QA runconfig dict.
 
@@ -1712,8 +1714,10 @@ class RootParamGroup(ABC):
 
     @classmethod
     def from_runconfig_file(
-        cls, runconfig_yaml: str | os.PathLike, product_type: str
-    ) -> nisarqa.RootParamGroup:
+        cls: type[nisarqa.RootParamGroupT],
+        runconfig_yaml: str | os.PathLike,
+        product_type: str,
+    ) -> nisarqa.RootParamGroupT:
         """
         Get a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
 

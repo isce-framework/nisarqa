@@ -7,7 +7,9 @@ __all__ = [
 ]
 
 from collections.abc import Mapping, Sequence
-from typing import Union
+from typing import TypeVar, Union
+
+from nisarqa import RootParamGroup
 
 RunConfigScalar = Union[str, bool, int, float, None]
 RunConfigList = Sequence[
@@ -16,3 +18,5 @@ RunConfigList = Sequence[
 RunConfigDict = Mapping[
     str, Union[RunConfigScalar, RunConfigList, "RunConfigDict"]
 ]
+
+RootParamGroupT = TypeVar("RootParamGroupT", bound="RootParamGroup")
