@@ -147,6 +147,6 @@ from .utils.utils import *
 from .utils.summary_csv import *
 from .utils.metrics_writer import *
 from .utils.sanity_checks import *
-from .utils._typing import *
+from .utils.typing import *
 
 # isort: on

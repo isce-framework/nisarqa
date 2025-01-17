@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+__all__ = [
+    "RunConfigScalar",
+    "RunConfigList",
+    "RunConfigDict",
+]
+
 from collections.abc import Mapping, Sequence
 from typing import Union
 
@@ -9,13 +15,4 @@ RunConfigList = Sequence[
 ]
 RunConfigDict = Mapping[
     str, Union[RunConfigScalar, RunConfigList, "RunConfigDict"]
-]
-
-
-# The are global constants and not functions nor classes,
-# so manually create the __all__ attribute.
-__all__ = [
-    "RunConfigScalar",
-    "RunConfigList",
-    "RunConfigDict",
 ]
