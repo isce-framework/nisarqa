@@ -944,8 +944,8 @@ def plot_2d_array_and_save_to_png(
     sample_spacing: Optional[tuple[float, float]] = None,
     longest_side_max: Optional[int] = None,
     *,
-    vmin: float = None,
-    vmax: float = None,
+    vmin: float | None = None,
+    vmax: float | None = None,
 ) -> None:
     """
     Plot a 2D raster to square pixels, and save to PNG.
@@ -974,10 +974,10 @@ def plot_2d_array_and_save_to_png(
         The maximum number of pixels allowed for the longest side of the final
         2D multilooked image. If None, the longest edge of `arr` will be used.
         Defaults to None.
-    vmin, vmax : float, optional
+    vmin, vmax : float or None, optional
         The vmin and vmax (respectively) to use when plotting the input array
         using `matplotlib.imshow()`. These define the data range that the
-        colormap covers. If None, the min and max (respectively) of the
+        colormap covers. If None, the min and max values (respectively) of the
         input array will be used.
     """
     if sample_spacing is None:
