@@ -370,7 +370,7 @@ def plot_ionosphere_phase_screen_to_pdf(
 
     # Rewrap the ionosphere phase screen array to (-pi, pi]
     # Step 1: Rewrap to [0, 2pi) via `get_phase_array()`.
-    iono_arr, _ = get_phase_array(
+    iono_arr, cbar_min_max = get_phase_array(
         phs_or_complex_raster=iono_raster,
         make_square_pixels=True,
         rewrap=2.0,
@@ -391,7 +391,12 @@ def plot_ionosphere_phase_screen_to_pdf(
 
     # Add the wrapped phase image plot
     im = ax1.imshow(
-        iono_arr, aspect="equal", cmap="twilight_shifted", interpolation="none"
+        iono_arr,
+        aspect="equal",
+        cmap="twilight_shifted",
+        interpolation="none",
+        vmin=cbar_min_max[0],
+        vmax=cbar_min_max[1],
     )
 
     nisarqa.rslc.format_axes_ticks_and_labels(
@@ -567,7 +572,12 @@ def plot_unwrapped_phase_image_to_pdf(
     )
 
     im1 = ax1.imshow(
-        phs_img_unw, aspect="equal", cmap="plasma", interpolation="none"
+        phs_img_unw,
+        aspect="equal",
+        cmap="plasma",
+        interpolation="none",
+        vmin=cbar_min_max_unw[0],
+        vmax=cbar_min_max_unw[1],
     )
 
     nisarqa.rslc.format_axes_ticks_and_labels(
@@ -607,6 +617,8 @@ def plot_unwrapped_phase_image_to_pdf(
             aspect="equal",
             cmap="twilight_shifted",
             interpolation="none",
+            vmin=cbar_min_max_rewrapped[0],
+            vmax=cbar_min_max_rewrapped[1],
         )
 
         pi_unicode = "\u03c0"
@@ -779,7 +791,12 @@ def plot_wrapped_phase_image_and_coh_mag_to_pdf(
 
     # Add the wrapped phase image plot
     im1 = ax1.imshow(
-        phs_img, aspect="equal", cmap="twilight_shifted", interpolation="none"
+        phs_img,
+        aspect="equal",
+        cmap="twilight_shifted",
+        interpolation="none",
+        vmin=cbar_min_max[0],
+        vmax=cbar_min_max[1],
     )
 
     nisarqa.rslc.format_axes_ticks_and_labels(
@@ -862,7 +879,7 @@ def make_wrapped_phase_png(
     """
 
     with product.get_wrapped_igram(freq=freq, pol=pol) as igram_r:
-        phase, _ = get_phase_array(
+        phase, cbar_min_max = get_phase_array(
             phs_or_complex_raster=igram_r,
             make_square_pixels=False,  # we'll do this while downsampling
             rewrap=None,
@@ -874,6 +891,8 @@ def make_wrapped_phase_png(
         sample_spacing=(igram_r.y_axis_spacing, igram_r.x_axis_spacing),
         longest_side_max=longest_side_max,
         png_filepath=png_filepath,
+        vmin=cbar_min_max[0],
+        vmax=cbar_min_max[1],
     )
 
 
@@ -901,7 +920,7 @@ def make_unwrapped_phase_png(
     """
 
     with product.get_unwrapped_phase(freq=freq, pol=pol) as igram_r:
-        phase, _ = get_phase_array(
+        phase, cbar_min_max = get_phase_array(
             phs_or_complex_raster=igram_r,
             make_square_pixels=False,  # we'll do this while downsampling
             rewrap=params.rewrap,
@@ -913,6 +932,8 @@ def make_unwrapped_phase_png(
         sample_spacing=(igram_r.y_axis_spacing, igram_r.x_axis_spacing),
         longest_side_max=params.longest_side_max,
         png_filepath=png_filepath,
+        vmin=cbar_min_max[0],
+        vmax=cbar_min_max[1],
     )
 
 
@@ -922,6 +943,9 @@ def plot_2d_array_and_save_to_png(
     cmap: str | mpl.colors.Colormap = "viridis",
     sample_spacing: Optional[tuple[float, float]] = None,
     longest_side_max: Optional[int] = None,
+    *,
+    vmin: float | None = None,
+    vmax: float | None = None,
 ) -> None:
     """
     Plot a 2D raster to square pixels, and save to PNG.
@@ -950,6 +974,11 @@ def plot_2d_array_and_save_to_png(
         The maximum number of pixels allowed for the longest side of the final
         2D multilooked image. If None, the longest edge of `arr` will be used.
         Defaults to None.
+    vmin, vmax : float or None, optional
+        The vmin and vmax (respectively) to use when plotting the input array
+        using `matplotlib.imshow()`. These define the data range that the
+        colormap covers. If None, the min and max values (respectively) of the
+        input array will be used.
     """
     if sample_spacing is None:
         sample_spacing = (1, 1)
@@ -972,6 +1001,8 @@ def plot_2d_array_and_save_to_png(
             aspect="equal",
             cmap=cmap,
             interpolation="none",
+            vmin=vmin,
+            vmax=vmax,
         )
 
     save_mpl_plot_to_png(
