@@ -912,7 +912,7 @@ class NisarProduct(ABC):
 
     def coordinate_grid_metadata_cubes(
         self,
-    ) -> Iterator[nisarqa.MetadataCube3D]:
+    ) -> Iterator[nisarqa.MetadataDataset3D]:
         """
         Generator for all metadata cubes in `../metadata/xxxGrid` Group.
 
@@ -921,8 +921,8 @@ class NisarProduct(ABC):
 
         Yields
         ------
-        cube : nisarqa.MetadataCube3D
-            The next MetadataCube3D in the Group.
+        cube : nisarqa.MetadataDataset3D
+            The next MetadataDataset3D in the Group.
         """
         with h5py.File(self.filepath, "r") as f:
             grp_path = self._coordinate_grid_metadata_group_path
@@ -947,7 +947,7 @@ class NisarProduct(ABC):
                         f" dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_cube(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
 
     @abstractmethod
     def _data_group_path(self) -> str:
@@ -1147,28 +1147,26 @@ class NisarProduct(ABC):
         """
         pass
 
-    def _build_metadata_cube(
+    def _build_metadata_dataset(
         self,
         f: h5py.File,
         ds_arr: h5py.Dataset,
-    ) -> (
-        nisarqa.MetadataCube1D | nisarqa.MetadataCube2D | nisarqa.MetadataCube3D
-    ):
+    ) -> nisarqa.MetadataDatasetT:
         """
-        Construct a MetadataCube for the given 1D, 2D, or 3D dataset.
+        Construct a MetadataDataset for the given 1D, 2D, or 3D dataset.
 
         Parameters
         ----------
         f : h5py.File
             Handle to the NISAR input product.
         ds_arr : h5py.Dataset
-            Path to the metadata cube Dataset.
+            Path to the metadata dataset.
 
         Returns
         -------
-        cube : MetadataCube1D or MetadataCube2D or MetadataCube3D
-            A constructed MetadataCube of `ds_arr`. The number of dimensions
-            of `ds_arr` determines whether a MetadataCube1D, *2D, or *3D
+        ds : nisarqa.MetadataDatasetT
+            A constructed MetadataDataset of `ds_arr`. The number of dimensions
+            of `ds_arr` determines whether a MetadataDataset1D, *2D, or *3D
             is returned.
         """
         # Get the full HDF5 path to the Dataset
@@ -1178,7 +1176,7 @@ class NisarProduct(ABC):
         if n_dim not in (1, 2, 3):
             raise ValueError(f"{n_dim=}, must be 1, 2, or 3.")
 
-        # build arguments dict for the MetadataCubeXD constructor.
+        # build arguments dict for the MetadataDatasetXD constructor.
         kwargs = {"data": ds_arr, "name": ds_path}
 
         if self.is_geocoded:
@@ -1187,7 +1185,7 @@ class NisarProduct(ABC):
             names = ("slantRange", "zeroDopplerTime")
 
         # In all L2 products, the coordinate datasets exist in the same group
-        # as the cube itself. However, in L1 products, some coordinate
+        # as the dataset itself. However, in L1 products, some coordinate
         # datasets exist in a predecessor group, so we must recursively scan
         # parent directories until finding the coordinate dataset.
         kwargs["x_coord_vector"] = f[
@@ -1214,14 +1212,14 @@ class NisarProduct(ABC):
                 )
             ]
         if n_dim == 1:
-            cube_cls = nisarqa.MetadataCube1D
+            metadata_ds_cls = nisarqa.MetadataDataset1D
         elif n_dim == 2:
-            cube_cls = nisarqa.MetadataCube2D
+            metadata_ds_cls = nisarqa.MetadataDataset2D
         else:
-            cube_cls = nisarqa.MetadataCube3D
+            metadata_ds_cls = nisarqa.MetadataDataset3D
 
         try:
-            return cube_cls(**kwargs)
+            return metadata_ds_cls(**kwargs)
         except nisarqa.InvalidRasterError as e:
             if nisarqa.Version.from_string(
                 self.product_spec_version
@@ -1229,7 +1227,7 @@ class NisarProduct(ABC):
                 # Older products sometimes had filler metadata.
                 # log, and quiet the exception.
                 nisarqa.get_logger().error(
-                    f"Could not build MetadataCube{n_dim}D for"
+                    f"Could not build MetadataDataset{n_dim}D for"
                     f" Dataset {ds_path}"
                 )
             else:
@@ -1855,9 +1853,11 @@ class NisarGeoProduct(NisarProduct):
 class NonInsarProduct(NisarProduct):
     """Common functionality for RSLC, GLSC, and GCOV products."""
 
-    def neb_metadata_cubes(self, freq: str) -> Iterator[nisarqa.MetadataCube2D]:
+    def metadata_neb_datasets(
+        self, freq: str
+    ) -> Iterator[nisarqa.MetadataDataset2D]:
         """
-        Generator for all metadata cubes in noise equivalent backscatter Group.
+        Generator for metadata datasets in noise equivalent backscatter Group.
 
         These are located under the `calibrationInformation` Group.
 
@@ -1868,8 +1868,8 @@ class NonInsarProduct(NisarProduct):
 
         Yields
         ------
-        cube : nisarqa.MetadataCube2D
-            The next MetadataCube2D in this Group:
+        ds : nisarqa.MetadataDataset2D
+            The next MetadataDataset2D in this Group:
             `../metadata/calibrationInformation/frequency<freq>/noiseEquivalentBackscatter`
         """
         with (
@@ -1880,13 +1880,13 @@ class NonInsarProduct(NisarProduct):
                 if isinstance(ds_arr, h5py.Group):
                     raise TypeError(
                         f"Unexpected HDF5 Group found in {neb_grp.name}."
-                        " Metadata cubes Groups should only contain Datasets."
+                        " Metadata Groups should only contain Datasets."
                     )
                 ds_path = ds_arr.name
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not metadata cubes. Skip 'em.
+                    # scalar and 1D datasets are not metadata datasets. Skip.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -1895,18 +1895,18 @@ class NonInsarProduct(NisarProduct):
                         f" contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_cube(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
 
-    def elevation_antenna_pat_metadata_cubes(
+    def metadata_elevation_antenna_pat_datasets(
         self, freq: str
-    ) -> Iterator[nisarqa.MetadataCube2D]:
+    ) -> Iterator[nisarqa.MetadataDataset2D]:
         """
-        Generator for all elevation antenna pattern metadata cubes.
+        Generator for all elevation antenna pattern metadata datasets.
 
         Yields
         ------
-        cube : nisarqa.MetadataCube2D
-            The next MetadataCube2D in this Group:
+        ds : nisarqa.MetadataDataset2D
+            The next MetadataDataset2D in this Group:
             `../metadata/calibrationInformation/frequency<freq>/elevationAntennaPattern`
         """
         with h5py.File(self.filepath, "r") as f:
@@ -1921,13 +1921,13 @@ class NonInsarProduct(NisarProduct):
                 if isinstance(ds_arr, h5py.Group):
                     raise TypeError(
                         f"unexpected HDF5 Group found in {grp_path}."
-                        " Metadata cubes Groups should only contain Datasets."
+                        " Metadata Groups should only contain Datasets."
                     )
                 ds_path = ds_arr.name
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not metadata cubes. Skip 'em.
+                    # scalar and 1D datasets are not metadata datasets. Skip.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -1936,7 +1936,7 @@ class NonInsarProduct(NisarProduct):
                         f" {n_dim} dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_cube(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
 
     @abstractmethod
     def get_layers_for_browse(self) -> dict[str, list[str]]:
@@ -2573,6 +2573,42 @@ class SLC(NonInsarProduct):
             red=red, green=green, blue=blue, filepath=filepath
         )
 
+    def metadata_geometry_datasets(
+        self,
+    ) -> Iterator[nisarqa.MetadataDataset2D]:
+        """
+        Generator for all metadata datasets in geometry calibration info Group.
+
+        Yields
+        ------
+        ds : nisarqa.MetadataDataset2D
+            The next MetadataDataset2D in this Group:
+                `../metadata/calibrationInformation/geometry`
+        """
+        with h5py.File(self.filepath, "r") as f:
+            grp_path = "/".join([self._calibration_metadata_path, "geometry"])
+            grp = f[grp_path]
+            for ds_arr in grp.values():
+                if isinstance(ds_arr, h5py.Group):
+                    raise TypeError(
+                        f"unexpected HDF5 Group found in {grp_path}."
+                        " Metadata Groups should only contain Datasets."
+                    )
+                ds_path = ds_arr.name
+
+                n_dim = np.ndim(ds_arr)
+                if n_dim in (0, 1):
+                    # scalar and 1D datasets are not metadata datasets. Skip.
+                    pass
+                elif n_dim != 2:
+                    raise ValueError(
+                        f"The geometry metadata group should only contain 1D"
+                        f" or 2D Datasets. Dataset contains {n_dim}"
+                        f" dimensions: {ds_path}"
+                    )
+                else:
+                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+
 
 @dataclass
 class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
@@ -2882,52 +2918,16 @@ class RSLC(SLC, NisarRadarProduct):
 
         return path
 
-    def geometry_metadata_cubes(
+    def metadata_crosstalk_datasets(
         self,
-    ) -> Iterator[nisarqa.MetadataCube2D]:
+    ) -> Iterator[nisarqa.MetadataDataset1D]:
         """
-        Generator for all metadata cubes in geometry calibration info Group.
+        Generator for all metadata datasets in crosstalk calibration info Group.
 
         Yields
         ------
-        cube : nisarqa.MetadataCube2D
-            The next MetadataCube2D in this Group:
-                `../metadata/calibrationInformation/geometry`
-        """
-        with h5py.File(self.filepath, "r") as f:
-            grp_path = "/".join([self._calibration_metadata_path, "geometry"])
-            grp = f[grp_path]
-            for ds_arr in grp.values():
-                if isinstance(ds_arr, h5py.Group):
-                    raise TypeError(
-                        f"unexpected HDF5 Group found in {grp_path}."
-                        " Metadata cubes Groups should only contain Datasets."
-                    )
-                ds_path = ds_arr.name
-
-                n_dim = np.ndim(ds_arr)
-                if n_dim in (0, 1):
-                    # scalar and 1D datasets are not metadata cubes. Skip 'em.
-                    pass
-                elif n_dim != 2:
-                    raise ValueError(
-                        f"The geometry metadata group should only contain 1D"
-                        f" or 2D Datasets. Dataset contains {n_dim}"
-                        f" dimensions: {ds_path}"
-                    )
-                else:
-                    yield self._build_metadata_cube(f=f, ds_arr=ds_arr)
-
-    def crosstalk_metadata_cubes(
-        self,
-    ) -> Iterator[nisarqa.MetadataCube1D]:
-        """
-        Generator for all metadata cubes in crosstalk calibration info Group.
-
-        Yields
-        ------
-        cube : nisarqa.MetadataCube1D
-            The next MetadataCube1D in this Group:
+        ds : nisarqa.MetadataDataset1D
+            The next MetadataDataset1D in this Group:
                 `../metadata/calibrationInformation/crosstalk`
         """
         with h5py.File(self.filepath, "r") as f:
@@ -2937,7 +2937,7 @@ class RSLC(SLC, NisarRadarProduct):
                 if isinstance(ds_arr, h5py.Group):
                     raise TypeError(
                         f"unexpected HDF5 Group found in {grp_path}."
-                        " Metadata cubes Groups should only contain Datasets."
+                        " Metadata Groups should only contain Datasets."
                     )
                 ds_path = ds_arr.name
 
@@ -2951,7 +2951,7 @@ class RSLC(SLC, NisarRadarProduct):
                 if grp_path.endswith("/slantRange") or (n_dim == 0):
                     pass
                 else:
-                    yield self._build_metadata_cube(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
 
 
 @dataclass

@@ -125,7 +125,7 @@ from .utils.file_verification.dataset_inclusion_rules import *
 from .utils.file_verification.verify import *
 from .utils.file_verification.xml_check import *
 from .utils.file_verification.xml_parser import *
-from .utils.metadata_cube_checks import *
+from .utils.metadata_checks import *
 
 # keep individual products in their own namespace
 from .products import (
