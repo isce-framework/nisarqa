@@ -403,10 +403,18 @@ class _SummaryCSV:
         )
 
     def check_metadata_cubes(self, result: str) -> None:
-        """Check: 'Metadata cubes are valid?'"""
+        """Check: 'Coordinate grid metadata cubes are valid?'"""
         self.check(
-            description="Metadata cubes are valid?",
+            description="Coordinate grid metadata cubes are valid?",
             result=result,
+        )
+
+    def check_calibration_metadata(self, result: str, notes: str = "") -> None:
+        """Check: 'Calibration information datasets are valid?'"""
+        self.check(
+            description="Calibration information datasets are valid?",
+            result=result,
+            notes=notes,
         )
 
     def check_identification_group(self, result: str) -> None:
