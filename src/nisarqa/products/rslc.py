@@ -102,7 +102,7 @@ def verify_rslc(
             fail_if_all_nan=root_params.validation.metadata_luts_fail_if_all_nan,
         )
 
-        nisarqa.verify_calibration_metadata(
+        nisarqa.verify_calibration_metadata_luts(
             product=product,
             fail_if_all_nan=root_params.validation.metadata_luts_fail_if_all_nan,
         )

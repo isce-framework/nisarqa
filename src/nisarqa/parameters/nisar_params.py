@@ -1101,7 +1101,7 @@ class ValidationGroupParamGroup(YamlParamGroup):
         # VALIDATE INPUTS
         if not isinstance(self.metadata_luts_fail_if_all_nan, bool):
             raise TypeError(
-                f"`{self.=}`, must be bool."
+                f"`{self.metadata_luts_fail_if_all_nan=}`, must be bool."
             )
 
     @staticmethod

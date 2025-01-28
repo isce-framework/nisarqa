@@ -912,7 +912,7 @@ class NisarProduct(ABC):
 
     def coordinate_grid_metadata_cubes(
         self,
-    ) -> Iterator[nisarqa.MetadataDataset3D]:
+    ) -> Iterator[nisarqa.MetadataLUT3D]:
         """
         Generator for all metadata cubes in `../metadata/xxxGrid` Group.
 
@@ -921,8 +921,8 @@ class NisarProduct(ABC):
 
         Yields
         ------
-        cube : nisarqa.MetadataDataset3D
-            The next MetadataDataset3D in the Group.
+        cube : nisarqa.MetadataLUT3D
+            The next MetadataLUT3D in the Group.
         """
         with h5py.File(self.filepath, "r") as f:
             grp_path = self._coordinate_grid_metadata_group_path
@@ -942,12 +942,12 @@ class NisarProduct(ABC):
                     pass
                 elif n_dim != 3:
                     raise ValueError(
-                        f"The radar grid metadata group should only contain 1D"
-                        f" or 3D Datasets. Dataset contains {n_dim}"
+                        f"The coordinate grid metadata group should only"
+                        f" contain 1D or 3D Datasets. Dataset contains {n_dim}"
                         f" dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
 
     @abstractmethod
     def _data_group_path(self) -> str:
@@ -1147,26 +1147,26 @@ class NisarProduct(ABC):
         """
         pass
 
-    def _build_metadata_dataset(
+    def _build_metadata_lut(
         self,
         f: h5py.File,
         ds_arr: h5py.Dataset,
-    ) -> nisarqa.MetadataDatasetT:
+    ) -> nisarqa.MetadataLUTT:
         """
-        Construct a MetadataDataset for the given 1D, 2D, or 3D dataset.
+        Construct a MetadataLUT for the given 1D, 2D, or 3D dataset.
 
         Parameters
         ----------
         f : h5py.File
             Handle to the NISAR input product.
         ds_arr : h5py.Dataset
-            Path to the metadata dataset.
+            Path to the metadata LUT Dataset.
 
         Returns
         -------
-        ds : nisarqa.MetadataDatasetT
-            A constructed MetadataDataset of `ds_arr`. The number of dimensions
-            of `ds_arr` determines whether a MetadataDataset1D, *2D, or *3D
+        ds : nisarqa.MetadataLUTT
+            A constructed MetadataLUT of `ds_arr`. The number of dimensions
+            of `ds_arr` determines whether a MetadataLUT1D, *2D, or *3D
             is returned.
         """
         # Get the full HDF5 path to the Dataset
@@ -1176,7 +1176,7 @@ class NisarProduct(ABC):
         if n_dim not in (1, 2, 3):
             raise ValueError(f"{n_dim=}, must be 1, 2, or 3.")
 
-        # build arguments dict for the MetadataDatasetXD constructor.
+        # build arguments dict for the MetadataLUTXD constructor.
         kwargs = {"data": ds_arr, "name": ds_path}
 
         if self.is_geocoded:
@@ -1212,14 +1212,14 @@ class NisarProduct(ABC):
                 )
             ]
         if n_dim == 1:
-            metadata_ds_cls = nisarqa.MetadataDataset1D
+            lut_cls = nisarqa.MetadataLUT1D
         elif n_dim == 2:
-            metadata_ds_cls = nisarqa.MetadataDataset2D
+            lut_cls = nisarqa.MetadataLUT2D
         else:
-            metadata_ds_cls = nisarqa.MetadataDataset3D
+            lut_cls = nisarqa.MetadataLUT3D
 
         try:
-            return metadata_ds_cls(**kwargs)
+            return lut_cls(**kwargs)
         except nisarqa.InvalidRasterError as e:
             if nisarqa.Version.from_string(
                 self.product_spec_version
@@ -1227,7 +1227,7 @@ class NisarProduct(ABC):
                 # Older products sometimes had filler metadata.
                 # log, and quiet the exception.
                 nisarqa.get_logger().error(
-                    f"Could not build MetadataDataset{n_dim}D for"
+                    f"Could not build MetadataLUT{n_dim}D for"
                     f" Dataset {ds_path}"
                 )
             else:
@@ -1853,11 +1853,9 @@ class NisarGeoProduct(NisarProduct):
 class NonInsarProduct(NisarProduct):
     """Common functionality for RSLC, GLSC, and GCOV products."""
 
-    def metadata_neb_datasets(
-        self, freq: str
-    ) -> Iterator[nisarqa.MetadataDataset2D]:
+    def metadata_neb_luts(self, freq: str) -> Iterator[nisarqa.MetadataLUT2D]:
         """
-        Generator for metadata datasets in noise equivalent backscatter Group.
+        Generator for metadata LUTs in noise equivalent backscatter Group.
 
         These are located under the `calibrationInformation` Group.
 
@@ -1868,8 +1866,8 @@ class NonInsarProduct(NisarProduct):
 
         Yields
         ------
-        ds : nisarqa.MetadataDataset2D
-            The next MetadataDataset2D in this Group:
+        ds : nisarqa.MetadataLUT2D
+            The next MetadataLUT2D in this Group:
             `../metadata/calibrationInformation/frequency<freq>/noiseEquivalentBackscatter`
         """
         with (
@@ -1886,7 +1884,7 @@ class NonInsarProduct(NisarProduct):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not metadata datasets. Skip.
+                    # scalar and 1D datasets are not metadata LUTs. Skip.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -1895,18 +1893,18 @@ class NonInsarProduct(NisarProduct):
                         f" contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
 
-    def metadata_elevation_antenna_pat_datasets(
+    def metadata_elevation_antenna_pat_luts(
         self, freq: str
-    ) -> Iterator[nisarqa.MetadataDataset2D]:
+    ) -> Iterator[nisarqa.MetadataLUT2D]:
         """
         Generator for all elevation antenna pattern metadata datasets.
 
         Yields
         ------
-        ds : nisarqa.MetadataDataset2D
-            The next MetadataDataset2D in this Group:
+        ds : nisarqa.MetadataLUT2D
+            The next MetadataLUT2D in this Group:
             `../metadata/calibrationInformation/frequency<freq>/elevationAntennaPattern`
         """
         with h5py.File(self.filepath, "r") as f:
@@ -1936,7 +1934,7 @@ class NonInsarProduct(NisarProduct):
                         f" {n_dim} dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
 
     @abstractmethod
     def get_layers_for_browse(self) -> dict[str, list[str]]:
@@ -2573,16 +2571,16 @@ class SLC(NonInsarProduct):
             red=red, green=green, blue=blue, filepath=filepath
         )
 
-    def metadata_geometry_datasets(
+    def metadata_geometry_luts(
         self,
-    ) -> Iterator[nisarqa.MetadataDataset2D]:
+    ) -> Iterator[nisarqa.MetadataLUT2D]:
         """
-        Generator for all metadata datasets in geometry calibration info Group.
+        Generator for all metadata LUTs in geometry calibration info Group.
 
         Yields
         ------
-        ds : nisarqa.MetadataDataset2D
-            The next MetadataDataset2D in this Group:
+        ds : nisarqa.MetadataLUT2D
+            The next MetadataLUT2D in this Group:
                 `../metadata/calibrationInformation/geometry`
         """
         with h5py.File(self.filepath, "r") as f:
@@ -2598,7 +2596,7 @@ class SLC(NonInsarProduct):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not metadata datasets. Skip.
+                    # scalar and 1D datasets are not metadata LUTs. Skip.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -2607,7 +2605,7 @@ class SLC(NonInsarProduct):
                         f" dimensions: {ds_path}"
                     )
                 else:
-                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
 
 
 @dataclass
@@ -2918,16 +2916,16 @@ class RSLC(SLC, NisarRadarProduct):
 
         return path
 
-    def metadata_crosstalk_datasets(
+    def metadata_crosstalk_luts(
         self,
-    ) -> Iterator[nisarqa.MetadataDataset1D]:
+    ) -> Iterator[nisarqa.MetadataLUT1D]:
         """
-        Generator for all metadata datasets in crosstalk calibration info Group.
+        Generator for all metadata LUTs in crosstalk calibration info Group.
 
         Yields
         ------
-        ds : nisarqa.MetadataDataset1D
-            The next MetadataDataset1D in this Group:
+        ds : nisarqa.MetadataLUT1D
+            The next MetadataLUT1D in this Group:
                 `../metadata/calibrationInformation/crosstalk`
         """
         with h5py.File(self.filepath, "r") as f:
@@ -2951,7 +2949,7 @@ class RSLC(SLC, NisarRadarProduct):
                 if grp_path.endswith("/slantRange") or (n_dim == 0):
                     pass
                 else:
-                    yield self._build_metadata_dataset(f=f, ds_arr=ds_arr)
+                    yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
 
 
 @dataclass

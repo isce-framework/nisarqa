@@ -14,21 +14,21 @@ objects_to_skip = nisarqa.get_all(name=__name__)
 
 
 @dataclass
-class MetadataDataset1D:
+class MetadataLUT1D:
     """
-    1D metadata dataset.
+    1D metadata LUT.
 
     Parameters
     ----------
     data : array_like
-        Metadata dataset with shape (X,). Can be a numpy.ndarray, h5py.Dataset,
-        etc. The dataset will be coerced to and stored as a NumPy array.
+        Metadata LUT with shape (X,). Can be a numpy.ndarray, h5py.Dataset,
+        etc. The LUT will be coerced to and stored as a NumPy array.
     name : str
-        Name for this Dataset. If source data is from an HDF5 file, suggest
+        Name for this MetadataLUT. If source data is from an HDF5 file, suggest
         using the full path to the Dataset for `name`.
     x_coord_vector : array_like
         1D vector with shape (X,) containing the coordinate values for the
-        x axis of the dataset.
+        x axis of the LUT.
         For L1 products, this is the `slantRange` corresponding to `data`.
         For L2 products, this is the `xCoordinates` corresponding to `data`.
     """
@@ -39,7 +39,7 @@ class MetadataDataset1D:
 
     def __post_init__(self):
 
-        # Metadata datasets are, by design, very small in size. So, coerce these
+        # Metadata LUTs are, by design, very small in size. So, coerce these
         # input ArrayLike objects to NumPy arrays during init.
         # Otherwise, they may be repeatedly converted to (temporary) NumPy
         # arrays as we pass them to NumPy functions, matplotlib, etc.
@@ -55,31 +55,31 @@ class MetadataDataset1D:
 
     @property
     def shape(self) -> tuple[int, ...]:
-        """Shape of the metadata dataset."""
+        """Shape of the metadata LUT."""
         return self.data.shape
 
 
 @dataclass
-class MetadataDataset2D(MetadataDataset1D):
+class MetadataLUT2D(MetadataLUT1D):
     """
-    2D metadata dataset.
+    2D metadata LUT.
 
     Parameters
     ----------
     data : array_like
-        Metadata dataset with shape (Y, X). Can be a numpy.ndarray, h5py.Dataset,
-        etc. The dataset will be coerced to and stored as a NumPy array.
+        Metadata LUT with shape (Y, X). Can be a numpy.ndarray, h5py.Dataset,
+        etc. The LUT will be coerced to and stored as a NumPy array.
     name : str
-        Name for this Dataset. If data is from an HDF5 file, suggest using
+        Name for this LUT. If data is from an HDF5 file, suggest using
         the full path to the Dataset for `name`.
     x_coord_vector : array_like
         1D vector with shape (X,) containing the coordinate values for the
-        x axis of the dataset.
+        x axis of the LUT.
         For L1 products, this is the `slantRange` corresponding to `data`.
         For L2 products, this is the `xCoordinates` corresponding to `data`.
     y_coord_vector : array_like
         1D vector with shape (Y,) containing the coordinate values for the
-        y axis of the dataset.
+        y axis of the LUT.
         For L1 products, this is the `zeroDopplerTime` corresponding to `data`.
         For L2 products, this is the `yCoordinates` corresponding to `data`.
     """
@@ -94,42 +94,42 @@ class MetadataDataset2D(MetadataDataset1D):
 
         if self.shape[-2] != len(self.y_coord_vector):
             raise ValueError(
-                f"Dataset {self.name} has y dimension {self.shape[-2]},"
+                f"LUT {self.name} has y dimension {self.shape[-2]},"
                 f" which should match the length of the cooresponding y-axis"
                 f" coordinate vector which is {len(self.y_coord_vector)}."
             )
 
 
 @dataclass
-class MetadataDataset3D(MetadataDataset2D):
+class MetadataLUT3D(MetadataLUT2D):
     """
-    3D metadata dataset.
+    3D metadata LUT.
 
     Parameters
     ----------
     data : array_like
-        Metadata dataset with shape (Z, Y, X). Can be a numpy.ndarray,
-        h5py.Dataset, etc. The dataset will be coerced to and stored as
+        Metadata LUT with shape (Z, Y, X). Can be a numpy.ndarray,
+        h5py.Dataset, etc. The LUT will be coerced to and stored as
         a NumPy array.
     name : str
-        Name for this Dataset. If data is from an HDF5 file, suggest using
+        Name for this LUT. If data is from an HDF5 file, suggest using
         the full path to the Dataset for `name`. If `name` ends with 'Baseline',
-        the dataset will be assumed to be a parallel baseline or perpendicular
-        baseline dataset, which may have a z-dimension of 2 regardless of the
+        the LUT will be assumed to be a parallel baseline or perpendicular
+        baseline LUT, which may have a z-dimension of 2 regardless of the
         size of `z_coord_vector`.
     x_coord_vector : array_like
         1D vector with shape (X,) containing the coordinate values for the
-        x axis of the dataset.
+        x axis of the LUT.
         For L1 products, this is the `slantRange` corresponding to `data`.
         For L2 products, this is the `xCoordinates` corresponding to `data`.
     y_coord_vector : array_like
         1D vector with shape (Y,) containing the coordinate values for the
-        y axis of the dataset.
+        y axis of the LUT.
         For L1 products, this is the `zeroDopplerTime` corresponding to `data`.
         For L2 products, this is the `yCoordinates` corresponding to `data`.
     z_coord_vector : array_like
         1D vector with shape (Z,) containing the coordinate values for the
-        z axis of the dataset.
+        z axis of the LUT.
         For NISAR, this is `heightAboveEllipsoid` corresponding to `data`.
     """
 
@@ -143,11 +143,11 @@ class MetadataDataset3D(MetadataDataset2D):
         len_z = len(self.z_coord_vector)
         if self.shape[-3] != len_z:
             if self.name.endswith("Baseline"):
-                # `parallelBaseline` and `perpendicularBaseline` Datasets
+                # `parallelBaseline` and `perpendicularBaseline` LUTs
                 # either have a height of 2 or the length of the z coordinates
                 if self.shape[-3] != 2:
                     raise nisarqa.InvalidRasterError(
-                        f"Dataset {self.name} has z dimension {self.shape[-3]},"
+                        f"LUT {self.name} has z dimension {self.shape[-3]},"
                         " which should either be 2 or match the length of the"
                         " cooresponding z-axis coordinate vector which is"
                         f" {len_z}."
@@ -156,7 +156,7 @@ class MetadataDataset3D(MetadataDataset2D):
                     len_z = 2
             else:
                 raise nisarqa.InvalidRasterError(
-                    f"Dataset {self.name} has z dimension {self.shape[-3]},"
+                    f"LUT {self.name} has z dimension {self.shape[-3]},"
                     f" which should match the length of the cooresponding"
                     f" z-axis coordinate vector which is {len_z}."
                 )
@@ -166,7 +166,7 @@ def verify_metadata_cubes(
     product: nisarqa.NisarProduct, fail_if_all_nan: bool = True
 ) -> None:
     """
-    Verify the input product's coordinate grid metadata cubes are valid.
+    Verify the input product's coordinate grid metadata cube LUTs are valid.
 
     Coordinate grid metadata cubes are the 3D datasets in the input product's
     coordinate grid (e.g. `geolocationGrid` or `radarGrid`) metadata group.
@@ -185,27 +185,27 @@ def verify_metadata_cubes(
     Raises
     ------
     nisarqa.InvalidRasterError
-        If `fail_if_all_nan` is True and if one or more metadata datasets
+        If `fail_if_all_nan` is True and if one or more metadata LUTs
         contains all non-finite (e.g. Nan, +/- Inf) values, or if one of
-        the z-dimension height layers in a 3D dataset has all non-finite values.
+        the z-dimension height layers in a 3D LUT has all non-finite values.
     """
 
-    # Flag indicating if metadata datasets pass all verification checks; used
+    # Flag indicating if metadata LUTs pass all verification checks; used
     # for Summary CSV reporting
     passes = True
     has_finite = True
 
-    # Check metadata datasets in metadata Group
+    # Check metadata LUTs in metadata Group
     try:
-        # Note: During the __post_init__ of constructing each metadata dataset,
+        # Note: During the __post_init__ of constructing each metadata LUT,
         # several validation checks are performed, including ensuring that
         # there are corresponding datasets with x coordinates and y coordinates
         # of the correct length. If these elements are missing, exceptions
         # will get thrown.
         for cube in product.coordinate_grid_metadata_cubes():
-            has_finite &= _dataset_has_finite_pixels(cube)
+            has_finite &= _lut_has_finite_pixels(cube)
             passes &= has_finite
-            passes &= _dataset_is_not_all_zeros(cube)
+            passes &= _lut_is_not_all_zeros(cube)
             passes &= _check_gdal(product=product, ds=cube)
 
     except (nisarqa.DatasetNotFoundError, ValueError):
@@ -225,18 +225,18 @@ def verify_metadata_cubes(
         )
 
 
-def verify_calibration_metadata(
+def verify_calibration_metadata_luts(
     product: nisarqa.NonInsarProduct, fail_if_all_nan: bool = True
 ) -> None:
     """
-    Verify if the input product's calibration metadata datasets are valid.
+    Verify if the input product's calibration metadata LUTs are valid.
 
     Parameters
     ----------
     product : nisarqa.NonInsarProduct
         Instance of the input product.
     fail_if_all_nan : bool, optional
-        True to raise an exception if one of the metadata datasets contains
+        True to raise an exception if one of the metadata LUTs contains
         all non-finite (e.g. Nan, +/- Inf) values.
         False to quiet the exception, although it will still be logged.
         Defaults to True.
@@ -244,18 +244,18 @@ def verify_calibration_metadata(
     Raises
     ------
     nisarqa.InvalidRasterError
-        If `fail_if_all_nan` is True and if one or more metadata datasets
+        If `fail_if_all_nan` is True and if one or more metadata LUTs
         contains all non-finite (e.g. Nan, +/- Inf) values.
     """
     log = nisarqa.get_logger()
-    # Flag indicating if metadata datasets pass all verification checks; used
+    # Flag indicating if metadata LUTs pass all verification checks; used
     # for Summary CSV reporting
     passes = True
     has_finite = True
 
-    # Check metadata datasets in metadata Group
+    # Check calibration metadata LUTs in metadata Group
     try:
-        # Note: During the __post_init__ of constructing each metadata dataset,
+        # Note: During the __post_init__ of constructing each metadata LUT,
         # several validation checks are performed, including ensuring that
         # there are corresponding datasets with x coordinates and y coordinates
         # of the correct length. If these elements are missing, exceptions
@@ -267,44 +267,44 @@ def verify_calibration_metadata(
             if spec < nisarqa.Version(1, 1, 0):
                 break
 
-            for ds in product.metadata_neb_datasets(freq):
-                has_finite &= _dataset_has_finite_pixels(ds)
+            for ds in product.metadata_neb_luts(freq):
+                has_finite &= _lut_has_finite_pixels(ds)
                 passes &= has_finite
-                passes &= _dataset_is_not_all_zeros(ds)
+                passes &= _lut_is_not_all_zeros(ds)
                 passes &= _check_gdal(product=product, ds=ds)
 
-            for ds in product.metadata_elevation_antenna_pat_datasets(freq):
-                has_finite &= _dataset_has_finite_pixels(ds)
+            for ds in product.metadata_elevation_antenna_pat_luts(freq):
+                has_finite &= _lut_has_finite_pixels(ds)
                 passes &= has_finite
-                passes &= _dataset_is_not_all_zeros(ds)
+                passes &= _lut_is_not_all_zeros(ds)
                 passes &= _check_gdal(product=product, ds=ds)
 
             if isinstance(product, nisarqa.SLC):
-                for ds in product.metadata_geometry_datasets():
-                    has_finite &= _dataset_has_finite_pixels(ds)
+                for ds in product.metadata_geometry_luts():
+                    has_finite &= _lut_has_finite_pixels(ds)
                     passes &= has_finite
-                    passes &= _dataset_is_not_all_zeros(ds)
+                    passes &= _lut_is_not_all_zeros(ds)
                     passes &= _check_gdal(product=product, ds=ds)
 
             if isinstance(product, nisarqa.RSLC):
-                for ds in product.metadata_crosstalk_datasets():
-                    has_finite &= _dataset_has_finite_pixels(ds)
+                for ds in product.metadata_crosstalk_luts():
+                    has_finite &= _lut_has_finite_pixels(ds)
                     passes &= has_finite
-                    passes &= _dataset_is_not_all_zeros(ds)
+                    passes &= _lut_is_not_all_zeros(ds)
                 summary_notes = ""
             else:
                 # GSLC and GCOV products contain the `crosstalk` Group with
-                # datasets copied directly from the input RSLC product,
+                # LUTs copied directly from the input RSLC product,
                 # but these are neither geocoded nor georeferenced.
                 # This means that that there is no corresponding
                 # e.g. `xCoordinates` datasets, so it is not possible to
-                # build/test a MetadataDataset.
+                # build/test a MetadataLUT.
                 log.warning(
                     "Verification of calibration information `crosstalk`"
-                    " metadata datasets was skipped by QA. Please update QA"
+                    " metadata LUTs was skipped by QA. Please update QA"
                     " code once these datasets become georeferenced."
                 )
-                summary_notes = "`crosstalk` datasets skipped."
+                summary_notes = "`crosstalk` LUTs skipped."
 
     except (nisarqa.DatasetNotFoundError, ValueError):
         log.error(traceback.format_exc())
@@ -318,7 +318,7 @@ def verify_calibration_metadata(
 
     if fail_if_all_nan and (not has_finite):
         raise nisarqa.InvalidRasterError(
-            "One or more calibration metadata datasets contains all non-finite"
+            "One or more calibration metadata LUTs contains all non-finite"
             " (e.g. NaN, +/- Inf) values. See log file"
             " for details and names of the failing dataset(s)."
         )
@@ -326,34 +326,32 @@ def verify_calibration_metadata(
 
 def _check_gdal(
     product: nisarqa.NisarProduct,
-    ds: nisarqa.MetadataDataset2D | nisarqa.MetadataDataset3D,
+    ds: nisarqa.MetadataLUT2D | nisarqa.MetadataLUT3D,
 ) -> bool:
     """
-    Check if product and member dataset are either L1, or L2 and GDAL-friendly.
+    Check if product and member LUT are either L1, or L2 and GDAL-friendly.
 
-    Always returns `True` if the dataset is not geocoded and/or not an
-    h5py.Dataset.
+    Always returns `True` if the LUT is not geocoded and/or not an h5py.Dataset.
 
     Parameters
     ----------
     product : nisarqa.NisarProduct
         Instance of the input product. If product is not geocoded (e.g. it
         is an L1 product), the function will always return True.
-    ds : nisarqa.MetadataDataset2D or nisarqa.MetadataDataset3D
-        Metadata Dataset to be checked. If `ds.data` is not an h5py.Dataset,
+    ds : nisarqa.MetadataLUT2D or nisarqa.MetadataLUT3D
+        Metadata LUT to be checked. If `ds.data` LUT is not an h5py.Dataset,
         the function will always return True.
 
     Returns
     -------
     passes : bool
-        True if the dataset contains at least one finite pixel (meaning, it is
-        considered a valid dataset), or if input product is not geocoded,
+        True if the LUT contains at least one finite pixel (meaning, it is
+        considered a valid LUT), or if input product is not geocoded,
          or if `ds` is not an h5py.Dataset.
-        False if the given metadata dataset contains all non-finite (e.g. NaN,
+        False if the given metadata LUT contains all non-finite (e.g. NaN,
         +/- Inf) values.
-        Or, if the dataset is 3D, and if any of the z-dimension
-        height layers is all non-finite, it is also considered malformed and we
-        return False.
+        Or, if the LUT is 3D, and if any of the z-dimension height layers
+        is all non-finite, it is also considered malformed and we return False.
     """
     if product.is_geocoded and isinstance(ds.data, h5py.Dataset):
         return is_gdal_friendly(
@@ -438,41 +436,40 @@ def is_gdal_friendly(input_filepath: str, ds_path: str) -> bool:
         return False
 
 
-def _dataset_has_finite_pixels(ds: nisarqa.MetadataDatasetT) -> bool:
+def _lut_has_finite_pixels(ds: nisarqa.MetadataLUTT) -> bool:
     """
-    Return False if dataset contains all non-finite values; True otherwise.
+    Return False if LUT contains all non-finite values; True otherwise.
 
     Parameters
     ----------
-    ds : nisarqa.MetadataDatasetT
-        Metadata Dataset to be checked.
+    ds : nisarqa.MetadataLUTT
+        Metadata LUT to be checked.
 
     Returns
     -------
     passes : bool
-        True if the dataset contains at least one finite pixel. (Meaning, it is
-        considered a valid dataset.)
-        False if the given metadata dataset contains all non-finite (e.g. NaN,
+        True if the LUT contains at least one finite pixel. (Meaning, it is
+        considered a valid LUT.)
+        False if the given metadata LUT contains all non-finite (e.g. NaN,
         +/- Inf) values.
-        Or, if the dataset is 3D, and if any of the z-dimension
-        height layers is all non-finite, it is also considered malformed and we
-        return False.
+        Or, if the LUT is 3D, and if any of the z-dimension height layers
+        is all non-finite, it is also considered malformed and we return False.
     """
     log = nisarqa.get_logger()
 
     if not np.isfinite(ds.data).any():
         log.error(
-            f"Metadata dataset {ds.name} contains all non-finite"
+            f"Metadata LUT {ds.name} contains all non-finite"
             " (e.g. NaN) values."
         )
         return False
 
-    # For 3-D datasets, check each z-layer individually for all-NaN values.
-    if isinstance(ds, MetadataDataset3D):
+    # For 3-D LUTs, check each z-layer individually for all-NaN values.
+    if isinstance(ds, MetadataLUT3D):
         for z in range(ds.shape[0]):
             if not np.isfinite(ds.data[z, :, :]).any():
                 log.error(
-                    f"Metadata dataset {ds.name} z-axis layer number {z}"
+                    f"Metadata LUT {ds.name} z-axis layer number {z}"
                     " contains all non-finite (e.g. NaN) values."
                 )
                 return False
@@ -480,25 +477,24 @@ def _dataset_has_finite_pixels(ds: nisarqa.MetadataDatasetT) -> bool:
     return True
 
 
-def _dataset_is_not_all_zeros(ds: nisarqa.MetadataDatasetT) -> bool:
+def _lut_is_not_all_zeros(ds: nisarqa.MetadataLUTT) -> bool:
     """
-    Return False if metadata dataset contains all near-zeros; True otherwise.
+    Return False if metadata LUT contains all near-zeros; True otherwise.
 
     Parameters
     ----------
-    ds : nisarqa.MetadataDatasetT
-        Metadata Dataset to be checked.
+    ds : nisarqa.MetadataLUTT
+        Metadata LUT to be checked.
 
     Returns
     -------
     Passes : bool
-        True if the dataset contains at least one non-near-zero pixel. (Meaning,
-        it is considered a valid dataset.)
-        False if the given metadata dataset contain all near-zero ( <1e-12 )
-        values, it is likely a malformed Dataset.
-        Or, if the dataset is 3D, and if any of the z-dimension
-        height layers is all near-zero, it is also considered malformed and we
-        return False.
+        True if the LUT contains at least one non-near-zero pixel. (Meaning,
+        it is considered a valid LUT.)
+        False if the given metadata LUT contain all near-zero ( <1e-12 )
+        values, it is likely a malformed LUT.
+        Or, if the LUT is 3D, and if any of the z-dimension height layers
+        is all near-zero, it is also considered malformed and we return False.
     """
     log = nisarqa.get_logger()
 
@@ -508,14 +504,13 @@ def _dataset_is_not_all_zeros(ds: nisarqa.MetadataDatasetT) -> bool:
         # So, issue obnoxious warnings for now.
         # TODO - refine this check during CalVal once real data comes back.
         msg = (
-            f"Metadata dataset {ds.name} contains all near-zero"
-            " (<1e-12) values."
+            f"Metadata LUT {ds.name} contains all near-zero" " (<1e-12) values."
         )
         log.warning(msg)
         return False
 
-    # For 3-D datasets, check each z-layer individually for all near-zero values.
-    if isinstance(ds, MetadataDataset3D):
+    # For 3-D LUTs, check each z-layer individually for all near-zero values.
+    if isinstance(ds, MetadataLUT3D):
         for z in range(ds.shape[0]):
             if np.all(np.abs(ds.data[z, :, :]) < 1e-12):
                 # This check is likely to raise a lot of failures.
@@ -523,7 +518,7 @@ def _dataset_is_not_all_zeros(ds: nisarqa.MetadataDatasetT) -> bool:
                 # So, issue obnoxious warnings for now.
                 # TODO - refine this check during CalVal once real data comes back.
                 msg = (
-                    f"Metadata dataset {ds.name} z-axis layer number {z}"
+                    f"Metadata LUT {ds.name} z-axis layer number {z}"
                     " contains all near-zero (<1e-12) values."
                 )
                 log.warning(msg)
