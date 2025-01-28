@@ -329,9 +329,10 @@ def _check_gdal(
     ds: nisarqa.MetadataDataset2D | nisarqa.MetadataDataset3D,
 ) -> bool:
     """
-    Check if the dataset is GDAL-friendly.
+    Check if product and member dataset are either L1, or L2 and GDAL-friendly.
 
-    Always returns `True` if the dataset is not geocoded and/or not an h5py.Dataset.
+    Always returns `True` if the dataset is not geocoded and/or not an
+    h5py.Dataset.
 
     Parameters
     ----------
@@ -349,7 +350,7 @@ def _check_gdal(
         considered a valid dataset), or if input product is not geocoded,
          or if `ds` is not an h5py.Dataset.
         False if the given metadata dataset contains all non-finite (e.g. NaN,
-        +/- Inf) values, it is likely a mal-formed Dataset.
+        +/- Inf) values.
         Or, if the dataset is 3D, and if any of the z-dimension
         height layers is all non-finite, it is also considered malformed and we
         return False.
@@ -452,7 +453,7 @@ def _dataset_has_finite_pixels(ds: nisarqa.MetadataDatasetT) -> bool:
         True if the dataset contains at least one finite pixel. (Meaning, it is
         considered a valid dataset.)
         False if the given metadata dataset contains all non-finite (e.g. NaN,
-        +/- Inf) values, it is likely a mal-formed Dataset.
+        +/- Inf) values.
         Or, if the dataset is 3D, and if any of the z-dimension
         height layers is all non-finite, it is also considered malformed and we
         return False.

@@ -1076,7 +1076,7 @@ class ValidationGroupParamGroup(YamlParamGroup):
 
     Parameters
     ----------
-    metadata_fail_if_all_nan : str
+    metadata_luts_fail_if_all_nan : str
         True to raise an exception if one or more metadata datasets contain
         all non-finite (e.g. Nan, +/- Inf) values, or if one or more
         z-dimension height layers in a 3D dataset has all non-finite values.
@@ -1084,11 +1084,11 @@ class ValidationGroupParamGroup(YamlParamGroup):
         Defaults to True.
     """
 
-    metadata_fail_if_all_nan: bool = field(
+    metadata_luts_fail_if_all_nan: bool = field(
         default=True,
         metadata={
             "yaml_attrs": YamlAttrs(
-                name="metadata_fail_if_all_nan",
+                name="metadata_luts_fail_if_all_nan",
                 descr="""True to raise an exception if one or more metadata datasets
                 contain all non-finite (e.g. Nan, +/- Inf) values, or if one or more
                 z-dimension height layers in a 3D dataset has all non-finite values.
@@ -1099,9 +1099,9 @@ class ValidationGroupParamGroup(YamlParamGroup):
 
     def __post_init__(self):
         # VALIDATE INPUTS
-        if not isinstance(self.metadata_fail_if_all_nan, bool):
+        if not isinstance(self.metadata_luts_fail_if_all_nan, bool):
             raise TypeError(
-                f"`{self.metadata_fail_if_all_nan=}`, must be bool."
+                f"`{self.=}`, must be bool."
             )
 
     @staticmethod
