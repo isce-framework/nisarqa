@@ -208,7 +208,7 @@ def verify_metadata_cubes(
             passes &= _dataset_is_not_all_zeros(cube)
             passes &= _check_gdal(product=product, ds=cube)
 
-    except (nisarqa.DatasetNotFoundError, ValueError) as e:
+    except (nisarqa.DatasetNotFoundError, ValueError):
         nisarqa.get_logger().error(traceback.format_exc())
         passes = False
 
@@ -220,7 +220,7 @@ def verify_metadata_cubes(
         raise nisarqa.InvalidRasterError(
             "One or more metadata cubes contains all non-finite"
             " (e.g. NaN, +/- Inf) values or one of the z-dimension height"
-            " layers in a 3D cube has all non-finite values. See log file"
+            " layers in a cube has all non-finite values. See log file"
             " for details and names of the failing dataset(s)."
         )
 
@@ -233,12 +233,11 @@ def verify_calibration_metadata(
 
     Parameters
     ----------
-    product : nisarqa.NisarNonInsarProductProduct
+    product : nisarqa.NonInsarProduct
         Instance of the input product.
     fail_if_all_nan : bool, optional
         True to raise an exception if one of the metadata datasets contains
-        all non-finite (e.g. Nan, +/- Inf) values, or if one of the
-        z-dimension height layers in a 3D dataset has all non-finite values.
+        all non-finite (e.g. Nan, +/- Inf) values.
         False to quiet the exception, although it will still be logged.
         Defaults to True.
 
@@ -246,8 +245,7 @@ def verify_calibration_metadata(
     ------
     nisarqa.InvalidRasterError
         If `fail_if_all_nan` is True and if one or more metadata datasets
-        contains all non-finite (e.g. Nan, +/- Inf) values, or if one of
-        the z-dimension height layers in a 3D dataset has all non-finite values.
+        contains all non-finite (e.g. Nan, +/- Inf) values.
     """
     log = nisarqa.get_logger()
     # Flag indicating if metadata datasets pass all verification checks; used
@@ -272,7 +270,6 @@ def verify_calibration_metadata(
             for ds in product.metadata_neb_datasets(freq):
                 has_finite &= _dataset_has_finite_pixels(ds)
                 passes &= has_finite
-                passes &= _dataset_has_finite_pixels(ds)
                 passes &= _dataset_is_not_all_zeros(ds)
                 passes &= _check_gdal(product=product, ds=ds)
 
@@ -309,7 +306,7 @@ def verify_calibration_metadata(
                 )
                 summary_notes = "`crosstalk` datasets skipped."
 
-    except (nisarqa.DatasetNotFoundError, ValueError) as e:
+    except (nisarqa.DatasetNotFoundError, ValueError):
         log.error(traceback.format_exc())
         passes = False
 
@@ -322,8 +319,7 @@ def verify_calibration_metadata(
     if fail_if_all_nan and (not has_finite):
         raise nisarqa.InvalidRasterError(
             "One or more calibration metadata datasets contains all non-finite"
-            " (e.g. NaN, +/- Inf) values or one of the z-dimension height"
-            " layers in a 3D dataset has all non-finite values. See log file"
+            " (e.g. NaN, +/- Inf) values. See log file"
             " for details and names of the failing dataset(s)."
         )
 
@@ -335,16 +331,16 @@ def _check_gdal(
     """
     Check if the dataset is GDAL-friendly.
 
-    Function is no-op if the dataset is not geocoded and/or not an h5py.Dataset.
+    Always returns `True` if the dataset is not geocoded and/or not an h5py.Dataset.
 
     Parameters
     ----------
     product : nisarqa.NisarProduct
         Instance of the input product. If product is not geocoded (e.g. it
-        is an L1 product), `passes` will always return as True.
+        is an L1 product), the function will always return True.
     ds : nisarqa.MetadataDataset2D or nisarqa.MetadataDataset3D
         Metadata Dataset to be checked. If `ds.data` is not an h5py.Dataset,
-        `passes` will always return as True.
+        the function will always return True.
 
     Returns
     -------

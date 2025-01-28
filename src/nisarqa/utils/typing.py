@@ -21,4 +21,4 @@ RunConfigDict = Mapping[
 
 RootParamGroupT = TypeVar("RootParamGroupT", bound="RootParamGroup")
 
-MetadataDatasetT = TypeVar("MetadataDataset", bound="MetadataDataset1D")
+MetadataDatasetT = TypeVar("MetadataDatasetT", bound="MetadataDataset1D")
