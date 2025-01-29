@@ -248,6 +248,24 @@ def verify_calibration_metadata_luts(
         contains all non-finite (e.g. Nan, +/- Inf) values.
     """
     log = nisarqa.get_logger()
+    summary = nisarqa.get_summary()
+
+    # Very old test datasets do not necessarily have these calibration
+    # test datasets, and/or they are formatted differently.
+    # Since these are old and unsupported test datasets, ok to skip checks.
+    spec = nisarqa.Version.from_string(product.product_spec_version)
+    if spec < nisarqa.Version(1, 1, 0):
+        msg = (
+            "Input product has an unsupported product specification version."
+            " Verification checks of calibration information metadata skipped."
+        )
+        log.warning(msg)
+        summary.check_calibration_metadata(
+            result="WARN",
+            notes=msg,
+        )
+        return
+
     # Flag indicating if metadata LUTs pass all verification checks; used
     # for Summary CSV reporting
     passes = True
@@ -260,12 +278,7 @@ def verify_calibration_metadata_luts(
         # there are corresponding datasets with x coordinates and y coordinates
         # of the correct length. If these elements are missing, exceptions
         # will get thrown.
-        spec = nisarqa.Version.from_string(product.product_spec_version)
-
         for freq in product.freqs:
-
-            if spec < nisarqa.Version(1, 1, 0):
-                break
 
             for ds in product.metadata_neb_luts(freq):
                 has_finite &= _lut_has_finite_pixels(ds)
