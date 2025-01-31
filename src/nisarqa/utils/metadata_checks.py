@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import traceback
 from dataclasses import dataclass
+from itertools import chain
 from typing import TypeVar
 
 import h5py
@@ -272,58 +273,52 @@ def verify_calibration_metadata_luts(
     has_finite = True
 
     # Check calibration metadata LUTs in metadata Group
-    try:
-        # Note: During the __post_init__ of constructing each metadata LUT,
-        # several validation checks are performed, including ensuring that
-        # there are corresponding datasets with x coordinates and y coordinates
-        # of the correct length. If these elements are missing, exceptions
-        # will get thrown.
-        for freq in product.freqs:
-
-            for ds in product.metadata_neb_luts(freq):
-                has_finite &= _lut_has_finite_pixels(ds)
-                passes &= has_finite
-                passes &= _lut_is_not_all_zeros(ds)
-                passes &= _check_gdal(product=product, ds=ds)
-
-            for ds in product.metadata_elevation_antenna_pat_luts(freq):
-                has_finite &= _lut_has_finite_pixels(ds)
-                passes &= has_finite
-                passes &= _lut_is_not_all_zeros(ds)
-                passes &= _check_gdal(product=product, ds=ds)
-
+    for freq in product.freqs:
+        try:
+            # Note: During the __post_init__ of constructing each metadata LUT,
+            # several validation checks are performed, including ensuring that
+            # there are corresponding datasets with x coordinates and y coordinates
+            # of the correct length. If these elements are missing, exceptions
+            # will get thrown.
+            calib_datasets = chain(
+                product.metadata_neb_luts(freq),
+                product.metadata_elevation_antenna_pat_luts(freq),
+            )
             if isinstance(product, nisarqa.SLC):
-                for ds in product.metadata_geometry_luts():
-                    has_finite &= _lut_has_finite_pixels(ds)
-                    passes &= has_finite
-                    passes &= _lut_is_not_all_zeros(ds)
-                    passes &= _check_gdal(product=product, ds=ds)
-
-            if isinstance(product, nisarqa.RSLC):
-                for ds in product.metadata_crosstalk_luts():
-                    has_finite &= _lut_has_finite_pixels(ds)
-                    passes &= has_finite
-                    passes &= _lut_is_not_all_zeros(ds)
-                summary_notes = ""
-            else:
-                # GSLC and GCOV products contain the `crosstalk` Group with
-                # LUTs copied directly from the input RSLC product,
-                # but these are neither geocoded nor georeferenced.
-                # This means that that there is no corresponding
-                # e.g. `xCoordinates` datasets, so it is not possible to
-                # build/test a MetadataLUT.
-                log.warning(
-                    "Verification of calibration information `crosstalk`"
-                    " metadata LUTs was skipped by QA. Please update QA"
-                    " code once these datasets become georeferenced."
+                calib_datasets = chain(
+                    calib_datasets, product.metadata_geometry_luts()
                 )
-                summary_notes = "`crosstalk` LUTs skipped."
+            if isinstance(product, nisarqa.RSLC):
+                calib_datasets = chain(
+                    calib_datasets, product.metadata_crosstalk_luts()
+                )
+        except (nisarqa.DatasetNotFoundError, ValueError):
+            log.error(traceback.format_exc())
+            passes = False
 
-    except (nisarqa.DatasetNotFoundError, ValueError):
-        log.error(traceback.format_exc())
-        passes = False
+        for ds in calib_datasets:
+            has_finite &= _lut_has_finite_pixels(ds)
+            passes &= has_finite
+            passes &= _lut_is_not_all_zeros(ds)
+            passes &= _check_gdal(product=product, ds=ds)
 
     # SUMMARY LOG
+    if isinstance(product, nisarqa.RSLC):
+        summary_notes = ""
+    else:
+        # GSLC and GCOV products contain the `crosstalk` Group with
+        # LUTs copied directly from the input RSLC product,
+        # but these are neither geocoded nor georeferenced.
+        # This means that that there is no corresponding
+        # e.g. `xCoordinates` datasets, so it is not possible to
+        # build/test a MetadataLUT.
+        log.warning(
+            "Verification of calibration information `crosstalk`"
+            " metadata LUTs was skipped by QA. Please update QA"
+            " code once these datasets become georeferenced."
+        )
+        summary_notes = "`crosstalk` LUTs skipped."
+
     summary = nisarqa.get_summary()
     summary.check_calibration_metadata(
         result="PASS" if passes else "FAIL", notes=summary_notes
@@ -469,7 +464,6 @@ def _lut_has_finite_pixels(ds: nisarqa.MetadataLUTT) -> bool:
         is all non-finite, it is also considered malformed and we return False.
     """
     log = nisarqa.get_logger()
-
     if not np.isfinite(ds.data).any():
         log.error(
             f"Metadata LUT {ds.name} contains all non-finite"
