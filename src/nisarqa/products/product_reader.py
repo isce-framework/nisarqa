@@ -943,8 +943,8 @@ class NisarProduct(ABC):
                 elif n_dim != 3:
                     raise ValueError(
                         f"The coordinate grid metadata group should only"
-                        f" contain 1D or 3D Datasets. Dataset contains {n_dim}"
-                        f" dimensions: {ds_path}"
+                        " should only contain scalar, 1D, or 3D Datasets."
+                        f" Dataset contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
                     yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
@@ -1889,8 +1889,8 @@ class NonInsarProduct(NisarProduct):
                 elif n_dim != 2:
                     raise ValueError(
                         "The `noiseEquivalentBackscatter` metadata group"
-                        " should only contain 1D or 2D Datasets. Dataset"
-                        f" contains {n_dim} dimensions: {ds_path}"
+                        " should only contain scalar, 1D, or 2D Datasets."
+                        f" Dataset contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
                     yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
@@ -1930,8 +1930,8 @@ class NonInsarProduct(NisarProduct):
                 elif n_dim != 2:
                     raise ValueError(
                         f"The elevationAntennaPattern metadata group should"
-                        f" only contain 1D or 2D Datasets. Dataset contains"
-                        f" {n_dim} dimensions: {ds_path}"
+                        " should only contain scalar, 1D, or 2D Datasets."
+                        f" Dataset contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
                     yield self._build_metadata_lut(f=f, ds_arr=ds_arr)
@@ -2600,9 +2600,9 @@ class SLC(NonInsarProduct):
                     pass
                 elif n_dim != 2:
                     raise ValueError(
-                        f"The geometry metadata group should only contain 1D"
-                        f" or 2D Datasets. Dataset contains {n_dim}"
-                        f" dimensions: {ds_path}"
+                        f"The geometry metadata group should only contain"
+                        " scalar, 1D, or 2D Datasets."
+                        f" Dataset contains {n_dim} dimensions: {ds_path}"
                     )
                 else:
                     yield self._build_metadata_lut(f=f, ds_arr=ds_arr)

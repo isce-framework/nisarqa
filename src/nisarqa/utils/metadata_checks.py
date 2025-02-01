@@ -315,7 +315,8 @@ def verify_calibration_metadata_luts(
         log.warning(
             "Verification of calibration information `crosstalk`"
             " metadata LUTs was skipped by QA. Please update QA"
-            " code once these datasets become georeferenced."
+            " code once coordinate datasets are added"
+            " to the input product's `crosstalk` group."
         )
         summary_notes = "`crosstalk` LUTs skipped."
 
