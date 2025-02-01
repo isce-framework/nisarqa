@@ -274,33 +274,34 @@ def verify_calibration_metadata_luts(
 
     # Check calibration metadata LUTs in metadata Group
     for freq in product.freqs:
+        calib_datasets = chain(
+            product.metadata_neb_luts(freq),
+            product.metadata_elevation_antenna_pat_luts(freq),
+        )
+        if isinstance(product, nisarqa.SLC):
+            calib_datasets = chain(
+                calib_datasets, product.metadata_geometry_luts()
+            )
+        if isinstance(product, nisarqa.RSLC):
+            calib_datasets = chain(
+                calib_datasets, product.metadata_crosstalk_luts()
+            )
+
         try:
             # Note: During the __post_init__ of constructing each metadata LUT,
             # several validation checks are performed, including ensuring that
-            # there are corresponding datasets with x coordinates and y coordinates
-            # of the correct length. If these elements are missing, exceptions
-            # will get thrown.
-            calib_datasets = chain(
-                product.metadata_neb_luts(freq),
-                product.metadata_elevation_antenna_pat_luts(freq),
-            )
-            if isinstance(product, nisarqa.SLC):
-                calib_datasets = chain(
-                    calib_datasets, product.metadata_geometry_luts()
-                )
-            if isinstance(product, nisarqa.RSLC):
-                calib_datasets = chain(
-                    calib_datasets, product.metadata_crosstalk_luts()
-                )
+            # there are corresponding datasets with x coordinates and
+            # y coordinates of the correct length. If these elements are
+            # missing, exceptions will get thrown.
+            for ds in calib_datasets:
+                has_finite &= _lut_has_finite_pixels(ds)
+                passes &= has_finite
+                passes &= _lut_is_not_all_zeros(ds)
+                passes &= _check_gdal(product=product, ds=ds)
+
         except (nisarqa.DatasetNotFoundError, ValueError):
             log.error(traceback.format_exc())
             passes = False
-
-        for ds in calib_datasets:
-            has_finite &= _lut_has_finite_pixels(ds)
-            passes &= has_finite
-            passes &= _lut_is_not_all_zeros(ds)
-            passes &= _check_gdal(product=product, ds=ds)
 
     # SUMMARY LOG
     if isinstance(product, nisarqa.RSLC):
