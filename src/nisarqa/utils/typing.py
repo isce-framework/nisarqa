@@ -5,6 +5,7 @@ __all__ = [
     "RunConfigScalar",
     "RunConfigList",
     "RunConfigDict",
+    "MetadataLUTT",
 ]
 
 from collections.abc import Mapping, Sequence
@@ -19,3 +20,5 @@ RunConfigDict = Mapping[
 ]
 
 RootParamGroupT = TypeVar("RootParamGroupT", bound="RootParamGroup")
+
+MetadataLUTT = TypeVar("MetadataLUTT", bound="MetadataLUT1D")

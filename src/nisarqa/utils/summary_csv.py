@@ -185,20 +185,20 @@ class _SummaryCSV:
 
     def _validate_result(self, result: str) -> str:
         """
-        Validate that `result` is either 'PASS' or 'FAIL'.
+        Validate that `result` is either "PASS", "FAIL", or "WARN".
 
         Parameters
         ----------
         result : str
-            Either 'PASS' or 'FAIL'.
+            Either "PASS", "FAIL", or "WARN".
 
         Raises
         ------
         ValueError
-            If `result` is neither 'PASS' nor 'FAIL'.
+            If `result` is neither "PASS", "FAIL", nor "WARN"..
         """
         self._validate_string(result)
-        if result not in ("PASS", "FAIL"):
+        if result not in ("PASS", "FAIL", "WARN"):
             raise ValueError(f"`{result=}`, must be either 'PASS' or 'FAIL'.")
 
     def _validate_description(self, description: str) -> str:
@@ -319,7 +319,7 @@ class _SummaryCSV:
             Example 1: "Able to open NISAR input file?"
             Example 2: "Percentage of invalid pixels under threshold?"
         result : str
-            The result of the check. Must be one of: "PASS" or "FAIL"
+            The result of the check. Must be one of: "PASS", "FAIL", "WARN".
         threshold : str, optional
             If a threshold value was used to determine the outcome of the
             PASS/FAIL check, note that value here. Defaults to the empty
@@ -403,10 +403,18 @@ class _SummaryCSV:
         )
 
     def check_metadata_cubes(self, result: str) -> None:
-        """Check: 'Metadata cubes are valid?'"""
+        """Check: 'Coordinate grid metadata cubes are valid?'"""
         self.check(
-            description="Metadata cubes are valid?",
+            description="Coordinate grid metadata cubes are valid?",
             result=result,
+        )
+
+    def check_calibration_metadata(self, result: str, notes: str = "") -> None:
+        """Check: 'Calibration information LUTs are valid?'"""
+        self.check(
+            description="Calibration information LUTs are valid?",
+            result=result,
+            notes=notes,
         )
 
     def check_identification_group(self, result: str) -> None:

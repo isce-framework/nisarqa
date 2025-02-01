@@ -1076,22 +1076,22 @@ class ValidationGroupParamGroup(YamlParamGroup):
 
     Parameters
     ----------
-    metadata_cubes_fail_if_all_nan : str
-        True to raise an exception if one or more metadata cubes contains
+    metadata_luts_fail_if_all_nan : str
+        True to raise an exception if one or more metadata LUTs contain
         all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-        z-dimension height layers in a 3D cube has all non-finite values.
+        z-dimension height layers in a 3D LUT has all non-finite values.
         False to quiet the exception (although it will still be logged).
         Defaults to True.
     """
 
-    metadata_cubes_fail_if_all_nan: bool = field(
+    metadata_luts_fail_if_all_nan: bool = field(
         default=True,
         metadata={
             "yaml_attrs": YamlAttrs(
-                name="metadata_cubes_fail_if_all_nan",
-                descr="""True to raise an exception if one or more metadata cubes contains
-                all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-                z-dimension height layers in a 3D cube has all non-finite values.
+                name="metadata_luts_fail_if_all_nan",
+                descr="""True to raise an exception if one or more metadata LUTs
+                contain all non-finite (e.g. Nan, +/- Inf) values, or if one or more
+                z-dimension height layers in a 3D LUT has all non-finite values.
                 False to quiet the exception (although it will still be logged).""",
             )
         },
@@ -1099,9 +1099,9 @@ class ValidationGroupParamGroup(YamlParamGroup):
 
     def __post_init__(self):
         # VALIDATE INPUTS
-        if not isinstance(self.metadata_cubes_fail_if_all_nan, bool):
+        if not isinstance(self.metadata_luts_fail_if_all_nan, bool):
             raise TypeError(
-                f"`{self.metadata_cubes_fail_if_all_nan=}`, must be bool."
+                f"`{self.metadata_luts_fail_if_all_nan=}`, must be bool."
             )
 
     @staticmethod

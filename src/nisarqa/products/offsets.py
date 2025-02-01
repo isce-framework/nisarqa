@@ -111,7 +111,7 @@ def verify_offset(
 
         nisarqa.verify_metadata_cubes(
             product=product,
-            fail_if_all_nan=root_params.validation.metadata_cubes_fail_if_all_nan,
+            fail_if_all_nan=root_params.validation.metadata_luts_fail_if_all_nan,
         )
 
         nisarqa.dataset_sanity_checks(product=product)
