@@ -1077,9 +1077,9 @@ class ValidationGroupParamGroup(YamlParamGroup):
     Parameters
     ----------
     metadata_luts_fail_if_all_nan : str
-        True to raise an exception if one or more metadata datasets contain
+        True to raise an exception if one or more metadata LUTs contain
         all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-        z-dimension height layers in a 3D dataset has all non-finite values.
+        z-dimension height layers in a 3D LUT has all non-finite values.
         False to quiet the exception (although it will still be logged).
         Defaults to True.
     """
@@ -1089,9 +1089,9 @@ class ValidationGroupParamGroup(YamlParamGroup):
         metadata={
             "yaml_attrs": YamlAttrs(
                 name="metadata_luts_fail_if_all_nan",
-                descr="""True to raise an exception if one or more metadata datasets
+                descr="""True to raise an exception if one or more metadata LUTs
                 contain all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-                z-dimension height layers in a 3D dataset has all non-finite values.
+                z-dimension height layers in a 3D LUT has all non-finite values.
                 False to quiet the exception (although it will still be logged).""",
             )
         },

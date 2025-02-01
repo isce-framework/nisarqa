@@ -1153,7 +1153,7 @@ class NisarProduct(ABC):
         ds_arr: h5py.Dataset,
     ) -> nisarqa.MetadataLUTT:
         """
-        Construct a MetadataLUT for the given 1D, 2D, or 3D dataset.
+        Construct a MetadataLUT for the given 1D, 2D, or 3D LUT.
 
         Parameters
         ----------
@@ -1899,7 +1899,7 @@ class NonInsarProduct(NisarProduct):
         self, freq: str
     ) -> Iterator[nisarqa.MetadataLUT2D]:
         """
-        Generator for all elevation antenna pattern metadata datasets.
+        Generator for all elevation antenna pattern metadata LUTs.
 
         Yields
         ------

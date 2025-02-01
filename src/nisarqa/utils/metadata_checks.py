@@ -169,7 +169,7 @@ def verify_metadata_cubes(
     """
     Verify the input product's coordinate grid metadata cube LUTs are valid.
 
-    Coordinate grid metadata cubes are the 3D datasets in the input product's
+    Coordinate grid metadata cubes are the 3D LUTs in the input product's
     coordinate grid (e.g. `geolocationGrid` or `radarGrid`) metadata group.
 
     Parameters
@@ -179,7 +179,7 @@ def verify_metadata_cubes(
     fail_if_all_nan : bool, optional
         True to raise an exception if one of the metadata cubes contains
         all non-finite (e.g. Nan, +/- Inf) values, or if one of the
-        z-dimension height layers in a 3D dataset has all non-finite values.
+        z-dimension height layers in a 3D LUT has all non-finite values.
         False to quiet the exception, although it will still be logged.
         Defaults to True.
 
@@ -274,18 +274,14 @@ def verify_calibration_metadata_luts(
 
     # Check calibration metadata LUTs in metadata Group
     for freq in product.freqs:
-        calib_datasets = chain(
+        calib_luts = chain(
             product.metadata_neb_luts(freq),
             product.metadata_elevation_antenna_pat_luts(freq),
         )
         if isinstance(product, nisarqa.SLC):
-            calib_datasets = chain(
-                calib_datasets, product.metadata_geometry_luts()
-            )
+            calib_luts = chain(calib_luts, product.metadata_geometry_luts())
         if isinstance(product, nisarqa.RSLC):
-            calib_datasets = chain(
-                calib_datasets, product.metadata_crosstalk_luts()
-            )
+            calib_luts = chain(calib_luts, product.metadata_crosstalk_luts())
 
         try:
             # Note: During the __post_init__ of constructing each metadata LUT,
@@ -293,7 +289,7 @@ def verify_calibration_metadata_luts(
             # there are corresponding datasets with x coordinates and
             # y coordinates of the correct length. If these elements are
             # missing, exceptions will get thrown.
-            for ds in calib_datasets:
+            for ds in calib_luts:
                 has_finite &= _lut_has_finite_pixels(ds)
                 passes &= has_finite
                 passes &= _lut_is_not_all_zeros(ds)

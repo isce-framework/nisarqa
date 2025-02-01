@@ -410,9 +410,9 @@ class _SummaryCSV:
         )
 
     def check_calibration_metadata(self, result: str, notes: str = "") -> None:
-        """Check: 'Calibration information datasets are valid?'"""
+        """Check: 'Calibration information LUTs are valid?'"""
         self.check(
-            description="Calibration information datasets are valid?",
+            description="Calibration information LUTs are valid?",
             result=result,
             notes=notes,
         )
