@@ -289,11 +289,11 @@ def verify_calibration_metadata_luts(
             # there are corresponding datasets with x coordinates and
             # y coordinates of the correct length. If these elements are
             # missing, exceptions will get thrown.
-            for ds in calib_luts:
-                has_finite &= _lut_has_finite_pixels(ds)
-                passes &= has_finite
-                passes &= _lut_is_not_all_zeros(ds)
-                passes &= _check_gdal(product=product, ds=ds)
+            for lut in calib_luts:
+                has_finite &= _lut_has_finite_pixels(lut)
+                passes &= _lut_is_not_all_zeros(lut)
+                passes &= _check_gdal(product=product, ds=lut)
+            passes &= has_finite
 
         except (nisarqa.DatasetNotFoundError, ValueError):
             log.error(traceback.format_exc())
