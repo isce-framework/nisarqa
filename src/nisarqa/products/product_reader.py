@@ -938,7 +938,8 @@ class NisarProduct(ABC):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not LUTs. Skip.
+                    # Scalar and 1D datasets in this group are coordinate dimensions
+                    # and georeferencing info -- not metadata LUTs. Skip them here.
                     pass
                 elif n_dim != 3:
                     raise ValueError(
@@ -1884,7 +1885,8 @@ class NonInsarProduct(NisarProduct):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not LUTs. Skip.
+                    # Scalar and 1D datasets in this group are coordinate dimensions
+                    # and georeferencing info -- not metadata LUTs. Skip them here.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -1925,7 +1927,8 @@ class NonInsarProduct(NisarProduct):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not LUTs. Skip.
+                    # Scalar and 1D datasets in this group are coordinate dimensions
+                    # and georeferencing info -- not metadata LUTs. Skip them here.
                     pass
                 elif n_dim != 2:
                     raise ValueError(
@@ -2596,7 +2599,8 @@ class SLC(NonInsarProduct):
 
                 n_dim = np.ndim(ds_arr)
                 if n_dim in (0, 1):
-                    # scalar and 1D datasets are not LUTs. Skip.
+                    # Scalar and 1D datasets in this group are coordinate dimensions
+                    # and georeferencing info -- not metadata LUTs. Skip them here.
                     pass
                 elif n_dim != 2:
                     raise ValueError(

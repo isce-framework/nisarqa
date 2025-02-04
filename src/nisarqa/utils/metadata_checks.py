@@ -167,7 +167,7 @@ def verify_metadata_cubes(
     product: nisarqa.NisarProduct, fail_if_all_nan: bool = True
 ) -> None:
     """
-    Verify the input product's coordinate grid metadata cube LUTs are valid.
+    Verify the input product's coordinate grid metadata cubes are valid.
 
     Coordinate grid metadata cubes are the 3D LUTs in the input product's
     coordinate grid (e.g. `geolocationGrid` or `radarGrid`) metadata group.
@@ -252,7 +252,7 @@ def verify_calibration_metadata_luts(
     summary = nisarqa.get_summary()
 
     # Very old test datasets do not necessarily have these calibration
-    # test datasets, and/or they are formatted differently.
+    # datasets, or they are stored with a different layout.
     # Since these are old and unsupported test datasets, ok to skip checks.
     spec = nisarqa.Version.from_string(product.product_spec_version)
     if spec < nisarqa.Version(1, 1, 0):
@@ -317,7 +317,6 @@ def verify_calibration_metadata_luts(
         )
         summary_notes = "`crosstalk` LUTs skipped."
 
-    summary = nisarqa.get_summary()
     summary.check_calibration_metadata(
         result="PASS" if passes else "FAIL", notes=summary_notes
     )
