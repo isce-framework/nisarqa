@@ -213,14 +213,23 @@ def identification_sanity_checks(
         )
 
     # Verify Boolean Datasets
-    for ds_name in (
+    bool_datasets = [
         "isDithered",
         "isGeocoded",
         "isMixedMode",
         "isUrgentObservation",
-        "isJointObservation",
         "isFullFrame",
-    ):
+    ]
+
+    if product_type.lower() in nisarqa.LIST_OF_INSAR_PRODUCTS:
+        bool_datasets += [
+            "referenceIsJointObservation",
+            "secondaryIsJointObservation",
+        ]
+    else:
+        bool_datasets += ["isJointObservation"]
+
+    for ds_name in bool_datasets:
         ds_checked.add(ds_name)
         if _dataset_exists(ds_name):
             data = _get_string_dataset(ds_name=ds_name)
