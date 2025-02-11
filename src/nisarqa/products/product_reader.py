@@ -3457,47 +3457,6 @@ class InsarProduct(NisarProduct):
         # So, treat this as a wrapper function.
         return h5_file[raster_path]
 
-    def _check_dtype(self, path: str, expected_dtype: np.dtype) -> None:
-        """
-        Check that the dataset found at `path` has the correct dtype.
-
-        Parameters
-        ----------
-        path : str
-            Path to a dataset inside the input product.
-        expected_dtype : np.dtype
-            The expected dtype for the dataset, e.g. np.complex64.
-        """
-
-        # Use lru_cache to minimize the amount of (slow) file i/o
-        @lru_cache
-        def _check_dtype_inner(path: str, expected_dtype: np.dtype) -> None:
-            with h5py.File(self.filepath) as f:
-                try:
-                    dataset_handle = f[path]
-                except KeyError:
-                    raise nisarqa.DatasetNotFoundError
-
-                product_dtype = dataset_handle.dtype
-
-            # dataset.dtype returns e.g. "<f4" for NISAR products.
-            # Use .base to convert to equivalent native numpy dtype.
-            log = nisarqa.get_logger()
-            # If the check passes, log as 'INFO', otherwise log as 'WARNING'
-            pass_fail, logger = (
-                ("PASS", log.info)
-                if (product_dtype.base == expected_dtype)
-                else ("FAIL", log.error)
-            )
-
-            logger(
-                f"({pass_fail}) PASS/FAIL Check: Input file's dataset has"
-                f" type {product_dtype} which conforms to expected dtype"
-                f" {expected_dtype}. Dataset: {path}"
-            )
-
-        _check_dtype_inner(path, expected_dtype)
-
     @abstractmethod
     def _get_path_containing_freq_pol(self, freq: str, pol: str) -> str:
         """
@@ -3663,7 +3622,6 @@ class WrappedGroup(InsarProduct):
         """
         parent_path = self._wrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/wrappedInterferogram"
-        self._check_dtype(path=path, expected_dtype=np.complex64)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3689,7 +3647,6 @@ class WrappedGroup(InsarProduct):
         """
         parent_path = self._wrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/coherenceMagnitude"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3733,7 +3690,6 @@ class UnwrappedGroup(InsarProduct):
         """
         parent_path = self._unwrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/unwrappedPhase"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3759,7 +3715,6 @@ class UnwrappedGroup(InsarProduct):
         """
         parent_path = self._unwrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/connectedComponents"
-        self._check_dtype(path=path, expected_dtype=np.uint32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3785,7 +3740,6 @@ class UnwrappedGroup(InsarProduct):
         """
         parent_path = self._unwrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/coherenceMagnitude"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3811,7 +3765,6 @@ class UnwrappedGroup(InsarProduct):
         """
         parent_path = self._unwrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/ionospherePhaseScreen"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3837,7 +3790,6 @@ class UnwrappedGroup(InsarProduct):
         """
         parent_path = self._unwrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/ionospherePhaseScreenUncertainty"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3891,7 +3843,6 @@ class IgramOffsetsGroup(InsarProduct):
         """
         parent_path = self._igram_offsets_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/alongTrackOffset"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3917,7 +3868,6 @@ class IgramOffsetsGroup(InsarProduct):
         """
         parent_path = self._igram_offsets_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/slantRangeOffset"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -3943,7 +3893,6 @@ class IgramOffsetsGroup(InsarProduct):
         """
         parent_path = self._igram_offsets_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/correlationSurfacePeak"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4270,7 +4219,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/alongTrackOffset"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4299,7 +4247,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/slantRangeOffset"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4328,7 +4275,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/alongTrackOffsetVariance"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4357,7 +4303,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/slantRangeOffsetVariance"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4386,7 +4331,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/crossOffsetVariance"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
@@ -4415,7 +4359,6 @@ class OffsetProduct(InsarProduct):
         """
         parent_path = self._numbered_layer_group_path(freq, pol, layer_num)
         path = f"{parent_path}/correlationSurfacePeak"
-        self._check_dtype(path=path, expected_dtype=np.float32)
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
