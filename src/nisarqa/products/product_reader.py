@@ -293,6 +293,49 @@ def _parse_dataset_stats_from_h5(
     return raster_stats
 
 
+def _get_dataset_handle(h5_file: h5py.File, raster_path: str) -> h5py.Dataset:
+    """
+    Return a handle to the requested Dataset.
+
+    If Dataset is complex32, it will be wrapped with the ComplexFloat16Decoder.
+
+    Parameters
+    ----------
+    h5_file : h5py.File
+        File handle for the input file.
+    raster_path : str
+        Path in the input file to the desired Dataset.
+        Example: "/science/LSAR/RSLC/grids/frequencyA/HH"
+
+    Returns
+    -------
+    dataset : h5py.Dataset
+        Handle to the requested dataset.
+
+    Notes
+    -----
+    As of R4.0.2, the baseline is that both RSLC and GSLC produce
+    their imagery layers in complex64 (float32+float32) format
+    with some bits zeroed out for compression.
+    However, older test datasets were produced with imagery layers in
+    complex32 format, and ISCE3 can still be configured to generate the
+    layers in that format.
+    """
+    # Get Dataset handle via h5py's standard reader
+    dataset = h5_file[raster_path]
+
+    if nisarqa.is_complex32(dataset):
+        # As of h5py 3.8.0, h5py gained the ability to read complex32
+        # datasets, however numpy and other downstream packages do not
+        # necessarily have that flexibility.
+        # If the input product has dtype complex32, then we'll need to use
+        # ComplexFloat16Decoder so that numpy et al can read the datasets.
+        return nisarqa.ComplexFloat16Decoder(dataset)
+    else:
+        # Stick with h5py's standard reader
+        return dataset
+
+
 @dataclass
 class NisarProduct(ABC):
     """
@@ -1454,7 +1497,7 @@ class NisarRadarProduct(NisarProduct):
         kwargs = {}
 
         # Get dataset object and check for correct dtype
-        dataset = self._get_dataset_handle(h5_file, raster_path)
+        dataset = _get_dataset_handle(h5_file, raster_path)
         kwargs["data"] = dataset
 
         kwargs["units"] = _get_units(dataset)
@@ -1589,35 +1632,6 @@ class NisarRadarProduct(NisarProduct):
                 f" contain a datetime string. Dataset: {ds.name}"
             )
             return "INVALID EPOCH"
-
-    @abstractmethod
-    def _get_dataset_handle(
-        self, h5_file: h5py.File, raster_path: str
-    ) -> h5py.Dataset:
-        """
-        Return a handle to the requested dataset.
-
-        When implemented, it is recommended that validation checks on the
-        dataset's dtype, etc. are performed before returning the handle.
-        This function is a useful abstraction in case we need to e.g. use
-        ComplexFloat16DataDecoder to access RSLC data.
-
-        Parameters
-        ----------
-        h5_file : h5py.File
-            File handle for the input file.
-        raster_path : str
-            Path in the input file to the desired dataset.
-            Examples:
-                "/science/LSAR/RSLC/swaths/frequencyA/HH"
-                "/science/LSAR/RIFG/swaths/frequencyA/interferogram/HH/wrappedInterferogram"
-
-        Returns
-        -------
-        dataset : h5py.Dataset
-            Handle to the requested dataset.
-        """
-        pass
 
 
 @dataclass
@@ -1754,7 +1768,7 @@ class NisarGeoProduct(NisarProduct):
         kwargs = {}
 
         # Get dataset object and check for correct dtype
-        dataset = self._get_dataset_handle(h5_file, raster_path)
+        dataset = _get_dataset_handle(h5_file, raster_path)
         kwargs["data"] = dataset
 
         kwargs["units"] = _get_units(dataset)
@@ -1821,34 +1835,6 @@ class NisarGeoProduct(NisarProduct):
             return nisarqa.GeoRasterWithStats(**kwargs)
         else:
             return nisarqa.GeoRaster(**kwargs)
-
-    @abstractmethod
-    def _get_dataset_handle(
-        self, h5_file: h5py.File, raster_path: str
-    ) -> h5py.Dataset:
-        """
-        Return a handle to the requested dataset.
-
-        It is recommended that the implementation perform validation
-        checks on the dataset's dtype, etc. before returning the handle.
-        For example, RSLC might need to use ComplexFloat16Decoder.
-
-        Parameters
-        ----------
-        h5_file : h5py.File
-            File handle for the input file.
-        raster_path : str
-            Path in the input file to the desired dataset.
-            Examples:
-                "/science/LSAR/RSLC/grids/frequencyA/HH"
-                "/science/LSAR/RIFG/grids/frequencyA/wrappedInterferogram/HH/wrappedInterferogram"
-
-        Returns
-        -------
-        dataset : h5py.Dataset
-            Handle to the requested dataset.
-        """
-        pass
 
 
 @dataclass
@@ -2241,34 +2227,6 @@ class NonInsarProduct(NisarProduct):
 
 @dataclass
 class SLC(NonInsarProduct):
-    def _get_dataset_handle(
-        self, h5_file: h5py.File, raster_path: str
-    ) -> h5py.Dataset:
-        # As of R4.0.2, the baseline is that both RSLC and GSLC produce
-        # their imagery layers in complex64 (float32+float32) format
-        # with some bits masked out to improve compression.
-        # However, older test datasets were produced with imagery layers in
-        # complex32 format, and ISCE3 can still be configured to generate the
-        # layers in that format.
-        log = nisarqa.get_logger()
-        msg = (
-            "(%s) PASS/FAIL Check: Product raster dtype conforms to"
-            f" {self.product_type} Product Spec dtype of complex64. Dataset: %s"
-        )
-        dataset = h5_file[raster_path]
-        if nisarqa.is_complex32(dataset):
-            # As of h5py 3.8.0, h5py gained the ability to read complex32
-            # datasets, however numpy and other downstream packages do not
-            # necessarily have that flexibility.
-            # If the input product has dtype complex32, then we'll need to use
-            # ComplexFloat16Decoder so that numpy et al can read the datasets.
-            dataset = nisarqa.ComplexFloat16Decoder(dataset)
-            log.error(msg % ("FAIL", raster_path))
-        else:
-            # Use h5py's standard reader
-            log.info(msg % ("PASS", raster_path))
-
-        return dataset
 
     def get_pols(self, freq: str) -> tuple[str, ...]:
         pols = super().get_pols(freq)
@@ -2990,37 +2948,6 @@ class GCOV(NonInsarGeoProduct):
 
         return pols
 
-    def _get_dataset_handle(
-        self, h5_file: h5py.File, raster_path: str
-    ) -> nisarqa.GeoRaster:
-        # Use h5py's standard reader
-        dataset = h5_file[raster_path]
-
-        # Check the dataset dtype
-        log = nisarqa.get_logger()
-        pol = raster_path.split("/")[-1]
-        if pol[0:2] == pol[2:4]:
-            # on-diagonal term dataset. These are float32 as of May 2023.
-            spec_dtype = np.float32
-        else:
-            # off-diagonal term dataset. These are complex64 as of May 2023.
-            spec_dtype = np.complex64
-
-        raster_dtype = dataset.dtype
-        # If the check passes, log that as 'INFO', otherwise log as 'ERROR'
-        pass_fail, logger = (
-            ("PASS", log.info)
-            if (raster_dtype == spec_dtype)
-            else ("FAIL", log.error)
-        )
-
-        logger(
-            f"({pass_fail}) PASS/FAIL Check: Product raster {raster_dtype}"
-            f" conforms to GCOV Product Spec dtype of {spec_dtype}."
-        )
-
-        return dataset
-
     def get_layers_for_browse(self) -> dict[str, list[str]]:
         """
         Assign polarizations to grayscale or RGBA channels for the Browse Image.
@@ -3429,33 +3356,6 @@ class InsarProduct(NisarProduct):
             f"{self.product_type.upper()}_{band}_{freq}_{group}_{pol}_{layer}"
         )
         return name
-
-    def _get_dataset_handle(
-        self, h5_file: h5py.File, raster_path: str
-    ) -> h5py.Dataset:
-        """
-        Return a handle to the requested dataset.
-
-        Parameters
-        ----------
-        h5_file : h5py.File
-            File handle for the input file.
-        raster_path : str
-            Path in the input file to the desired dataset.
-            Examples:
-                "/science/LSAR/RSLC/swaths/frequencyA/HH"
-                "/science/LSAR/RIFG/swaths/frequencyA/interferogram/HH/wrappedInterferogram"
-
-        Returns
-        -------
-        dataset : h5py.Dataset
-            Handle to the requested dataset.
-        """
-        # Unlike RSLC, GSLC, and GCOV, the product readers for
-        # insar products do their dtype checking when the paths are fetched
-        # (e.g. when calling get_along_track_offset(...)).
-        # So, treat this as a wrapper function.
-        return h5_file[raster_path]
 
     @abstractmethod
     def _get_path_containing_freq_pol(self, freq: str, pol: str) -> str:
