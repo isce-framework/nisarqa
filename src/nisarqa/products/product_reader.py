@@ -293,7 +293,9 @@ def _parse_dataset_stats_from_h5(
     return raster_stats
 
 
-def _get_dataset_handle(h5_file: h5py.File, raster_path: str) -> h5py.Dataset:
+def _get_dataset_handle(
+    h5_file: h5py.File, raster_path: str
+) -> h5py.Dataset | nisarqa.ComplexFloat16Decoder:
     """
     Return a handle to the requested Dataset.
 
@@ -309,7 +311,7 @@ def _get_dataset_handle(h5_file: h5py.File, raster_path: str) -> h5py.Dataset:
 
     Returns
     -------
-    dataset : h5py.Dataset
+    dataset : h5py.Dataset or ComplexFloat16Decoder
         Handle to the requested dataset.
 
     Notes
