@@ -264,6 +264,7 @@ class SubBlock2D:
         return self._arr[tile_rowslice0, tile_colslice0]
 
 
+@nisarqa.log_function_start_and_stop_time
 def compute_multilooked_backscatter_by_tiling(
     arr, nlooks, input_raster_represents_power=False, tile_shape=(512, -1)
 ):
@@ -407,6 +408,7 @@ def compute_multilooked_backscatter_by_tiling(
     return multilook_img
 
 
+@nisarqa.log_function_start_and_stop_time
 def compute_histogram_by_tiling(
     arr: ArrayLike,
     bin_edges: np.ndarray,
@@ -570,6 +572,7 @@ def compute_histogram_by_tiling(
     return hist_counts
 
 
+@nisarqa.log_function_start_and_stop_time
 def compute_range_spectra_by_tiling(
     arr: ArrayLike,
     sampling_rate: float,
@@ -670,6 +673,7 @@ def compute_range_spectra_by_tiling(
     )
 
 
+@nisarqa.log_function_start_and_stop_time
 def compute_az_spectra_by_tiling(
     arr: ArrayLike,
     sampling_rate: float,

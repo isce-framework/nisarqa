@@ -432,6 +432,60 @@ def set_logger_handler(
         log.addHandler(handler)
 
 
+def log_function_start_and_stop_time(func):
+    """
+    Function decorator which logs the start and completion of a function.
+
+    The function's arguments are also logged. Useful for benchmarking; the
+    log file can be parsed for timings.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        # Construct the "arguments" string for the log message
+        def trunc(arg) -> str:
+            max_length = 40
+            if isinstance(arg, nisarqa.YamlParamGroup):
+                max_length = 100
+            a = f"{arg!r}"
+            if len(a) < max_length or isinstance(
+                arg, (h5py.Dataset, nisarqa.ComplexFloat16Decoder)
+            ):
+                return arg
+            else:
+                return f"{a[:max_length]}[TRUNCATED]"
+
+        name = ""
+        obj_with_name_attr = (
+            h5py.Dataset,
+            nisarqa.ComplexFloat16Decoder,
+            nisarqa.Raster,
+        )
+        for a in args:
+            if isinstance(a, obj_with_name_attr):
+                name = f"{a.name}. "
+                break
+        if not name:
+            for val in kwargs.values():
+                if isinstance(val, obj_with_name_attr):
+                    name = f"{val.name}. "
+                    break
+        trunc_args = tuple((trunc(i) for i in args))
+        trunc_kwargs = {key: trunc(val) for key, val in kwargs.items()}
+
+        suffix = f"`{func.__name__}`. {name}args={trunc_args}. kwargs={trunc_kwargs}."
+
+        # Log the start, run the function, log completion, return the results
+        log = nisarqa.get_logger()
+        log.info(f"Starting function: {suffix}")
+        result = func(*args, **kwargs)
+        log.info(f"Function complete: {suffix}")
+        return result
+
+    return wrapper
+
+
 @contextmanager
 def log_runtime(msg: str) -> Generator[None, None, None]:
     """
