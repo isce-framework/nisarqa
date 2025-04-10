@@ -436,8 +436,10 @@ def log_function_start_and_stop_time(func):
     """
     Function decorator which logs the start and completion of a function.
 
-    The function's arguments are also logged. Useful for benchmarking; the
-    log file can be parsed for timings.
+    Useful for benchmarking; the log file can be parsed for timings.
+    
+    The function's arguments are also logged. This may be useful for logging
+    multiple invocations of the same function with different arguments.
     """
 
     @wraps(func)
@@ -445,16 +447,14 @@ def log_function_start_and_stop_time(func):
 
         # Construct the "arguments" string for the log message
         def trunc(arg) -> str:
-            max_length = 40
-            if isinstance(arg, nisarqa.YamlParamGroup):
-                max_length = 100
-            a = f"{arg!r}"
+            max_length = 100 if isinstance(arg, nisarqa.YamlParamGroup) else 40
+            a = repr(arg)
             if len(a) < max_length or isinstance(
                 arg, (h5py.Dataset, nisarqa.ComplexFloat16Decoder)
             ):
                 return arg
             else:
-                return f"{a[:max_length]}[TRUNCATED]"
+                return f"{a[:max_length]}(...)"
 
         name = ""
         obj_with_name_attr = (
@@ -471,10 +471,10 @@ def log_function_start_and_stop_time(func):
                 if isinstance(val, obj_with_name_attr):
                     name = f"{val.name}. "
                     break
-        trunc_args = tuple((trunc(i) for i in args))
+        trunc_args = tuple(trunc(i) for i in args)
         trunc_kwargs = {key: trunc(val) for key, val in kwargs.items()}
 
-        suffix = f"`{func.__name__}`. {name}args={trunc_args}. kwargs={trunc_kwargs}."
+        suffix = f"Called `{func.__name__}` with args={trunc_args} and kwargs={trunc_kwargs}."
 
         # Log the start, run the function, log completion, return the results
         log = nisarqa.get_logger()
