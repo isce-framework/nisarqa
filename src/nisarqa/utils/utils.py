@@ -437,7 +437,7 @@ def log_function_start_and_stop_time(func):
     Function decorator which logs the start and completion of a function.
 
     Useful for benchmarking; the log file can be parsed for timings.
-    
+
     The function's arguments are also logged. This may be useful for logging
     multiple invocations of the same function with different arguments.
     """
