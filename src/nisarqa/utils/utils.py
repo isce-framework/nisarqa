@@ -446,6 +446,11 @@ def log_runtime(msg: str) -> Generator[None, None, None]:
     msg : str
         Prefix for the log message. Format of logged message will be:
             "Runtime: <msg> took <duration>".
+
+    See Also
+    --------
+    log_function_runtime :
+        Function decorator to log runtime of a function.
     """
     tic = datetime.now()
     yield
@@ -465,10 +470,7 @@ def log_function_runtime(func: Callable[..., T]) -> Callable[..., T]:
     See Also
     --------
     log_runtime :
-        Context manager to log runtime with a custom message.
-        Useful if the arguments are too verbose for nice log messages.
-    log_function_runtime_with_arguments :
-        Function decorator to log a function's runtime along with its arguments.
+        Context manager to log runtime of a code block with a custom message.
     """
 
     @wraps(func)
