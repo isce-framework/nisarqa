@@ -480,60 +480,6 @@ def log_function_runtime(func: Callable[..., T]) -> Callable[..., T]:
     return wrapper
 
 
-def log_function_runtime_with_arguments(
-    func: Callable[..., T],
-) -> Callable[..., T]:
-    """
-    Function decorator to log the runtime of a function and its arguments.
-
-    The function's arguments are also logged. This may be useful for logging
-    multiple invocations of the same function with different arguments.
-    If an individual argument's `repr` is longer than 100 characters, the
-    argument's value's `repr` will be used and then truncated; this is to
-    prevent e.g. large NumPy arrays from being logged.
-
-    Parameters
-    ----------
-    func : callable
-        Function that will have its runtime and arguments logged.
-
-    Warnings
-    -------
-    Logging all arguments in a log message can become very verbose.
-    Recommend testing to ensure reasonable log messages.
-
-    See Also
-    --------
-    log_runtime :
-        Context manager to log runtime with a custom message.
-        Useful if the arguments are too verbose for nice log messages.
-    log_function_runtime :
-        Function decorator to log a function's runtime, but without
-        logging the arguments.
-    """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-
-        def trunc(arg) -> str:
-            max_length = 100
-            a = repr(arg)
-            if len(a) <= max_length:
-                return arg
-            else:
-                return f"{a[:max_length]}(...)"
-
-        trunc_args = tuple(trunc(i) for i in args)
-        trunc_kwargs = {key: trunc(val) for key, val in kwargs.items()}
-
-        suffix = f"`{func.__name__}` with args={trunc_args} and kwargs={trunc_kwargs}"
-
-        with log_runtime(suffix):
-            return func(*args, **kwargs)
-
-    return wrapper
-
-
 @contextmanager
 def log_runtime(msg: str) -> Generator[None, None, None]:
     """
