@@ -520,37 +520,36 @@ def process_backscatter_imgs_and_browse(
                     colorbar_formatter = None
 
                 # Label and Save Backscatter Image to PDF
-                with product.get_raster(freq=freq, pol=pol) as img:
-                    # Construct Figure title
-                    fig_title = f"{plot_title_prefix}\n{img.name}"
+                # Construct Figure title
+                fig_title = f"{plot_title_prefix}\n{img.name}"
 
-                    # Construct the axes title. Add image correction notes
-                    # in the order specified in `apply_image_correction()`.
-                    ax_title = ""
-                    clip_interval = params.percentile_for_clipping
-                    if not np.allclose(clip_interval, [0.0, 100.0]):
-                        ax_title += (
-                            "clipped to percentile range"
-                            f" [{clip_interval[0]}, {clip_interval[1]}]\n"
-                        )
-
-                    ax_title += f"scale={params.backscatter_units}"
-
-                    if params.gamma is not None:
-                        ax_title += rf", $\gamma$-correction={params.gamma}"
-
-                    nisarqa.rslc.img2pdf_grayscale(
-                        img_arr=corrected_img,
-                        fig_title=fig_title,
-                        ax_title=ax_title,
-                        ylim=img.y_axis_limits,
-                        xlim=img.x_axis_limits,
-                        colorbar_formatter=colorbar_formatter,
-                        ylabel=img.y_axis_label,
-                        xlabel=img.x_axis_label,
-                        plots_pdf=report_pdf,
-                        nan_color=params.nan_color,
+                # Construct the axes title. Add image correction notes
+                # in the order specified in `apply_image_correction()`.
+                ax_title = ""
+                clip_interval = params.percentile_for_clipping
+                if not np.allclose(clip_interval, [0.0, 100.0]):
+                    ax_title += (
+                        "clipped to percentile range"
+                        f" [{clip_interval[0]}, {clip_interval[1]}]\n"
                     )
+
+                ax_title += f"scale={params.backscatter_units}"
+
+                if params.gamma is not None:
+                    ax_title += rf", $\gamma$-correction={params.gamma}"
+
+                nisarqa.rslc.img2pdf_grayscale(
+                    img_arr=corrected_img,
+                    fig_title=fig_title,
+                    ax_title=ax_title,
+                    ylim=img.y_axis_limits,
+                    xlim=img.x_axis_limits,
+                    colorbar_formatter=colorbar_formatter,
+                    ylabel=img.y_axis_label,
+                    xlabel=img.x_axis_label,
+                    plots_pdf=report_pdf,
+                    nan_color=params.nan_color,
+                )
 
                 # If this backscatter image is needed to construct the browse image...
                 if (freq in layers_for_browse) and (
