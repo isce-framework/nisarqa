@@ -80,7 +80,6 @@ def file_is_empty(filepath: str | os.PathLike) -> bool:
     return os.stat(filepath).st_size == 0
 
 
-@nisarqa.log_function_start_and_stop_time
 def run_abscal_single_freq_pol(
     corner_reflector_csv: str | os.PathLike,
     rslc_hdf5: str | os.PathLike,
@@ -385,7 +384,6 @@ def run_neb_tool(
             # TODO: Step 2: create plots
 
 
-@nisarqa.log_function_start_and_stop_time
 def run_rslc_pta_single_freq_pol(
     corner_reflector_csv: str | os.PathLike,
     rslc_hdf5: str | os.PathLike,
@@ -467,7 +465,6 @@ def run_rslc_pta_single_freq_pol(
             return json.load(tmpfile)
 
 
-@nisarqa.log_function_start_and_stop_time
 def run_gslc_pta_single_freq_pol(
     corner_reflector_csv: str | os.PathLike,
     gslc_hdf5: str | os.PathLike,

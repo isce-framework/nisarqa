@@ -455,7 +455,6 @@ def process_backscatter_imgs_and_browse(
 
 
 # TODO - move to generic location
-@nisarqa.log_function_start_and_stop_time
 def get_multilooked_backscatter_img(
     img, params, stats_h5, input_raster_represents_power=False
 ):
@@ -1188,7 +1187,6 @@ def process_backscatter_and_phase_histograms(
             )
 
 
-@nisarqa.log_function_start_and_stop_time
 def generate_backscatter_image_histogram_single_freq(
     product: nisarqa.NonInsarProduct,
     freq: str,
@@ -1338,7 +1336,6 @@ def generate_backscatter_image_histogram_single_freq(
     log.info(f"Backscatter Image Histograms for Frequency {freq} complete.")
 
 
-@nisarqa.log_function_start_and_stop_time
 def generate_phase_histogram_single_freq(
     product: nisarqa.NonInsarProduct,
     freq: str,
@@ -1556,7 +1553,6 @@ def process_range_spectra(
             )
 
 
-@nisarqa.log_function_start_and_stop_time
 def generate_range_spectra_single_freq(
     product: nisarqa.RSLC,
     freq: str,
@@ -1745,7 +1741,6 @@ def process_azimuth_spectra(
             )
 
 
-@nisarqa.log_function_start_and_stop_time
 def generate_az_spectra_single_freq(
     product: nisarqa.RSLC,
     freq: str,

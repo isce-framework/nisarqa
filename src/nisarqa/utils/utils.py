@@ -15,7 +15,7 @@ from collections.abc import (
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Any, Optional, overload
+from typing import Optional, TypeVar, overload
 
 import h5py
 import numpy as np
@@ -24,6 +24,10 @@ from ruamel.yaml import YAML
 
 import nisarqa
 from nisarqa.utils.typing import RunConfigDict, T
+
+# Used for callable types
+# TODO - where in the codebase should T and P live?
+T = TypeVar("T")
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -432,56 +436,100 @@ def set_logger_handler(
         log.addHandler(handler)
 
 
-def log_function_start_and_stop_time(func):
+@contextmanager
+def log_runtime(msg: str) -> Generator[None, None, None]:
     """
-    Function decorator which logs the start and completion of a function.
+    Log the runtime of the context manager's block with microsecond precision.
 
-    Useful for benchmarking; the log file can be parsed for timings.
+    Parameters
+    ----------
+    msg : str
+        Prefix for the log message. Format of logged message will be:
+            "Runtime: <msg> took <duration>".
+    """
+    tic = datetime.now()
+    yield
+    toc = datetime.now()
+    nisarqa.get_logger().info(f"Runtime: {msg} took {toc - tic}")
 
-    The function's arguments are also logged. This may be useful for logging
-    multiple invocations of the same function with different arguments.
+
+def log_function_runtime(func: Callable[..., T]) -> Callable[..., T]:
+    """
+    Function decorator to log the runtime of a function.
+
+    Parameters
+    ----------
+    func : callable
+        Function that will have its runtime logged.
+
+    See Also
+    --------
+    log_runtime :
+        Context manager to log runtime with a custom message.
+        Useful if the arguments are too verbose for nice log messages.
+    log_function_runtime_with_arguments :
+        Function decorator to log a function's runtime along with its arguments.
     """
 
     @wraps(func)
     def wrapper(*args, **kwargs):
 
-        # Construct the "arguments" string for the log message
+        with log_runtime(f"`{func.__name__}`"):
+            return func(*args, **kwargs)
+
+    return wrapper
+
+
+def log_function_runtime_with_arguments(
+    func: Callable[..., T],
+) -> Callable[..., T]:
+    """
+    Function decorator to log the runtime of a function and its arguments.
+
+    The function's arguments are also logged. This may be useful for logging
+    multiple invocations of the same function with different arguments.
+    If an individual argument's `repr` is longer than 100 characters, the
+    argument's value's `repr` will be used and then truncated; this is to
+    prevent e.g. large NumPy arrays from being logged.
+
+    Parameters
+    ----------
+    func : callable
+        Function that will have its runtime and arguments logged.
+
+    Warnings
+    -------
+    Logging all arguments in a log message can become very verbose.
+    Recommend testing to ensure reasonable log messages.
+
+    See Also
+    --------
+    log_runtime :
+        Context manager to log runtime with a custom message.
+        Useful if the arguments are too verbose for nice log messages.
+    log_function_runtime :
+        Function decorator to log a function's runtime, but without
+        logging the arguments.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
         def trunc(arg) -> str:
-            max_length = 100 if isinstance(arg, nisarqa.YamlParamGroup) else 40
+            max_length = 100
             a = repr(arg)
-            if len(a) < max_length or isinstance(
-                arg, (h5py.Dataset, nisarqa.ComplexFloat16Decoder)
-            ):
+            if len(a) <= max_length:
                 return arg
             else:
                 return f"{a[:max_length]}(...)"
 
-        name = ""
-        obj_with_name_attr = (
-            h5py.Dataset,
-            nisarqa.ComplexFloat16Decoder,
-            nisarqa.Raster,
-        )
-        for a in args:
-            if isinstance(a, obj_with_name_attr):
-                name = f"{a.name}. "
-                break
-        if not name:
-            for val in kwargs.values():
-                if isinstance(val, obj_with_name_attr):
-                    name = f"{val.name}. "
-                    break
         trunc_args = tuple(trunc(i) for i in args)
         trunc_kwargs = {key: trunc(val) for key, val in kwargs.items()}
 
-        suffix = f"Called `{func.__name__}` with args={trunc_args} and kwargs={trunc_kwargs}."
+        suffix = f"`{func.__name__}` with args={trunc_args} and kwargs={trunc_kwargs}"
 
-        # Log the start, run the function, log completion, return the results
-        log = nisarqa.get_logger()
-        log.info(f"Starting function: {suffix}")
-        result = func(*args, **kwargs)
-        log.info(f"Function complete: {suffix}")
-        return result
+        with log_runtime(suffix):
+            return func(*args, **kwargs)
 
     return wrapper
 
