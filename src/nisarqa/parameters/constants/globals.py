@@ -144,8 +144,6 @@ PRODUCT_SPECS_PATH = Path(__file__).parent.parent / "product_specs"
 
 complex32 = np.dtype([("r", np.float16), ("i", np.float16)])
 
-_image_cache_dict: dict = {}
-
 
 # The are global constants and not functions nor classes,
 # so manually create the __all__ attribute.
@@ -170,5 +168,4 @@ __all__ = [
     "GCOV_OFF_DIAG_POLS",
     "SEABORN_COLORBLIND",
     "complex32",
-    "_image_cache_dict",
 ]

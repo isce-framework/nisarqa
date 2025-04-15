@@ -1052,17 +1052,31 @@ class ProductPathGroupParamGroup(YamlParamGroup):
         },
     )
 
+    scratch_dir: str | os.PathLike = field(
+        default="./qa_scratch",
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="scratch_path",
+                descr="""Directory where SAS can write temporary data.""",
+            )
+        },
+    )
+
     def __post_init__(self):
         # VALIDATE INPUTS
 
-        if not isinstance(self.qa_output_dir, (str, os.PathLike)):
-            raise TypeError(f"`qa_output_dir` must be path-like")
+        for dir_name, dir, dir_type in (
+            ("qa_output_dir", self.qa_output_dir, "output"),
+            ("scratch_dir", self.scratch_dir, "scratch"),
+        ):
+            if not isinstance(dir, (str, os.PathLike)):
+                raise TypeError(f"`{dir_name}` must be path-like")
 
-        # If this directory does not exist, make it.
-        if not os.path.isdir(self.qa_output_dir):
-            log = nisarqa.get_logger()
-            log.info(f"Creating QA output directory: {self.qa_output_dir}")
-            os.makedirs(self.qa_output_dir, exist_ok=True)
+            # If this directory does not exist, make it.
+            if not os.path.isdir(dir):
+                log = nisarqa.get_logger()
+                log.info(f"Creating QA {dir_type} directory: {dir}")
+                os.makedirs(dir, exist_ok=True)
 
     @staticmethod
     def get_path_to_group_in_runconfig():

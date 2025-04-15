@@ -341,14 +341,15 @@ def _get_dataset_handle(
 
 
 @lru_cache
-def _get_memmap(input_file: str, img_path: str) -> tuple[str, str, Any]:
+def _get_memmap(
+    input_file: str, img_path: str, scratch_dir: str
+) -> tuple[str, str, Any]:
     """TODO"""
     # Get tmp memmap file name
     img_name = img_path.split("SAR/")[-1].replace("/", "-")
 
     random_number = random.randint(1, 100000)
-    tmp_file = f"./qa/memmap-{img_name}-{random_number}.dat"
-    # print(f"{tmp_file=}")
+    tmp_file = Path(scratch_dir, f"memmap-{img_name}-{random_number}.dat")
 
     # Create a memmap with dtype and shape that matches our data:
     with h5py.File(input_file, "r") as h5_f:
@@ -358,11 +359,10 @@ def _get_memmap(input_file: str, img_path: str) -> tuple[str, str, Any]:
             tmp_file, dtype="complex64", mode="w+", shape=h5_ds.shape
         )
 
-        # Write data to memmap array.
+        # Write data to memmap.
         # Note: This is an expensive operation. All decompression,
-        # de-chunking, etc. costs are handled here.
+        # de-chunking, etc. costs are incurred here.
         with nisarqa.log_runtime(f"Create memmap for {img_path}"):
-            # TODO - write as blocks to memory
             tile_iter = nisarqa.TileIterator(
                 arr_shape=h5_ds.shape,
                 axis_0_tile_dim=512,
@@ -373,12 +373,6 @@ def _get_memmap(input_file: str, img_path: str) -> tuple[str, str, Any]:
             # are constrained such that the 'uneven edges' will be ignored.
             for tile in tile_iter:
                 img_memmap[tile] = h5_ds[tile]
-
-            # img_memmap[:] = h5_ds[()]
-
-        # with nisarqa.log_runtime(f"Flush memmap to disk for {img_path}"):
-        #     # Flush to write the changes to the file
-        #     fp.flush()
 
         # Prior to Python 3.13 there is no API to close the underlying mmap.
         # So, the memmap will remain open for the duration of the program.
@@ -1182,7 +1176,7 @@ class NisarProduct(ABC):
     def _image_cache(self, img_path: str) -> ArrayLike:
         """TODO: Docstring"""
 
-        return _get_memmap(self.filepath, img_path)
+        return _get_memmap(self.filepath, img_path, scratch_dir)
 
     @abstractmethod
     def _get_raster_from_path(
