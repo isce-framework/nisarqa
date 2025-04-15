@@ -15,7 +15,7 @@ from collections.abc import (
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, TypeVar, overload
+from typing import Optional, overload
 
 import h5py
 import numpy as np
@@ -24,10 +24,6 @@ from ruamel.yaml import YAML
 
 import nisarqa
 from nisarqa.utils.typing import RunConfigDict, T
-
-# Used for callable types
-# TODO - where in the codebase should T and P live?
-T = TypeVar("T")
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -458,7 +454,9 @@ def log_runtime(msg: str) -> Generator[None, None, None]:
     nisarqa.get_logger().info(f"Runtime: {msg} took {toc - tic}")
 
 
-def log_function_runtime(func: Callable[..., T]) -> Callable[..., T]:
+def log_function_runtime(
+    func: Callable[..., nisarqa.T],
+) -> Callable[..., nisarqa.T]:
     """
     Function decorator to log the runtime of a function.
 
