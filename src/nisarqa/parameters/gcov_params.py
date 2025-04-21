@@ -7,8 +7,9 @@ from typing import Optional
 import nisarqa
 from nisarqa.parameters.nisar_params import (
     InputFileGroupParamGroup,
-    ProductPathGroupParamGroup,
-    RootParamGroup,
+    ScratchProductPathGroupParamGroup,
+    SoftwareConfigGroupParamGroup,
+    NonInsarRootParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
 )
@@ -84,7 +85,7 @@ class GCOVHistogramParamGroup(HistogramParamGroup):
 
 
 @dataclass
-class GCOVRootParamGroup(RootParamGroup):
+class GCOVRootParamGroup(NonInsarRootParamGroup):
     """
     Dataclass of all *ParamGroup objects to process QA for NISAR GCOV products.
 
@@ -101,8 +102,10 @@ class GCOVRootParamGroup(RootParamGroup):
         QA Workflows parameters
     input_f : InputFileGroupParamGroup or None, optional
         Input File Group parameters for QA
-    prodpath : ProductPathGroupParamGroup or None, optional
+    prodpath : ScratchProductPathGroupParamGroup or None, optional
         Product Path Group parameters for QA
+    software_config : SoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
@@ -111,9 +114,8 @@ class GCOVRootParamGroup(RootParamGroup):
         Histogram Group parameters for GCOV QA
     """
 
-    # Shared parameters
-    input_f: Optional[InputFileGroupParamGroup] = None
-    prodpath: Optional[ProductPathGroupParamGroup] = None
+    # Overwrite parent's attributes b/c new type
+    prodpath: Optional[ScratchProductPathGroupParamGroup] = None
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -121,7 +123,9 @@ class GCOVRootParamGroup(RootParamGroup):
 
     @staticmethod
     def get_mapping_of_workflows2param_grps(workflows):
-        Grp = RootParamGroup.ReqParamGrp  # class object for our named tuple
+        Grp = (
+            NonInsarRootParamGroup.ReqParamGrp
+        )  # class object for our named tuple
 
         flag_any_workflows_true = any(
             [getattr(workflows, field.name) for field in fields(workflows)]
@@ -136,7 +140,12 @@ class GCOVRootParamGroup(RootParamGroup):
             Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
-                param_grp_cls_obj=ProductPathGroupParamGroup,
+                param_grp_cls_obj=ScratchProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=SoftwareConfigGroupParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -163,8 +172,9 @@ class GCOVRootParamGroup(RootParamGroup):
         # the groups will appear in the runconfig.
         return {
             "input_f": InputFileGroupParamGroup,
-            "prodpath": ProductPathGroupParamGroup,
+            "prodpath": ScratchProductPathGroupParamGroup,
             "workflows": WorkflowsParamGroup,
+            "software_config": SoftwareConfigGroupParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": GCOVHistogramParamGroup,

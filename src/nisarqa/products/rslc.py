@@ -21,6 +21,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
+@nisarqa.prep_scratch_dir_from_root_params
 def verify_rslc(
     root_params: nisarqa.RSLCRootParamGroup, verbose: bool = False
 ) -> None:
@@ -59,6 +60,7 @@ def verify_rslc(
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
+    scratch_dir = root_params.prodpath.scratch_dir
 
     msg = f"Starting Quality Assurance for input file: {input_file}"
     log.info(msg)
@@ -71,7 +73,12 @@ def verify_rslc(
 
     try:
         # All worksflows use the RSLC() product; only initialize once.
-        product = nisarqa.RSLC(filepath=input_file)
+        product = nisarqa.RSLC(
+            filepath=input_file,
+            use_cache=root_params.software_config.use_cache,
+            cache_dir=scratch_dir,
+            # prime_the_cache=True,  # we analyze all images, so prime the cache
+        )
     except:
         # Input product could not be opened via the product reader.
         summary.check_can_open_input_file(result="FAIL")

@@ -3,6 +3,8 @@ from __future__ import annotations
 import logging
 import math
 import os
+import shutil
+import tempfile
 import warnings
 from collections.abc import (
     Callable,
@@ -15,7 +17,8 @@ from collections.abc import (
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional, overload
+from pathlib import Path
+from typing import Any, Generic, Optional, Protocol, overload
 
 import h5py
 import numpy as np
@@ -645,6 +648,132 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
     for b in iterator:
         yield a, b
         a = b
+
+
+@contextmanager
+def scratch_directory(
+    dir_: str | os.PathLike | None = None, *, delete: bool = True
+) -> Generator[Path, None, None]:
+    """
+    Context manager that creates a (possibly temporary) file system directory.
+
+    Parameters
+    ----------
+    dir_ : path-like or None, optional
+        Scratch directory path.
+        If `dir_` is a path-like object, a directory will be created at the
+        specified file system path if it did not already exist.
+        If `dir_` is None, a temporary directory will be created as though by
+        `tempfile.mkdtemp()`.
+        Defaults to None.
+    delete : bool, optional
+        If True, the directory and its contents are recursively removed from the
+        file system upon exiting the context manager.
+        Defaults to True.
+
+    Yields
+    ------
+    pathlib.Path
+        Scratch directory path. If `delete` was True, the directory will be
+        removed from the file system upon exiting the context manager scope.
+
+    Warnings
+    --------
+    Even if `dir_` previously existed on the file system, if `delete` is True,
+    then `dir_` will be deleted.
+    """
+    if dir_ is None:
+        scratchdir = Path(tempfile.mkdtemp())
+    else:
+        scratchdir = Path(dir_)
+        scratchdir.mkdir(parents=True, exist_ok=True)
+
+    yield scratchdir
+
+    if delete:
+        shutil.rmtree(scratchdir)
+
+
+# TODO - delete this function during code review if it remains unused
+def make_scratch_file(
+    *,
+    dir_: os.PathLike | str | None = None,
+    prefix: str | None = None,
+    suffix: str | None = None,
+) -> Path:
+    """
+    Create a uniquely-named scratch filepath as though by `tempfile.mkstemp()`.
+
+    Parameters
+    ----------
+    dir_ : path-like or None, optional
+        If dir_ is not None, the file will be created in that directory.
+        Otherwise, a default directory is used per `tempfile.mkstemp()`:
+        https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp
+        Defaults to None.
+    prefix, suffix : str or None, optional
+        Prefix and suffix for the scratch file, as per `tempfile.mkstemp()`:
+        https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp
+        Defaults to None.
+
+    Returns
+    -------
+    path : pathlib.Path
+        Filepath to a uniquely-named scratch file.
+    """
+    if dir_ is not None:
+        dir_ = os.fsdecode(dir_)
+    file, filename = tempfile.mkstemp(dir=dir_, prefix=prefix, suffix=suffix)
+    os.close(file)
+    return Path(filename)
+
+
+class VerifyFunc(Protocol, Generic[T]):
+    def __call__(
+        self,
+        root_params: nisarqa.NonInsarRootParamGroup,
+        *args: Any,
+        **kwargs: Any,
+    ) -> T: ...
+
+
+def prep_scratch_dir_from_root_params(
+    func: VerifyFunc[T],
+) -> VerifyFunc[T]:
+    """
+    Function decorator to handle setup and cleanup of a scratch directory.
+
+    Parameters
+    ----------
+    func : nisarqa.VerifyFunc
+        Function that will be wrapped. Per the nisarqa.VerifyFunc Protocol,
+        `func`'s first argument must be a root parameter group. This decorator
+        will parse the scratch directory path name and the user's request
+        of whether or not to cleanup the scratch directory after `func` has
+        finished from this root parameter group.
+
+    Returns
+    -------
+    wrapped_func : nisarqa.VerifyFunc
+        `func` that has been wrapped.
+    """
+
+    @wraps(func)
+    def wrapped_func(*args, **kwargs):
+        if len(args) > 0 and isinstance(
+            args[0], nisarqa.NonInsarRootParamGroup
+        ):
+            root_params = args[0]
+        else:
+            root_params = kwargs["root_params"]
+        qa_scratch_dir = root_params.prodpath.scratch_dir
+
+        delete = root_params.software_config.delete_scratch_dir
+
+        with scratch_directory(dir_=qa_scratch_dir, delete=delete):
+            return func(*args, **kwargs)
+
+    return wrapped_func
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

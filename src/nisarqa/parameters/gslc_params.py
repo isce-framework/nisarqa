@@ -8,8 +8,9 @@ from nisarqa import (
     HistogramParamGroup,
     InputFileGroupParamGroup,
     PointTargetAnalyzerParamGroup,
-    ProductPathGroupParamGroup,
-    RootParamGroup,
+    ScratchProductPathGroupParamGroup,
+    SoftwareConfigGroupParamGroup,
+    NonInsarRootParamGroup,
     SLCWorkflowsParamGroup,
     ValidationGroupParamGroup,
     YamlAttrs,
@@ -85,7 +86,7 @@ class GSLCDynamicAncillaryFileParamGroup(DynamicAncillaryFileParamGroup):
 
 
 @dataclass
-class GSLCRootParamGroup(RootParamGroup):
+class GSLCRootParamGroup(NonInsarRootParamGroup):
     """
     Dataclass of all *ParamGroup objects to process QA for NISAR GSLC products.
 
@@ -102,8 +103,10 @@ class GSLCRootParamGroup(RootParamGroup):
         GSLC QA Workflows parameters
     input_f : InputFileGroupParamGroup or None, optional
         Input File Group parameters for QA
-    prodpath : ProductPathGroupParamGroup or None, optional
+    prodpath : ScratchProductPathGroupParamGroup or None, optional
         Product Path Group parameters for QA
+    software_config : SoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
@@ -116,10 +119,9 @@ class GSLCRootParamGroup(RootParamGroup):
         Point Target Analyzer group parameters for GSLC QA-Caltools
     """
 
-    # Shared parameters
-    workflows: (
-        SLCWorkflowsParamGroup  # overwrite parent's `workflows` b/c new type
-    )
+    # Overwrite parent's attributes b/c new type
+    workflows: SLCWorkflowsParamGroup
+    prodpath: ScratchProductPathGroupParamGroup = None
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -167,7 +169,9 @@ class GSLCRootParamGroup(RootParamGroup):
 
     @staticmethod
     def get_mapping_of_workflows2param_grps(workflows):
-        Grp = RootParamGroup.ReqParamGrp  # class object for our named tuple
+        Grp = (
+            NonInsarRootParamGroup.ReqParamGrp
+        )  # class object for our named tuple
 
         flag_any_workflows_true = any(
             [getattr(workflows, field.name) for field in fields(workflows)]
@@ -182,7 +186,12 @@ class GSLCRootParamGroup(RootParamGroup):
             Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
-                param_grp_cls_obj=ProductPathGroupParamGroup,
+                param_grp_cls_obj=ScratchProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=SoftwareConfigGroupParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -220,8 +229,9 @@ class GSLCRootParamGroup(RootParamGroup):
         return {
             "input_f": InputFileGroupParamGroup,
             "anc_files": GSLCDynamicAncillaryFileParamGroup,
-            "prodpath": ProductPathGroupParamGroup,
+            "prodpath": ScratchProductPathGroupParamGroup,
             "workflows": SLCWorkflowsParamGroup,
+            "software_config": SoftwareConfigGroupParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": HistogramParamGroup,

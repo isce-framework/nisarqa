@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
-
 import matplotlib
 
 # Switch backend to one that doesn't require DISPLAY to be set since we're

@@ -727,8 +727,6 @@ def compute_az_spectra_by_tiling(
 
     To reduce processing time, users can decrease the interval of `col_indices`.
     """
-    log = nisarqa.get_logger()
-
     arr_shape = np.shape(arr)
     if len(arr_shape) != 2:
         raise ValueError(

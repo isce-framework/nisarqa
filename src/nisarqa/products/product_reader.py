@@ -5,11 +5,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
-from functools import cache, cached_property, lru_cache
+from functools import cached_property, lru_cache
 from pathlib import Path
-import random
 from typing import Any, overload
 from numpy.typing import ArrayLike
+from pathlib import Path
+import tempfile
 
 import h5py
 import isce3
@@ -342,41 +343,153 @@ def _get_dataset_handle(
 
 @lru_cache
 def _get_memmap(
-    input_file: str, img_path: str, scratch_dir: str
-) -> tuple[str, str, Any]:
-    """TODO"""
+    input_file: str | os.PathLike,
+    img_path: str,
+    cache_dir: str | os.PathLike | None = None,
+) -> np.memmap:
+    """
+
+    Parameters
+    ----------
+    input_file : path-like
+        HDF5 input file.
+    img_path : string
+        Path in the HDF5 input file to the 2-D Dataset to be memmap'ed.
+        Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
+    cache_dir : path-like or None, optional
+        Directory where QA software may write memmap data.
+        If `cache_dir` is a path-like object, a directory will be created at the
+        specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as though by
+        `tempfile.mkdtemp()`.
+        Directory and memmap files will not be cleaned up by this function.
+        Defaults to None.
+
+    Returns
+    -------
+    img_memmap : numpy.memmap
+        `memmap` copy of the `img_path` Dataset.
+
+    Notes
+    -----
+    Prior to Python 3.13 there is no API to close the underlying mmap.
+    So, the memmap will remain open for the duration of the program.
+    Source: https://numpy.org/doc/2.2/reference/generated/numpy.memmap.html
+    """
+    log = nisarqa.get_logger()
+
     # Get tmp memmap file name
-    img_name = img_path.split("SAR/")[-1].replace("/", "-")
+    with nisarqa.scratch_directory(dir_=cache_dir, delete=False):
+        tmp_file = Path(cache_dir) / f"{img_path.replace('/', '-')}.dat"
 
-    random_number = random.randint(1, 100000)
-    tmp_file = Path(scratch_dir, f"memmap-{img_name}-{random_number}.dat")
-
-    # Create a memmap with dtype and shape that matches our data:
+    # Create a memmap with dtype and shape that matches our data
     with h5py.File(input_file, "r") as h5_f:
         h5_ds = _get_dataset_handle(h5_file=h5_f, raster_path=img_path)
+        arr_shape = np.shape(h5_ds)
+        if len(arr_shape) != 2:
+            raise ValueError(
+                f"Input array has {len(arr_shape)} dimensions, but must be 2D."
+            )
 
         img_memmap = np.memmap(
-            tmp_file, dtype="complex64", mode="w+", shape=h5_ds.shape
+            tmp_file, dtype=h5_ds.dtype, mode="w+", shape=arr_shape
         )
 
         # Write data to memmap.
         # Note: This is an expensive operation. All decompression,
         # de-chunking, etc. costs are incurred here.
-        with nisarqa.log_runtime(f"Create memmap for {img_path}"):
-            tile_iter = nisarqa.TileIterator(
-                arr_shape=h5_ds.shape,
-                axis_0_tile_dim=512,
-                axis_1_tile_dim=512,
+
+        # tuple giving the chunk shape, or None if chunked storage is not used
+        chunks = h5_ds.chunks
+        if chunks is not None:
+            axis0_tile_dim = chunks[0]
+            axis1_tile_dim = chunks[1]
+            log.info(f"Dataset {img_path} has chunk shape {chunks}.")
+
+            # Edge case: dimension(s) are smaller than the chunk size,
+            # so adjust the lengths which will be used for the tile iterators
+            if arr_shape[0] < axis0_tile_dim:
+                axis0_tile_dim = arr_shape[0]
+            if arr_shape[1] < axis1_tile_dim:
+                axis1_tile_dim = arr_shape[1]
+
+        else:
+            # HDF5 defaults to row-major ordering, so use full rows
+            axis0_tile_dim = min(32, arr_shape[0])  # not too big
+            axis1_tile_dim = arr_shape[1]
+            log.info(
+                f"Dataset {img_path} not written with chunked storage."
+                f" Input array with shape {arr_shape} will be memmap'ed"
+                f" with tile shape ({axis0_tile_dim}, {axis1_tile_dim})."
             )
 
-            # Ok to pass the full input array; the tiling iterators
-            # are constrained such that the 'uneven edges' will be ignored.
-            for tile in tile_iter:
-                img_memmap[tile] = h5_ds[tile]
+        with nisarqa.log_runtime(f"Create memmap for {img_path}"):
+            # Note: TileIterator is constrained such that the 'uneven edges'
+            # are truncated. Will first memmap the full tiles, and then memmap
+            # the "leftover" right and bottom edges.
 
-        # Prior to Python 3.13 there is no API to close the underlying mmap.
-        # So, the memmap will remain open for the duration of the program.
-        # Source: https://numpy.org/doc/2.2/reference/generated/numpy.memmap.html
+            with nisarqa.log_runtime(f"memmap full tiles for {img_path}"):
+                # Step 1: memmap full tiles (edges are truncated)
+                tile_iter = nisarqa.TileIterator(
+                    arr_shape=arr_shape,
+                    axis_0_tile_dim=axis0_tile_dim,
+                    axis_1_tile_dim=axis1_tile_dim,
+                )
+                for tile in tile_iter:
+                    img_memmap[tile] = h5_ds[tile]
+
+            if arr_shape[0] % axis0_tile_dim > 0:
+                with nisarqa.log_runtime(f"memmap right side for {img_path}"):
+                    # Step 2: memmap the "leftover" right edge
+                    # Do not include leftover "bottom" edge here; do that below
+                    right_axis0_slice = slice(
+                        0,
+                        arr_shape[0] - (arr_shape[0] % axis0_tile_dim),
+                    )
+                    right_axis1_slice = slice(
+                        arr_shape[1] - (arr_shape[1] % axis1_tile_dim),
+                        arr_shape[1],
+                    )
+                    right_side = nisarqa.SubBlock2D(
+                        arr=h5_ds, slices=[right_axis0_slice, right_axis1_slice]
+                    )
+                    right_side_iter = nisarqa.TileIterator(
+                        arr_shape=right_side.shape,
+                        axis_0_tile_dim=axis0_tile_dim,
+                    )
+                    for tile in right_side_iter:
+                        img_memmap[tile] = right_side[tile]
+
+            if arr_shape[1] % axis1_tile_dim > 0:
+                with nisarqa.log_runtime(f"memmap bottom for {img_path}"):
+                    # Step 3: memmap the "leftover" bottom edge
+                    bottom_axis0_slice = slice(
+                        arr_shape[0] - (arr_shape[0] % axis0_tile_dim),
+                        arr_shape[0],
+                    )
+                    bottom_axis1_slice = slice(
+                        0,
+                        arr_shape[1] - (arr_shape[1] % axis1_tile_dim),
+                    )
+
+                    bottom_side = nisarqa.SubBlock2D(
+                        arr=h5_ds,
+                        slices=[bottom_axis0_slice, bottom_axis1_slice],
+                    )
+                    bottom_side_iter = nisarqa.TileIterator(
+                        arr_shape=bottom_side.shape,
+                        axis_1_tile_dim=axis1_tile_dim,
+                    )
+                    for tile in bottom_side_iter:
+                        img_memmap[tile] = bottom_side[tile]
+
+            if (arr_shape[0] % axis0_tile_dim > 0) and (
+                arr_shape[1] % axis1_tile_dim > 0
+            ):
+                # Step 4: memmap the bottom-right corner
+                corner_slices = (bottom_axis0_slice, right_axis1_slice)
+                img_memmap[corner_slices] = h5_ds[corner_slices]
+
         return img_memmap
 
 
@@ -389,10 +502,26 @@ class NisarProduct(ABC):
     ----------
     filepath : path-like
         Filepath to the input product.
+    use_cache : bool, optional
+        True to use memory map(s) to cache select Dataset(s).
+        False to always read data directly from the input file.
+        Generally, enabling caching should reduce runtime.
+        Defaults to False.
+    cache_dir : path-like, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `cache_dir` is a path-like object, it should already exist.
+        If `use_cache` is True and if `cache_dir` is None, a temporary
+        directory will be created as though by `tempfile.mkdtemp()`
+        and `cache_dir` instance attribute will be updated.
+        If `cache_dir` is None and if `use_cache` is False, a temporary
+        directory will not be created.
+        Defaults to None.
     """
 
-    # Full file path to the input product file.
     filepath: str
+    use_cache: bool = False
+    cache_dir: str | os.PathLike | None = None
 
     def __post_init__(self):
         # Verify that the input product contained a product spec version.
@@ -402,6 +531,17 @@ class NisarProduct(ABC):
         self._check_root_path()
         self._check_is_geocoded()
         self._check_data_group_path()
+
+        if self.cache_dir is None:
+            if self.use_cache:
+                object.__setattr__(self, "cache_dir", Path(tempfile.mkdtemp()))
+        else:
+            # cache directory should already exist
+            path = Path(self.cache_dir)
+            if not (path.exists() and path.is_dir()):
+                raise ValueError(
+                    f"{self.cache_dir=}; does not exist or is not a directory."
+                )
 
     @property
     @abstractmethod
@@ -1173,11 +1313,6 @@ class NisarProduct(ABC):
 
         return path
 
-    def _image_cache(self, img_path: str) -> ArrayLike:
-        """TODO: Docstring"""
-
-        return _get_memmap(self.filepath, img_path, scratch_dir)
-
     @abstractmethod
     def _get_raster_from_path(
         self, h5_file: h5py.File, raster_path: str, *, parse_stats: bool
@@ -1548,9 +1683,12 @@ class NisarRadarProduct(NisarProduct):
         # Get dataset object and check for correct dtype
         dataset = _get_dataset_handle(h5_file, raster_path)
 
-        use_cache = True
-        if use_cache:
-            kwargs["data"] = self._image_cache(img_path=raster_path)
+        if self.use_cache:
+            kwargs["data"] = _get_memmap(
+                input_file=self.filepath,
+                img_path=raster_path,
+                cache_dir=self.cache_dir,
+            )
         else:
             kwargs["data"] = dataset
 
@@ -1827,7 +1965,15 @@ class NisarGeoProduct(NisarProduct):
 
         # Get dataset object and check for correct dtype
         dataset = _get_dataset_handle(h5_file, raster_path)
-        kwargs["data"] = dataset
+
+        if self.use_cache:
+            kwargs["data"] = _get_memmap(
+                input_file=self.filepath,
+                img_path=raster_path,
+                cache_dir=self.cache_dir,
+            )
+        else:
+            kwargs["data"] = dataset
 
         kwargs["units"] = _get_units(dataset)
         kwargs["fill_value"] = _get_fill_value(dataset)
