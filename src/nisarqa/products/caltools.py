@@ -6,7 +6,6 @@ import os
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
-from tempfile import NamedTemporaryFile
 from typing import Any
 
 import h5py
@@ -86,6 +85,7 @@ def run_abscal_single_freq_pol(
     freq: str,
     pol: str,
     abscal_params: AbsCalParamGroup,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> list[dict[str, Any]]:
     """
     Run the absolute radiometric calibration (AbsCal) tool.
@@ -112,6 +112,13 @@ def run_abscal_single_freq_pol(
     abscal_params : AbsCalParamGroup
         A dataclass containing the parameters for processing
         and outputting the Absolute Calibration Factor workflow.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
 
     Returns
     -------
@@ -143,25 +150,30 @@ def run_abscal_single_freq_pol(
     kwds["pthresh"] = kwds.pop("power_threshold")
 
     # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run AbsCal tool.
-        estimate_abscal_factor.main(
-            corner_reflector_csv=corner_reflector_csv,
-            csv_format="nisar",
-            rslc_hdf5=rslc_hdf5,
-            output_json=tmpfile.name,
-            freq=freq,
-            pol=pol,
-            external_orbit_xml=None,  # Use the orbit in the RSLC product.
-            **kwds,
-        )
+    tmpfile = nisarqa.make_scratch_file(
+        dir_=scratch_dir, prefix=f"abscal-{freq}-{pol}-", suffix=".json"
+    )
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Run AbsCal tool.
+    estimate_abscal_factor.main(
+        corner_reflector_csv=corner_reflector_csv,
+        csv_format="nisar",
+        rslc_hdf5=rslc_hdf5,
+        output_json=tmpfile,
+        freq=freq,
+        pol=pol,
+        external_orbit_xml=None,  # Use the orbit in the RSLC product.
+        **kwds,
+    )
+
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            data = json.load(f)
+        return data
 
 
 def populate_abscal_hdf5_output(
@@ -283,6 +295,7 @@ def run_abscal_tool(
     dyn_anc_params: DynamicAncillaryFileParamGroup,
     rslc: nisarqa.RSLC,
     stats_filename: str | os.PathLike,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> None:
     """
     Run the Absolute Calibration Factor workflow.
@@ -300,6 +313,13 @@ def run_abscal_tool(
     stats_filename : path-like
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
     """
     for freq in rslc.freqs:
         # The scattering matrix of a canonical triangular trihedral corner
@@ -318,6 +338,7 @@ def run_abscal_tool(
                     freq=freq,
                     pol=pol,
                     abscal_params=abscal_params,
+                    scratch_dir=scratch_dir,
                 )
             nisarqa.get_logger().info(
                 f"AbsCal Tool for Frequency {freq}, Polarization {pol}"
@@ -391,6 +412,7 @@ def run_rslc_pta_single_freq_pol(
     freq: str,
     pol: str,
     pta_params: RSLCPointTargetAnalyzerParamGroup,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> list[dict[str, Any]]:
     """
     Run the RSLC point target analysis (PTA) tool.
@@ -417,6 +439,13 @@ def run_rslc_pta_single_freq_pol(
     pta_params : RSLCPointTargetAnalyzerParamGroup
         A dataclass containing the parameters for processing
         and outputting the Point Target Analyzer workflow.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
 
     Returns
     -------
@@ -444,25 +473,29 @@ def run_rslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run PTA tool.
-        point_target_analysis.process_corner_reflector_csv(
-            corner_reflector_csv=corner_reflector_csv,
-            csv_format="nisar",
-            rslc_hdf5=rslc_hdf5,
-            output_json=tmpfile.name,
-            freq=freq,
-            pol=pol,
-            cuts=True,
-            **kwds,
-        )
+    tmpfile = nisarqa.make_scratch_file(
+        dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
+    )
+    # Run PTA tool.
+    point_target_analysis.process_corner_reflector_csv(
+        corner_reflector_csv=corner_reflector_csv,
+        csv_format="nisar",
+        rslc_hdf5=rslc_hdf5,
+        output_json=tmpfile,
+        freq=freq,
+        pol=pol,
+        cuts=True,
+        **kwds,
+    )
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            data = json.load(f)
+        return data
 
 
 def run_gslc_pta_single_freq_pol(
@@ -473,6 +506,7 @@ def run_gslc_pta_single_freq_pol(
     pol: str,
     pta_params: PointTargetAnalyzerParamGroup,
     dem_file: str | os.PathLike | None = None,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> list[dict[str, Any]]:
     """
     Run the GSLC point target analysis (PTA) tool.
@@ -505,6 +539,13 @@ def run_gslc_pta_single_freq_pol(
         applicable (i.e. if the GSLC was flattened). If None (no DEM is
         supplied), the PTA tool will attempt to un-flatten using the reference
         ellipsoid, which may produce less accurate results. Defaults to None.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
 
     Returns
     -------
@@ -532,26 +573,30 @@ def run_gslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run PTA tool.
-        gslc_point_target_analysis.analyze_gslc_point_targets_csv(
-            gslc_filename=gslc_hdf5,
-            output_file=tmpfile.name,
-            corner_reflector_csv=corner_reflector_csv,
-            freq=freq,
-            pol=pol,
-            dem_path=dem_file,
-            cuts=True,
-            cr_format="nisar",
-            **kwds,
-        )
+    tmpfile = nisarqa.make_scratch_file(
+        dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
+    )
+    # Run PTA tool.
+    gslc_point_target_analysis.analyze_gslc_point_targets_csv(
+        gslc_filename=gslc_hdf5,
+        output_file=tmpfile,
+        corner_reflector_csv=corner_reflector_csv,
+        freq=freq,
+        pol=pol,
+        dem_path=dem_file,
+        cuts=True,
+        cr_format="nisar",
+        **kwds,
+    )
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            data = json.load(f)
+        return data
 
 
 def populate_pta_hdf5_output(
@@ -871,6 +916,7 @@ def run_rslc_pta_tool(
     dyn_anc_params: DynamicAncillaryFileParamGroup,
     rslc: nisarqa.RSLC,
     stats_filename: str | os.PathLike,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> None:
     """
     Run the RSLC Point Target Analyzer (PTA) workflow.
@@ -888,6 +934,13 @@ def run_rslc_pta_tool(
     stats_filename : path-like
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
     """
 
     for freq in rslc.freqs:
@@ -907,6 +960,7 @@ def run_rslc_pta_tool(
                     freq=freq,
                     pol=pol,
                     pta_params=pta_params,
+                    scratch_dir=scratch_dir,
                 )
             nisarqa.get_logger().info(
                 f"RSLC PTA Tool for Frequency {freq}, Polarization {pol}"
@@ -970,6 +1024,7 @@ def run_gslc_pta_tool(
     dyn_anc_params: GSLCDynamicAncillaryFileParamGroup,
     gslc: nisarqa.GSLC,
     stats_filename: str | os.PathLike,
+    scratch_dir: str | os.PathLike | None = None,
 ) -> None:
     """
     Run the GSLC Point Target Analyzer (PTA) workflow.
@@ -987,6 +1042,13 @@ def run_gslc_pta_tool(
     stats_filename : path-like
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
+    scratch_dir : path-like or None, optional
+        Existing directory where QA software may write temporary data.
+        Temporary files are not guaranteed to be deleted upon exiting.
+        If `scratch_dir` is a path-like object, it should already exist.
+        If None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`.
+        Defaults to None.
     """
 
     for freq in gslc.freqs:
@@ -1007,6 +1069,7 @@ def run_gslc_pta_tool(
                     pol=pol,
                     pta_params=pta_params,
                     dem_file=dyn_anc_params.dem_file,
+                    scratch_dir=scratch_dir,
                 )
             nisarqa.get_logger().info(
                 f"GSLC PTA Tool for Frequency {freq}, Polarization {pol}"

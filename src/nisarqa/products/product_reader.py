@@ -342,12 +342,13 @@ def _get_dataset_handle(
 
 
 @lru_cache
-def _get_memmap(
+def _get_or_create_cached_memmap(
     input_file: str | os.PathLike,
     img_path: str,
     cache_dir: str | os.PathLike | None = None,
 ) -> np.memmap:
     """
+    Get or create a cached memmap of the requested Dataset.
 
     Parameters
     ----------
@@ -423,72 +424,42 @@ def _get_memmap(
                 f" with tile shape ({axis0_tile_dim}, {axis1_tile_dim})."
             )
 
+        def iterate_by_tiles(
+            *, arr_shape: tuple[int, int], block_shape: tuple[int, int]
+        ) -> Iterator[tuple[slice, slice]]:
+            """
+            Iterates over a NumPy array in blocks.
+
+            Parameters
+            ----------
+            arr_shape : pair of int
+                The shape of the 2-D input array to be iterated over.
+            block_size : pair of int
+                The shape of the tiles (rows, cols).
+
+            Yields
+            ------
+            slices : tuple of slices
+                Pair of slices which define a 2D sub-block of input array.
+                    Format: ( <axes 0 rows slice>, <axes 1 columns slice> )
+            """
+            rows, cols = arr_shape
+            block_rows, block_cols = block_shape
+
+            for i in range(0, rows, block_rows):
+                for j in range(0, cols, block_cols):
+                    slices = (
+                        slice(i, i + block_rows),
+                        slice(j, j + block_cols),
+                    )
+                    yield slices
+
         with nisarqa.log_runtime(f"Create memmap for {img_path}"):
-            # Note: TileIterator is constrained such that the 'uneven edges'
-            # are truncated. Will first memmap the full tiles, and then memmap
-            # the "leftover" right and bottom edges.
 
-            with nisarqa.log_runtime(f"memmap full tiles for {img_path}"):
-                # Step 1: memmap full tiles (edges are truncated)
-                tile_iter = nisarqa.TileIterator(
-                    arr_shape=arr_shape,
-                    axis_0_tile_dim=axis0_tile_dim,
-                    axis_1_tile_dim=axis1_tile_dim,
-                )
-                for tile in tile_iter:
-                    img_memmap[tile] = h5_ds[tile]
-
-            if arr_shape[0] % axis0_tile_dim > 0:
-                with nisarqa.log_runtime(f"memmap right side for {img_path}"):
-                    # Step 2: memmap the "leftover" right edge
-                    # Do not include leftover "bottom" edge here; do that below
-                    right_axis0_slice = slice(
-                        0,
-                        arr_shape[0] - (arr_shape[0] % axis0_tile_dim),
-                    )
-                    right_axis1_slice = slice(
-                        arr_shape[1] - (arr_shape[1] % axis1_tile_dim),
-                        arr_shape[1],
-                    )
-                    right_side = nisarqa.SubBlock2D(
-                        arr=h5_ds, slices=[right_axis0_slice, right_axis1_slice]
-                    )
-                    right_side_iter = nisarqa.TileIterator(
-                        arr_shape=right_side.shape,
-                        axis_0_tile_dim=axis0_tile_dim,
-                    )
-                    for tile in right_side_iter:
-                        img_memmap[tile] = right_side[tile]
-
-            if arr_shape[1] % axis1_tile_dim > 0:
-                with nisarqa.log_runtime(f"memmap bottom for {img_path}"):
-                    # Step 3: memmap the "leftover" bottom edge
-                    bottom_axis0_slice = slice(
-                        arr_shape[0] - (arr_shape[0] % axis0_tile_dim),
-                        arr_shape[0],
-                    )
-                    bottom_axis1_slice = slice(
-                        0,
-                        arr_shape[1] - (arr_shape[1] % axis1_tile_dim),
-                    )
-
-                    bottom_side = nisarqa.SubBlock2D(
-                        arr=h5_ds,
-                        slices=[bottom_axis0_slice, bottom_axis1_slice],
-                    )
-                    bottom_side_iter = nisarqa.TileIterator(
-                        arr_shape=bottom_side.shape,
-                        axis_1_tile_dim=axis1_tile_dim,
-                    )
-                    for tile in bottom_side_iter:
-                        img_memmap[tile] = bottom_side[tile]
-
-            if (arr_shape[0] % axis0_tile_dim > 0) and (
-                arr_shape[1] % axis1_tile_dim > 0
+            for tile in iterate_by_tiles(
+                h5_ds, (axis0_tile_dim, axis1_tile_dim)
             ):
-                # Step 4: memmap the bottom-right corner
-                corner_slices = (bottom_axis0_slice, right_axis1_slice)
-                img_memmap[corner_slices] = h5_ds[corner_slices]
+                img_memmap[tile] = h5_ds[tile]
 
         return img_memmap
 
@@ -1684,7 +1655,7 @@ class NisarRadarProduct(NisarProduct):
         dataset = _get_dataset_handle(h5_file, raster_path)
 
         if self.use_cache:
-            kwargs["data"] = _get_memmap(
+            kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 img_path=raster_path,
                 cache_dir=self.cache_dir,
@@ -1967,7 +1938,7 @@ class NisarGeoProduct(NisarProduct):
         dataset = _get_dataset_handle(h5_file, raster_path)
 
         if self.use_cache:
-            kwargs["data"] = _get_memmap(
+            kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 img_path=raster_path,
                 cache_dir=self.cache_dir,

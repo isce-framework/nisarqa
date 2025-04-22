@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import numbers
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
 from functools import cached_property
-from typing import Any, Optional, overload
+from typing import Any, Optional, overload, Sequence
 
 import h5py
 import numpy as np
@@ -139,6 +138,10 @@ class ComplexFloat16Decoder(object):
         original = self.dataset.__repr__()
         new = original.replace("HDF5 dataset", "ComplexFloat16Decoder")
         return new
+
+    @property
+    def chunks(self) -> Sequence[int]:
+        return self.dataset.chunks
 
 
 @dataclass

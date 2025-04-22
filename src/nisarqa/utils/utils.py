@@ -694,7 +694,6 @@ def scratch_directory(
         shutil.rmtree(scratchdir)
 
 
-# TODO - delete this function during code review if it remains unused
 def make_scratch_file(
     *,
     dir_: os.PathLike | str | None = None,

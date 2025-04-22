@@ -216,6 +216,7 @@ def verify_gslc(
                 dyn_anc_params=root_params.anc_files,
                 gslc=product,
                 stats_filename=stats_file,
+                scratch_dir=scratch_dir,
             )
             log.info(
                 f"Point Target Analyzer CalTool results saved to {stats_file}."
