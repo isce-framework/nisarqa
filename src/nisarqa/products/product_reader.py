@@ -434,7 +434,7 @@ def _get_or_create_cached_memmap(
             ----------
             arr_shape : pair of int
                 The shape of the 2-D input array to be iterated over.
-            block_size : pair of int
+            block_shape : pair of int
                 The shape of the tiles (rows, cols).
 
             Yields
@@ -455,9 +455,9 @@ def _get_or_create_cached_memmap(
                     yield slices
 
         with nisarqa.log_runtime(f"Create memmap for {img_path}"):
-
             for tile in iterate_by_tiles(
-                h5_ds, (axis0_tile_dim, axis1_tile_dim)
+                arr_shape=(h5_ds.shape[0], h5_ds.shape[1]),
+                block_shape=(axis0_tile_dim, axis1_tile_dim),
             ):
                 img_memmap[tile] = h5_ds[tile]
 

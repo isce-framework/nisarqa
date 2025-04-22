@@ -1104,7 +1104,7 @@ class ScratchProductPathGroupParamGroup(ProductPathGroupParamGroup):
         default="./scratch",
         metadata={
             "yaml_attrs": YamlAttrs(
-                name="`scratch_path`",
+                name="scratch_path",
                 descr="""Directory where QA software may write temporary data.
                 If the directory does not exist, it will be created.
                 Because this scratch directory might be shared with e.g. ISCE3
