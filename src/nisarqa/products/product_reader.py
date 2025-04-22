@@ -358,12 +358,12 @@ def _get_or_create_cached_memmap(
         Path in the HDF5 input file to the 2-D Dataset to be memmap'ed.
         Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
     cache_dir : path-like or None, optional
-        Directory where QA software may write memmap data.
+        Directory where QA software may write memory-mapped files.
         If `cache_dir` is a path-like object, a directory will be created at the
         specified file system path if it did not already exist.
         If `cache_dir` is None, a temporary directory will be created as though by
         `tempfile.mkdtemp()`.
-        Directory and memmap files will not be cleaned up by this function.
+        Directory and memory-mapped files will not be cleaned up by this function.
         Defaults to None.
 
     Returns
@@ -398,21 +398,17 @@ def _get_or_create_cached_memmap(
 
         # Write data to memmap.
         # Note: This is an expensive operation. All decompression,
-        # de-chunking, etc. costs are incurred here.
+        # etc. costs are incurred here.
 
         # tuple giving the chunk shape, or None if chunked storage is not used
-        chunks = h5_ds.chunks
-        if chunks is not None:
-            axis0_tile_dim = chunks[0]
-            axis1_tile_dim = chunks[1]
+        if (chunks := h5_ds.chunks) is not None:
             log.info(f"Dataset {img_path} has chunk shape {chunks}.")
-
+            # Number of chunk dimensions must match number of Dataset dimensions.
+            assert len(chunks) == 2
             # Edge case: dimension(s) are smaller than the chunk size,
             # so adjust the lengths which will be used for the tile iterators
-            if arr_shape[0] < axis0_tile_dim:
-                axis0_tile_dim = arr_shape[0]
-            if arr_shape[1] < axis1_tile_dim:
-                axis1_tile_dim = arr_shape[1]
+            axis0_tile_dim = min(chunks[0], arr_shape[0])
+            axis1_tile_dim = min(chunks[1], arr_shape[1])
 
         else:
             # HDF5 defaults to row-major ordering, so use full rows
@@ -420,7 +416,7 @@ def _get_or_create_cached_memmap(
             axis1_tile_dim = arr_shape[1]
             log.info(
                 f"Dataset {img_path} not written with chunked storage."
-                f" Input array with shape {arr_shape} will be memmap'ed"
+                f" Input array with shape {arr_shape} will be copied to memory-mapped file"
                 f" with tile shape ({axis0_tile_dim}, {axis1_tile_dim})."
             )
 
@@ -448,13 +444,10 @@ def _get_or_create_cached_memmap(
 
             for i in range(0, rows, block_rows):
                 for j in range(0, cols, block_cols):
-                    slices = (
-                        slice(i, i + block_rows),
-                        slice(j, j + block_cols),
-                    )
+                    slices = np.s_[i:(i + block_rows), j:(j + block_cols)]
                     yield slices
 
-        with nisarqa.log_runtime(f"Create memmap for {img_path}"):
+        with nisarqa.log_runtime(f"Copy Dataset contents to memory-mapped file: {img_path}"):
             for tile in iterate_by_tiles(
                 arr_shape=(h5_ds.shape[0], h5_ds.shape[1]),
                 block_shape=(axis0_tile_dim, axis1_tile_dim),
@@ -478,7 +471,7 @@ class NisarProduct(ABC):
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to False.
-    cache_dir : path-like, optional
+    cache_dir : path-like or None, optional
         Existing directory where QA software may write temporary data.
         Temporary files are not guaranteed to be deleted upon exiting.
         If `cache_dir` is a path-like object, it should already exist.
@@ -505,7 +498,7 @@ class NisarProduct(ABC):
 
         if self.cache_dir is None:
             if self.use_cache:
-                object.__setattr__(self, "cache_dir", Path(tempfile.mkdtemp()))
+                self.cache_dir = Path(tempfile.mkdtemp()))
         else:
             # cache directory should already exist
             path = Path(self.cache_dir)

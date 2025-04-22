@@ -172,8 +172,7 @@ def run_abscal_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            data = json.load(f)
-        return data
+            return json.load(f)
 
 
 def populate_abscal_hdf5_output(
@@ -494,8 +493,7 @@ def run_rslc_pta_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            data = json.load(f)
-        return data
+            return json.load(f)
 
 
 def run_gslc_pta_single_freq_pol(
@@ -595,8 +593,7 @@ def run_gslc_pta_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            data = json.load(f)
-        return data
+            return json.load(f)
 
 
 def populate_pta_hdf5_output(
