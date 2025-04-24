@@ -113,11 +113,13 @@ def run_abscal_single_freq_pol(
         A dataclass containing the parameters for processing
         and outputting the Absolute Calibration Factor workflow.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
 
     Returns
@@ -149,7 +151,8 @@ def run_abscal_single_freq_pol(
     assert "pthresh" not in kwds
     kwds["pthresh"] = kwds.pop("power_threshold")
 
-    # Create a temporary file to store the JSON output of the tool.
+    # Create a scratch file to store the JSON output of the tool.
+    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"abscal-{freq}-{pol}-", suffix=".json"
     )
@@ -172,7 +175,8 @@ def run_abscal_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        return data
 
 
 def populate_abscal_hdf5_output(
@@ -313,11 +317,13 @@ def run_abscal_tool(
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
     """
     for freq in rslc.freqs:
@@ -439,11 +445,13 @@ def run_rslc_pta_single_freq_pol(
         A dataclass containing the parameters for processing
         and outputting the Point Target Analyzer workflow.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
 
     Returns
@@ -471,7 +479,8 @@ def run_rslc_pta_single_freq_pol(
     # code will need to be updated accordingly.
     kwds = asdict(pta_params)
 
-    # Create a temporary file to store the JSON output of the tool.
+    # Create a scratch file to store the JSON output of the tool.
+    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
     )
@@ -493,7 +502,8 @@ def run_rslc_pta_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        return data
 
 
 def run_gslc_pta_single_freq_pol(
@@ -538,11 +548,13 @@ def run_gslc_pta_single_freq_pol(
         supplied), the PTA tool will attempt to un-flatten using the reference
         ellipsoid, which may produce less accurate results. Defaults to None.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
 
     Returns
@@ -570,7 +582,8 @@ def run_gslc_pta_single_freq_pol(
     # QA code will need to be updated accordingly.
     kwds = asdict(pta_params)
 
-    # Create a temporary file to store the JSON output of the tool.
+    # Create a scratch file to store the JSON output of the tool.
+    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
     )
@@ -593,7 +606,8 @@ def run_gslc_pta_single_freq_pol(
         return []
     else:
         with open(tmpfile, "r") as f:
-            return json.load(f)
+            data = json.load(f)
+        return data
 
 
 def populate_pta_hdf5_output(
@@ -932,11 +946,13 @@ def run_rslc_pta_tool(
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
     """
 
@@ -1040,11 +1056,13 @@ def run_gslc_pta_tool(
         Filename (with path) for output STATS.h5 file. This is where
         outputs from the CalTool should be stored.
     scratch_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `scratch_dir` is a path-like object, it should already exist.
-        If None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`.
+        Directory where QA software may write memory-mapped files.
+        If `cache_dir` is a path-like object, a directory will be created
+        at the specified file system path if it did not already exist.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
     """
 

@@ -344,115 +344,111 @@ def _get_dataset_handle(
 @lru_cache
 def _get_or_create_cached_memmap(
     input_file: str | os.PathLike,
-    img_path: str,
+    dataset_path: str,
     cache_dir: str | os.PathLike | None = None,
+    default_tile_height: int = 32,
 ) -> np.memmap:
     """
     Get or create a cached memmap of the requested Dataset.
+
+    On first invocation, creates a memory-mapped file in the cache directory
+    and copies the contents of a 2D HDF5 Dataset to that file. The memory map
+    object is cached and simply returned on subsequent invocations with the
+    same arguments.
+
+    The Dataset contents are copied tile-by-tile to avoid oversubscribing
+    system memory. If the Dataset is chunked, the tile shape will match the
+    chunk dimensions. Otherwise, the tile shape defaults to:
+        (<default_tile_height>, <Dataset axis 1 width>)
+    The full width is used because HDF5 Datasets use row-major ordering.
 
     Parameters
     ----------
     input_file : path-like
         HDF5 input file.
-    img_path : string
-        Path in the HDF5 input file to the 2-D Dataset to be memmap'ed.
+    dataset_path : string
+        Path in the HDF5 input file to the 2D Dataset to be copied to a
+        memory-mapped file.
         Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
     cache_dir : path-like or None, optional
         Directory where QA software may write memory-mapped files.
         If `cache_dir` is a path-like object, a directory will be created at the
         specified file system path if it did not already exist.
-        If `cache_dir` is None, a temporary directory will be created as though by
-        `tempfile.mkdtemp()`.
-        Directory and memory-mapped files will not be cleaned up by this function.
+        If `cache_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
+    default_tile_height : int, optional
+        If Dataset is not chunked, then the tile shape used to copy the data
+        defaults to: (<default_tile_height>, <dataset axis 1 width>).
+        Ignored if Dataset is chunked. Defaults to 32.
 
     Returns
     -------
     img_memmap : numpy.memmap
-        `memmap` copy of the `img_path` Dataset.
-
-    Notes
-    -----
-    Prior to Python 3.13 there is no API to close the underlying mmap.
-    So, the memmap will remain open for the duration of the program.
-    Source: https://numpy.org/doc/2.2/reference/generated/numpy.memmap.html
+        `memmap` copy of the `dataset_path` Dataset.
     """
+    # Note: numpy.memmap relies on mmap.mmap, which, prior to Python 3.13,
+    # had no interface to close the underlying file descriptor.
+    # In addition, numpy.memmap doesn't provide an API to close the mmap object.
+    # (And, since numpy.memmap hides the details of how it calls mmap.mmap,
+    # it doesn't have a way to close the file handle either, even in
+    # Python 3.13+.) So both the file descriptor and the memory map may
+    # stay open for the lifetime of the process.
+
     log = nisarqa.get_logger()
 
-    # Get tmp memmap file name
-    with nisarqa.scratch_directory(dir_=cache_dir, delete=False):
-        tmp_file = Path(cache_dir) / f"{img_path.replace('/', '-')}.dat"
+    # Construct file name for memory-mapped file
+    cache_dir = nisarqa.scratch_directory(dir_=cache_dir, delete=False)
+    mmap_file = cache_dir / f"{dataset_path.replace('/', '-')}.dat"
 
     # Create a memmap with dtype and shape that matches our data
     with h5py.File(input_file, "r") as h5_f:
-        h5_ds = _get_dataset_handle(h5_file=h5_f, raster_path=img_path)
-        arr_shape = np.shape(h5_ds)
-        if len(arr_shape) != 2:
+        h5_ds = _get_dataset_handle(h5_file=h5_f, raster_path=dataset_path)
+        shape = np.shape(h5_ds)
+        if len(shape) != 2:
             raise ValueError(
-                f"Input array has {len(arr_shape)} dimensions, but must be 2D."
+                f"Input array has {len(shape)} dimensions, but must be 2D."
             )
 
         img_memmap = np.memmap(
-            tmp_file, dtype=h5_ds.dtype, mode="w+", shape=arr_shape
+            mmap_file, dtype=h5_ds.dtype, mode="w+", shape=shape
         )
 
-        # Write data to memmap.
-        # Note: This is an expensive operation. All decompression,
-        # etc. costs are incurred here.
+        # Copy data to memory-mapped file.
+        # Note: This is an expensive operation. All decompression, etc. costs
+        # are incurred here.
 
         # tuple giving the chunk shape, or None if chunked storage is not used
         if (chunks := h5_ds.chunks) is not None:
-            log.info(f"Dataset {img_path} has chunk shape {chunks}.")
+            log.info(f"Dataset {dataset_path} has chunk shape {chunks}.")
             # Number of chunk dimensions must match number of Dataset dimensions.
             assert len(chunks) == 2
             # Edge case: dimension(s) are smaller than the chunk size,
             # so adjust the lengths which will be used for the tile iterators
-            axis0_tile_dim = min(chunks[0], arr_shape[0])
-            axis1_tile_dim = min(chunks[1], arr_shape[1])
+            tile_height = min(chunks[0], shape[0])
+            tile_width = min(chunks[1], shape[1])
 
         else:
-            # HDF5 defaults to row-major ordering, so use full rows
-            axis0_tile_dim = min(32, arr_shape[0])  # not too big
-            axis1_tile_dim = arr_shape[1]
+            # HDF5 uses row-major ordering, so use full rows
+            tile_height = min(default_tile_height, shape[0])
+            tile_width = shape[1]
             log.info(
-                f"Dataset {img_path} not written with chunked storage."
-                f" Input array with shape {arr_shape} will be copied to memory-mapped file"
-                f" with tile shape ({axis0_tile_dim}, {axis1_tile_dim})."
+                f"Dataset {dataset_path} not written with chunked storage."
+                f" Input array with shape {shape} will be copied tile-by-tile"
+                " to memory-mapped file using tile shape"
+                f" ({tile_height}, {tile_width})."
             )
 
-        def iterate_by_tiles(
-            *, arr_shape: tuple[int, int], block_shape: tuple[int, int]
-        ) -> Iterator[tuple[slice, slice]]:
-            """
-            Iterates over a NumPy array in blocks.
+        msg = f"Copy Dataset contents to memory-mapped file: {dataset_path}"
+        with nisarqa.log_runtime(msg):
+            for i in range(0, shape[0], tile_height):
+                for j in range(0, shape[1], tile_width):
+                    slices = np.s_[i : (i + tile_height), j : (j + tile_width)]
+                    img_memmap[slices] = h5_ds[slices]
 
-            Parameters
-            ----------
-            arr_shape : pair of int
-                The shape of the 2-D input array to be iterated over.
-            block_shape : pair of int
-                The shape of the tiles (rows, cols).
-
-            Yields
-            ------
-            slices : tuple of slices
-                Pair of slices which define a 2D sub-block of input array.
-                    Format: ( <axes 0 rows slice>, <axes 1 columns slice> )
-            """
-            rows, cols = arr_shape
-            block_rows, block_cols = block_shape
-
-            for i in range(0, rows, block_rows):
-                for j in range(0, cols, block_cols):
-                    slices = np.s_[i:(i + block_rows), j:(j + block_cols)]
-                    yield slices
-
-        with nisarqa.log_runtime(f"Copy Dataset contents to memory-mapped file: {img_path}"):
-            for tile in iterate_by_tiles(
-                arr_shape=(h5_ds.shape[0], h5_ds.shape[1]),
-                block_shape=(axis0_tile_dim, axis1_tile_dim),
-            ):
-                img_memmap[tile] = h5_ds[tile]
+        log.info(f"Memory-mapped scratch file saved: {mmap_file}")
 
         return img_memmap
 
@@ -472,14 +468,15 @@ class NisarProduct(ABC):
         Generally, enabling caching should reduce runtime.
         Defaults to False.
     cache_dir : path-like or None, optional
-        Existing directory where QA software may write temporary data.
-        Temporary files are not guaranteed to be deleted upon exiting.
-        If `cache_dir` is a path-like object, it should already exist.
-        If `use_cache` is True and if `cache_dir` is None, a temporary
-        directory will be created as though by `tempfile.mkdtemp()`
-        and `cache_dir` instance attribute will be updated.
-        If `cache_dir` is None and if `use_cache` is False, a temporary
-        directory will not be created.
+        Directory where QA software may write temporary data.
+        If `cache_dir` is a path-like object, the directory will created if
+        it does not already exist.
+        If `cache_dir` is None, a temporary directory will be created as though
+        by `tempfile.mkdtemp()`, and the `cache_dir` attribute will be updated.
+        If `use_cache` is False, this parameter is ignored (no directory
+        will be created).
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
         Defaults to None.
     """
 
@@ -496,16 +493,12 @@ class NisarProduct(ABC):
         self._check_is_geocoded()
         self._check_data_group_path()
 
-        if self.cache_dir is None:
-            if self.use_cache:
-                self.cache_dir = Path(tempfile.mkdtemp()))
-        else:
-            # cache directory should already exist
-            path = Path(self.cache_dir)
-            if not (path.exists() and path.is_dir()):
-                raise ValueError(
-                    f"{self.cache_dir=}; does not exist or is not a directory."
-                )
+        if self.use_cache:
+            if self.cache_dir is None:
+                self.cache_dir = Path(tempfile.mkdtemp())
+            else:
+                path = Path(self.cache_dir)
+                path.mkdir(parents=True, exist_ok=True)
 
     @property
     @abstractmethod
