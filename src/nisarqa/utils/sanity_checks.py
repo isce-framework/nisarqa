@@ -1,11 +1,9 @@
 from __future__ import annotations
 
 from collections.abc import Container
-from typing import Any, TypeVar
 
 import h5py
 import numpy as np
-from numpy.typing import ArrayLike
 
 import nisarqa
 

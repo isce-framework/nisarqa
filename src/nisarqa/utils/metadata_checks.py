@@ -3,7 +3,6 @@ from __future__ import annotations
 import traceback
 from dataclasses import dataclass
 from itertools import chain
-from typing import TypeVar
 
 import h5py
 import numpy as np

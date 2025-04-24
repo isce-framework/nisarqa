@@ -3,7 +3,7 @@ from __future__ import annotations
 import numbers
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields, replace
-from typing import ClassVar, Optional, Type, Union
+from typing import ClassVar, Optional, Union
 
 import numpy as np
 from matplotlib.colors import to_rgba
@@ -15,10 +15,10 @@ from nisarqa import (
     HDF5Attrs,
     HDF5ParamGroup,
     InputFileGroupParamGroup,
-    ScratchProductPathGroupParamGroup,
-    SoftwareConfigGroupParamGroup,
     NonInsarRootParamGroup,
     RSLCPointTargetAnalyzerParamGroup,
+    ScratchProductPathGroupParamGroup,
+    SoftwareConfigGroupParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
     YamlAttrs,

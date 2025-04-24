@@ -5,13 +5,13 @@ import dataclasses
 import io
 import os
 import sys
+import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, ClassVar, Optional, Type, Union
-from datetime import datetime, timezone
-import uuid
 
 import h5py
 from ruamel.yaml import YAML, CommentedMap, CommentedSeq

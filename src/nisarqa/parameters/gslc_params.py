@@ -7,11 +7,11 @@ from nisarqa import (
     DynamicAncillaryFileParamGroup,
     HistogramParamGroup,
     InputFileGroupParamGroup,
+    NonInsarRootParamGroup,
     PointTargetAnalyzerParamGroup,
     ScratchProductPathGroupParamGroup,
-    SoftwareConfigGroupParamGroup,
-    NonInsarRootParamGroup,
     SLCWorkflowsParamGroup,
+    SoftwareConfigGroupParamGroup,
     ValidationGroupParamGroup,
     YamlAttrs,
 )

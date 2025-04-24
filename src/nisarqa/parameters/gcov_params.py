@@ -7,9 +7,9 @@ from typing import Optional
 import nisarqa
 from nisarqa.parameters.nisar_params import (
     InputFileGroupParamGroup,
+    NonInsarRootParamGroup,
     ScratchProductPathGroupParamGroup,
     SoftwareConfigGroupParamGroup,
-    NonInsarRootParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
 )

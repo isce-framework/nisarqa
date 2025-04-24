@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from collections.abc import Mapping
 from dataclasses import dataclass, fields
 from functools import cached_property
-from typing import Any, Optional, overload, Sequence
+from typing import Any, Optional, Sequence, overload
 
 import h5py
 import numpy as np
