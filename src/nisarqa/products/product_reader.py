@@ -398,7 +398,7 @@ def _get_or_create_cached_memmap(
     log = nisarqa.get_logger()
 
     # Construct file name for memory-mapped file
-    cache_dir = nisarqa.scratch_directory(dir_=cache_dir, delete=False)
+    cache_dir = nisarqa.make_scratch_directory(dir_=cache_dir)
     mmap_file = cache_dir / f"{dataset_path.replace('/', '-')}.dat"
 
     # Create a memmap with dtype and shape that matches our data
@@ -1641,7 +1641,7 @@ class NisarRadarProduct(NisarProduct):
         if self.use_cache:
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
-                img_path=raster_path,
+                dataset_path=raster_path,
                 cache_dir=self.cache_dir,
             )
         else:
@@ -1924,7 +1924,7 @@ class NisarGeoProduct(NisarProduct):
         if self.use_cache:
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
-                img_path=raster_path,
+                dataset_path=raster_path,
                 cache_dir=self.cache_dir,
             )
         else:

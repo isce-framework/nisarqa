@@ -389,7 +389,7 @@ def process_backscatter_imgs_and_browse(
         for pol in product.get_pols(freq=freq):
             # Open the *SARRaster image
 
-            with product.get_raster(freq=freq, pol=pol) as img:
+            with product.get_raster(freq="B", pol=pol) as img:
                 with nisarqa.log_runtime(
                     f"`get_multilooked_backscatter_img` for Frequency {freq}"
                     f" Polarization {pol}"

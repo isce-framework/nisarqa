@@ -650,6 +650,34 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
         a = b
 
 
+def make_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
+    """
+    Create a scratch directory as though by `tempfile.mkdtemp()`.
+
+    Parameters
+    ----------
+    dir_ : path-like or None, optional
+        Scratch directory path.
+        If `dir_` is a path-like object, a directory will be created at the
+        specified file system path if it did not already exist.
+        If `dir_` is None, a temporary directory will be created as though by
+        `tempfile.mkdtemp()`.
+        Defaults to None.
+
+    Returns
+    -------
+    pathlib.Path
+        Scratch directory path.
+    """
+    if dir_ is None:
+        scratchdir = Path(tempfile.mkdtemp())
+    else:
+        scratchdir = Path(dir_)
+        scratchdir.mkdir(parents=True, exist_ok=True)
+
+    return scratchdir
+
+
 @contextmanager
 def scratch_directory(
     dir_: str | os.PathLike | None = None, *, delete: bool = True
@@ -682,16 +710,15 @@ def scratch_directory(
     Even if `dir_` previously existed on the file system, if `delete` is True,
     then `dir_` will be deleted.
     """
-    if dir_ is None:
-        scratchdir = Path(tempfile.mkdtemp())
-    else:
-        scratchdir = Path(dir_)
-        scratchdir.mkdir(parents=True, exist_ok=True)
+    scratchdir = make_scratch_directory(dir_=dir_)
 
-    yield scratchdir
-
-    if delete:
-        shutil.rmtree(scratchdir)
+    try:
+        yield scratchdir
+    except Exception:
+        raise
+    finally:
+        if delete:
+            shutil.rmtree(scratchdir)
 
 
 def make_scratch_file(

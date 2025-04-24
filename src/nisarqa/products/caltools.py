@@ -152,7 +152,7 @@ def run_abscal_single_freq_pol(
     kwds["pthresh"] = kwds.pop("power_threshold")
 
     # Create a scratch file to store the JSON output of the tool.
-    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
+    scratch_dir = nisarqa.make_scratch_directory(dir_=scratch_dir)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"abscal-{freq}-{pol}-", suffix=".json"
     )
@@ -480,7 +480,7 @@ def run_rslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a scratch file to store the JSON output of the tool.
-    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
+    scratch_dir = nisarqa.make_scratch_directory(dir_=scratch_dir)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
     )
@@ -583,7 +583,7 @@ def run_gslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a scratch file to store the JSON output of the tool.
-    scratch_dir = nisarqa.scratch_directory(dir_=scratch_dir, delete=False)
+    scratch_dir = nisarqa.make_scratch_directory(dir_=scratch_dir)
     tmpfile = nisarqa.make_scratch_file(
         dir_=scratch_dir, prefix=f"pta-{freq}-{pol}-", suffix=".json"
     )
