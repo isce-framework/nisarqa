@@ -66,3 +66,6 @@ nisarqa = "nisarqa.__main__:main"
 [tool.black]
 preview = true
 line-length = 80
+
+[tool.isort]
+profile = "black"

@@ -8,7 +8,6 @@ from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
 from typing import Any, overload
-from numpy.typing import ArrayLike
 from pathlib import Path
 import tempfile
 
