@@ -13,6 +13,7 @@ from nisarqa import (
     InputFileGroupParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
+    SoftwareConfigParamGroup,
     Threshold99ParamGroup,
     ThresholdParamGroup,
     ValidationGroupParamGroup,
@@ -287,6 +288,41 @@ class GOFFWorkflowsParamGroup(WorkflowsParamGroup):
     @staticmethod
     def get_path_to_group_in_runconfig():
         return ["runconfig", "groups", "qa", "goff", "workflows"]
+
+
+@dataclass(frozen=True)
+class RIFGSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "rifg", "software_config"]
+
+
+@dataclass(frozen=True)
+class RUNWSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "runw", "software_config"]
+
+
+@dataclass(frozen=True)
+class GUNWSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "gunw", "software_config"]
+
+
+@dataclass(frozen=True)
+class ROFFSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "roff", "software_config"]
+
+
+@dataclass(frozen=True)
+class GOFFSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "goff", "software_config"]
 
 
 @dataclass(frozen=True)
@@ -1684,6 +1720,8 @@ class RIFGRootParamGroup(RootParamGroup):
         Input File Group parameters.
     prodpath : RIFGProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
+    software_config : RIFGSoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : RIFGValidationParamGroup or None, optional
         Validation Group parameters for QA
     wrapped_igram : RIFGWrappedIgramParamGroup or None, optional
@@ -1703,6 +1741,7 @@ class RIFGRootParamGroup(RootParamGroup):
     # Shared parameters
     input_f: Optional[RIFGInputFileGroupParamGroup] = None
     prodpath: Optional[RIFGProductPathGroupParamGroup] = None
+    software_config: Optional[RIFGSoftwareConfigParamGroup] = None
     validation: Optional[RIFGValidationParamGroup] = None
 
     wrapped_igram: Optional[RIFGWrappedIgramParamGroup] = None
@@ -1729,6 +1768,11 @@ class RIFGRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=RIFGProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=RIFGSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -1772,6 +1816,7 @@ class RIFGRootParamGroup(RootParamGroup):
             "input_f": RIFGInputFileGroupParamGroup,
             "prodpath": RIFGProductPathGroupParamGroup,
             "workflows": RIFGWorkflowsParamGroup,
+            "software_config": RIFGSoftwareConfigParamGroup,
             "validation": RIFGValidationParamGroup,
             "wrapped_igram": RIFGWrappedIgramParamGroup,
             "coh_mag": RIFGCohMagLayerParamGroup,
@@ -1801,6 +1846,8 @@ class RUNWRootParamGroup(RootParamGroup):
         Input File Group parameters.
     prodpath : RUNWProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
+    software_config : RUNWSoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : RUNWValidationParamGroup or None, optional
         Validation Group parameters for QA
     unw_phs_img : RUNWPhaseImageParamGroup or None, optional
@@ -1825,6 +1872,7 @@ class RUNWRootParamGroup(RootParamGroup):
     workflows: RUNWWorkflowsParamGroup
     input_f: Optional[RUNWInputFileGroupParamGroup] = None
     prodpath: Optional[RUNWProductPathGroupParamGroup] = None
+    software_config: Optional[RUNWSoftwareConfigParamGroup] = None
     validation: Optional[RUNWValidationParamGroup] = None
 
     unw_phs_img: Optional[RUNWPhaseImageParamGroup] = None
@@ -1854,6 +1902,11 @@ class RUNWRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=RUNWProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=RUNWSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -1912,6 +1965,7 @@ class RUNWRootParamGroup(RootParamGroup):
             "input_f": RUNWInputFileGroupParamGroup,
             "prodpath": RUNWProductPathGroupParamGroup,
             "workflows": RUNWWorkflowsParamGroup,
+            "software_config": RUNWSoftwareConfigParamGroup,
             "validation": RUNWValidationParamGroup,
             "unw_phs_img": RUNWPhaseImageParamGroup,
             "coh_mag": RUNWCohMagLayerParamGroup,
@@ -1944,6 +1998,8 @@ class GUNWRootParamGroup(RootParamGroup):
         Input File Group parameters.
     prodpath : GUNWProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
+    software_config : GUNWSoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : GUNWValidationParamGroup or None, optional
         Validation Group parameters for QA
     unw_phs_img : GUNWPhaseImageParamGroup or None, optional
@@ -1973,6 +2029,7 @@ class GUNWRootParamGroup(RootParamGroup):
     # Shared parameters
     input_f: Optional[GUNWInputFileGroupParamGroup] = None
     prodpath: Optional[GUNWProductPathGroupParamGroup] = None
+    software_config: Optional[GUNWSoftwareConfigParamGroup] = None
     validation: Optional[GUNWValidationParamGroup] = None
 
     unw_phs_img: Optional[GUNWPhaseImageParamGroup] = None
@@ -2003,6 +2060,11 @@ class GUNWRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=GUNWProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=GUNWSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -2066,6 +2128,7 @@ class GUNWRootParamGroup(RootParamGroup):
             "input_f": GUNWInputFileGroupParamGroup,
             "prodpath": GUNWProductPathGroupParamGroup,
             "workflows": GUNWWorkflowsParamGroup,
+            "software_config": GUNWSoftwareConfigParamGroup,
             "validation": GUNWValidationParamGroup,
             "unw_phs_img": GUNWPhaseImageParamGroup,
             "wrapped_igram": GUNWWrappedIgramParamGroup,
@@ -2099,6 +2162,8 @@ class ROFFRootParamGroup(RootParamGroup):
         Input File Group parameters.
     prodpath : ROFFProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
+    software_config : ROFFSoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ROFFValidationParamGroup or None, optional
         Validation Group parameters for QA
     az_rng_offsets : ROFFAzAndRangeOffsetsParamGroup or None, optional
@@ -2118,6 +2183,7 @@ class ROFFRootParamGroup(RootParamGroup):
     # Shared parameters
     input_f: Optional[ROFFInputFileGroupParamGroup] = None
     prodpath: Optional[ROFFProductPathGroupParamGroup] = None
+    software_config: Optional[ROFFSoftwareConfigParamGroup] = None
     validation: Optional[ROFFValidationParamGroup] = None
 
     az_rng_offsets: Optional[ROFFAzAndRangeOffsetsParamGroup] = None
@@ -2144,6 +2210,11 @@ class ROFFRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=ROFFProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=ROFFSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -2187,6 +2258,7 @@ class ROFFRootParamGroup(RootParamGroup):
             "input_f": ROFFInputFileGroupParamGroup,
             "prodpath": ROFFProductPathGroupParamGroup,
             "workflows": ROFFWorkflowsParamGroup,
+            "software_config": ROFFSoftwareConfigParamGroup,
             "validation": ROFFValidationParamGroup,
             "az_rng_offsets": ROFFAzAndRangeOffsetsParamGroup,
             "quiver": ROFFQuiverParamGroup,
@@ -2216,6 +2288,8 @@ class GOFFRootParamGroup(RootParamGroup):
         Input File Group parameters.
     prodpath : GOFFProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
+    software_config : GOFFSoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : VerificationGroupParamGroup or None, optional
         Validation Group parameters for QA
     az_rng_offsets : GOFFAzAndRangeOffsetsParamGroup or None, optional
@@ -2235,6 +2309,7 @@ class GOFFRootParamGroup(RootParamGroup):
     # Shared parameters
     input_f: Optional[GOFFInputFileGroupParamGroup] = None
     prodpath: Optional[GOFFProductPathGroupParamGroup] = None
+    software_config: Optional[GOFFSoftwareConfigParamGroup] = None
     validation: Optional[GOFFValidationParamGroup] = None
 
     az_rng_offsets: Optional[GOFFAzAndRangeOffsetsParamGroup] = None
@@ -2261,6 +2336,11 @@ class GOFFRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=GOFFProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=GOFFSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -2304,6 +2384,7 @@ class GOFFRootParamGroup(RootParamGroup):
             "input_f": GOFFInputFileGroupParamGroup,
             "prodpath": GOFFProductPathGroupParamGroup,
             "workflows": GOFFWorkflowsParamGroup,
+            "software_config": GOFFSoftwareConfigParamGroup,
             "validation": GOFFValidationParamGroup,
             "az_rng_offsets": GOFFAzAndRangeOffsetsParamGroup,
             "quiver": GOFFQuiverParamGroup,

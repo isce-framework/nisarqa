@@ -8,7 +8,6 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-@nisarqa.prep_scratch_dir_from_root_params
 def verify_gslc(
     root_params: nisarqa.GSLCRootParamGroup, verbose: bool = False
 ) -> None:
@@ -48,7 +47,6 @@ def verify_gslc(
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
-    scratch_dir = root_params.prodpath.scratch_dir
 
     msg = f"Starting Quality Assurance for input file: {input_file}"
     log.info(msg)
@@ -63,7 +61,6 @@ def verify_gslc(
         product = nisarqa.GSLC(
             filepath=input_file,
             use_cache=root_params.software_config.use_cache,
-            cache_dir=scratch_dir,
             # prime_the_cache=True,  # we analyze all images, so prime the cache
         )
     except:
@@ -216,7 +213,6 @@ def verify_gslc(
                 dyn_anc_params=root_params.anc_files,
                 gslc=product,
                 stats_filename=stats_file,
-                scratch_dir=scratch_dir,
             )
             log.info(
                 f"Point Target Analyzer CalTool results saved to {stats_file}."

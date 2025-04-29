@@ -650,9 +650,9 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
         a = b
 
 
-def make_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
+def _create_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
     """
-    Create a scratch directory as though by `tempfile.mkdtemp()`.
+    Prepare the scratch directory and return the absolute path.
 
     Parameters
     ----------
@@ -666,24 +666,28 @@ def make_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
 
     Returns
     -------
-    pathlib.Path
-        Scratch directory path.
+    path : pathlib.Path
+        Absolute path to the scratch directory.
     """
     if dir_ is None:
-        scratchdir = Path(tempfile.mkdtemp())
+        path = Path(tempfile.mkdtemp())
     else:
-        scratchdir = Path(dir_)
-        scratchdir.mkdir(parents=True, exist_ok=True)
+        path = Path(dir_)
+        path.mkdir(parents=True, exist_ok=True)
 
-    return scratchdir
+    # Expand ~ to the user’s home directory. Make path an absolute path.
+    # Also resolves symlinks (if they exist).
+    path = path.expanduser().resolve()
+
+    return path
 
 
 @contextmanager
-def scratch_directory(
+def scratch_directory_manager(
     dir_: str | os.PathLike | None = None, *, delete: bool = True
 ) -> Generator[Path, None, None]:
     """
-    Context manager that creates a (possibly temporary) file system directory.
+    Context manager for a (possibly temporary) file system directory.
 
     Parameters
     ----------
@@ -710,17 +714,121 @@ def scratch_directory(
     Even if `dir_` previously existed on the file system, if `delete` is True,
     then `dir_` will be deleted.
     """
-    scratchdir = make_scratch_directory(dir_=dir_)
+    set_global_scratch(scratch_dir=dir_)
+    scratchdir = get_global_scratch()
 
     try:
         yield scratchdir
     except Exception:
         raise
     finally:
+        log = nisarqa.get_logger()
+        current_scratch = get_global_scratch()
+
+        if scratchdir != current_scratch:
+            msg = (
+                f"Global scratch directory was '{scratchdir}', but it was"
+                f" most-recently updated to '{current_scratch}' external to"
+                " (but within the context of) this context manager."
+            )
+            if delete:
+                msg += (
+                    f" Only original scratch directory '{scratchdir}'"
+                    " will be deleted."
+                )
+            log.warning(msg)
+
         if delete:
-            shutil.rmtree(scratchdir)
+            try:
+                shutil.rmtree(scratchdir)
+            except FileNotFoundError:
+                msg = (
+                    f"Global scratch directory was '{scratchdir}', but it was"
+                    " deleted external to (but within the context of)"
+                    " this context manager."
+                )
+                log.error(msg)
+                raise FileNotFoundError(msg)
+            else:
+                log.info(
+                    f"Scratch directory deleted recursively: '{scratchdir}'"
+                )
 
 
+def set_global_scratch(scratch_dir: str | os.PathLike | None = None) -> None:
+    """
+    Set the persistent global scratch directory path.
+
+    For subsequent call to this function, the stored path is updated.
+
+    If the path does not exist, it is created (including parent directories).
+
+    Parameters
+    ----------
+    scratch_dir : path-like or None
+        If `scratch_dir` is a path-like object, the directory (with parents)
+        will created if it does not already exist.
+        If `scratch_dir` is None, a new temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
+        Defaults to None.
+
+    See Also
+    --------
+    get_global_scratch :
+        After the global scratch directory has been set, use this function
+        to get the absolute Path to the global scratch directory.
+    """
+    log = nisarqa.get_logger()
+    scratch_path = _create_scratch_directory(dir_=scratch_dir)
+
+    if (
+        hasattr(set_global_scratch, "_scratch_path")
+        and set_global_scratch._scratch_path == scratch_path
+    ):
+        old_dir = set_global_scratch._scratch_path
+        log.info(
+            f"Global scratch directory path was '{old_dir}'."
+            f" Updating it to '{scratch_path}'."
+        )
+
+    # Set function attribute to the globale scratch path
+    set_global_scratch._scratch_path = scratch_path
+
+    log.info(
+        f"Global scratch directory path set to '{set_global_scratch._scratch_path}'."
+    )
+
+
+def get_global_scratch() -> Path:
+    """
+    Get the persistent global scratch directory path.
+
+    User must call `set_global_scratch()` prior to calling this function.
+
+    Returns
+    -------
+    path : pathlib.Path
+        Path to global scratch directory.
+
+    See Also
+    --------
+    set_global_scratch :
+        Set the global scratch directory. Must be called prior to calling
+        `get_global_scratch()`.
+    """
+
+    if not hasattr(set_global_scratch, "_scratch_path"):
+        raise ValueError(
+            "Scratch path not set. User must call `set_global_scratch()`"
+            " prior to calling this function."
+        )
+
+    return getattr(set_global_scratch, "_scratch_path")
+
+
+# TODO delete this function if unused
 def make_scratch_file(
     *,
     dir_: os.PathLike | str | None = None,
@@ -752,54 +860,6 @@ def make_scratch_file(
     file, filename = tempfile.mkstemp(dir=dir_, prefix=prefix, suffix=suffix)
     os.close(file)
     return Path(filename)
-
-
-class VerifyFunc(Protocol, Generic[T]):
-    def __call__(
-        self,
-        root_params: nisarqa.NonInsarRootParamGroup,
-        *args: Any,
-        **kwargs: Any,
-    ) -> T: ...
-
-
-def prep_scratch_dir_from_root_params(
-    func: VerifyFunc[T],
-) -> VerifyFunc[T]:
-    """
-    Function decorator to handle setup and cleanup of a scratch directory.
-
-    Parameters
-    ----------
-    func : nisarqa.VerifyFunc
-        Function that will be wrapped. Per the nisarqa.VerifyFunc Protocol,
-        `func`'s first argument must be a root parameter group. This decorator
-        will parse the scratch directory path name and the user's request
-        of whether or not to cleanup the scratch directory after `func` has
-        finished from this root parameter group.
-
-    Returns
-    -------
-    wrapped_func : nisarqa.VerifyFunc
-        `func` that has been wrapped.
-    """
-
-    @wraps(func)
-    def wrapped_func(*args, **kwargs):
-        if len(args) > 0 and isinstance(
-            args[0], nisarqa.NonInsarRootParamGroup
-        ):
-            root_params = args[0]
-        else:
-            root_params = kwargs["root_params"]
-        qa_scratch_dir = root_params.prodpath.scratch_dir
-
-        delete = root_params.software_config.delete_scratch_dir
-
-        with scratch_directory(dir_=qa_scratch_dir, delete=delete):
-            return func(*args, **kwargs)
-
-    return wrapped_func
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

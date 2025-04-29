@@ -343,16 +343,15 @@ def _get_dataset_handle(
 def _get_or_create_cached_memmap(
     input_file: str | os.PathLike,
     dataset_path: str,
-    cache_dir: str | os.PathLike | None = None,
     default_tile_height: int = 32,
 ) -> np.memmap:
     """
     Get or create a cached memmap of the requested Dataset.
 
-    On first invocation, creates a memory-mapped file in the cache directory
-    and copies the contents of a 2D HDF5 Dataset to that file. The memory map
-    object is cached and simply returned on subsequent invocations with the
-    same arguments.
+    On first invocation, creates a memory-mapped file in the global
+    scratch directory and copies the contents of a 2D HDF5 Dataset to that file.
+    The memory map object is cached and simply returned on subsequent
+    invocations with the same arguments.
 
     The Dataset contents are copied tile-by-tile to avoid oversubscribing
     system memory. If the Dataset is chunked, the tile shape will match the
@@ -368,15 +367,6 @@ def _get_or_create_cached_memmap(
         Path in the HDF5 input file to the 2D Dataset to be copied to a
         memory-mapped file.
         Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
-    cache_dir : path-like or None, optional
-        Directory where QA software may write memory-mapped files.
-        If `cache_dir` is a path-like object, a directory will be created at the
-        specified file system path if it did not already exist.
-        If `cache_dir` is None, a temporary directory will be created as
-        though by `tempfile.mkdtemp()`.
-        The user is responsible for deleting the cache directory and its
-        contents when done with it.
-        Defaults to None.
     default_tile_height : int, optional
         If Dataset is not chunked, then the tile shape used to copy the data
         defaults to: (<default_tile_height>, <dataset axis 1 width>).
@@ -386,6 +376,16 @@ def _get_or_create_cached_memmap(
     -------
     img_memmap : numpy.memmap
         `memmap` copy of the `dataset_path` Dataset.
+
+    Raises
+    ------
+    ValueError :
+        If a file already exists on the disk with the exact filepath as
+        determined within this function. This might occur if the
+        function is called subsequently with the same `input_file`
+        and `dataset_path` arguments, but a different `default_tile_height`
+        argument; if so, then please call this function with the same
+        `default_tile_height` as before.
     """
     # Note: numpy.memmap relies on mmap.mmap, which, prior to Python 3.13,
     # had no interface to close the underlying file descriptor.
@@ -398,8 +398,19 @@ def _get_or_create_cached_memmap(
     log = nisarqa.get_logger()
 
     # Construct file name for memory-mapped file
-    cache_dir = nisarqa.make_scratch_directory(dir_=cache_dir)
-    mmap_file = cache_dir / f"{dataset_path.replace('/', '-')}.dat"
+    mmap_file = (
+        nisarqa.get_global_scratch() / f"{dataset_path.replace('/', '-')}.dat"
+    )
+
+    if mmap_file.exists():
+        raise ValueError(
+            "Cached memory-mapped file already created for input file"
+            f" {input_file} and Dataset {dataset_path}, located in the"
+            f" global scratch directory at: {mmap_file}."
+            " Suggest using the same `default_tile_height` argument"
+            " as when `_get_or_create_cached_memmap()` was first called for"
+            " this input file and Dataset pair."
+        )
 
     # Create a memmap with dtype and shape that matches our data
     with h5py.File(input_file, "r") as h5_f:
@@ -461,26 +472,15 @@ class NisarProduct(ABC):
     filepath : path-like
         Filepath to the input product.
     use_cache : bool, optional
-        True to use memory map(s) to cache select Dataset(s).
+        True to use memory map(s) to cache select Dataset(s) in
+        memory-mapped files in the global scratch directory.
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to False.
-    cache_dir : path-like or None, optional
-        Directory where QA software may write temporary data.
-        If `cache_dir` is a path-like object, the directory will created if
-        it does not already exist.
-        If `cache_dir` is None, a temporary directory will be created as though
-        by `tempfile.mkdtemp()`, and the `cache_dir` attribute will be updated.
-        If `use_cache` is False, this parameter is ignored (no directory
-        will be created).
-        The user is responsible for deleting the cache directory and its
-        contents when done with it.
-        Defaults to None.
     """
 
     filepath: str
     use_cache: bool = False
-    cache_dir: str | os.PathLike | None = None
 
     def __post_init__(self):
         # Verify that the input product contained a product spec version.
@@ -490,13 +490,6 @@ class NisarProduct(ABC):
         self._check_root_path()
         self._check_is_geocoded()
         self._check_data_group_path()
-
-        if self.use_cache:
-            if self.cache_dir is None:
-                self.cache_dir = Path(tempfile.mkdtemp())
-            else:
-                path = Path(self.cache_dir)
-                path.mkdir(parents=True, exist_ok=True)
 
     @property
     @abstractmethod
@@ -1642,7 +1635,6 @@ class NisarRadarProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
-                cache_dir=self.cache_dir,
             )
         else:
             kwargs["data"] = dataset
@@ -1925,7 +1917,6 @@ class NisarGeoProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
-                cache_dir=self.cache_dir,
             )
         else:
             kwargs["data"] = dataset

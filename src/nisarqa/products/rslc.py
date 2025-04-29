@@ -21,7 +21,6 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-@nisarqa.prep_scratch_dir_from_root_params
 def verify_rslc(
     root_params: nisarqa.RSLCRootParamGroup, verbose: bool = False
 ) -> None:
@@ -60,7 +59,6 @@ def verify_rslc(
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
-    scratch_dir = root_params.prodpath.scratch_dir
 
     msg = f"Starting Quality Assurance for input file: {input_file}"
     log.info(msg)
@@ -76,7 +74,6 @@ def verify_rslc(
         product = nisarqa.RSLC(
             filepath=input_file,
             use_cache=root_params.software_config.use_cache,
-            cache_dir=scratch_dir,
             # prime_the_cache=True,  # we analyze all images, so prime the cache
         )
     except:
@@ -262,7 +259,6 @@ def verify_rslc(
                 dyn_anc_params=root_params.anc_files,
                 rslc=product,
                 stats_filename=stats_file,
-                scratch_dir=scratch_dir,
             )
             log.info(
                 "Absolute Radiometric Calibration CalTool results saved to"
@@ -298,7 +294,6 @@ def verify_rslc(
                 dyn_anc_params=root_params.anc_files,
                 rslc=product,
                 stats_filename=stats_file,
-                scratch_dir=scratch_dir,
             )
             log.info(
                 f"Point Target Analyzer CalTool results saved to {stats_file}."
@@ -389,7 +384,7 @@ def process_backscatter_imgs_and_browse(
         for pol in product.get_pols(freq=freq):
             # Open the *SARRaster image
 
-            with product.get_raster(freq="B", pol=pol) as img:
+            with product.get_raster(freq=freq, pol=pol) as img:
                 with nisarqa.log_runtime(
                     f"`get_multilooked_backscatter_img` for Frequency {freq}"
                     f" Polarization {pol}"

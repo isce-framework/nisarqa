@@ -1043,6 +1043,14 @@ class ProductPathGroupParamGroup(YamlParamGroup):
         Filepath to the output directory to store NISAR QA output files.
         If the directory does not exist, it will be created.
         Defaults to './qa'
+    scratch_dir : path-like, optional
+        Directory where QA software may write temporary data.
+        If the directory does not exist, it will be created.
+        Because this scratch directory might be shared with e.g. ISCE3
+        science product SASes, QA will create a uniquely-named
+        directory inside `scratch_path` for any QA scratch files.
+        Provided `scratch_dir` argument will be converted to a Path object.
+        Defaults to './scratch'
     """
 
     qa_output_dir: str | os.PathLike = field(
@@ -1055,50 +1063,6 @@ class ProductPathGroupParamGroup(YamlParamGroup):
             )
         },
     )
-
-    def __post_init__(self):
-        # VALIDATE INPUTS
-
-        if not isinstance(self.qa_output_dir, (str, os.PathLike)):
-            raise TypeError(f"`qa_output_dir` must be path-like")
-
-        # If this directory does not exist, make it.
-        if not os.path.isdir(self.qa_output_dir):
-            log = nisarqa.get_logger()
-            log.info(f"Creating QA output directory: {self.qa_output_dir}")
-            os.makedirs(self.qa_output_dir, exist_ok=True)
-
-    @staticmethod
-    def get_path_to_group_in_runconfig():
-        return ["runconfig", "groups", "product_path_group"]
-
-
-@dataclass(frozen=True)
-class ScratchProductPathGroupParamGroup(ProductPathGroupParamGroup):
-    """
-    Parameters from Product Path Group runconfig group with scratch directory.
-
-    This corresponds to the `groups: product_path_group` runconfig group.
-
-    Parameters
-    ----------
-    qa_output_dir : path-like, optional
-        Filepath to the output directory to store NISAR QA output files.
-        If the directory does not exist, it will be created.
-        Defaults to './qa'
-    scratch_dir : path-like, optional
-        Directory where QA software may write temporary data.
-        If the directory does not exist, it will be created.
-        Because this scratch directory might be shared with e.g. ISCE3
-        science product SASes, QA will create a uniquely-named
-        directory inside `scratch_path` for any QA scratch files.
-        Provided `scratch_dir` argument will be converted to a Path object.
-        Defaults to './scratch'
-    """
-
-    # Note: If in the future the InSAR QA SASes need the scratch directory,
-    # then `scratch_dir` should be absorbed into the parent
-    # `ProductPathGroupParamGroup`, and this class should be removed.
 
     scratch_dir: str | os.PathLike = field(
         default="./scratch",
@@ -1116,7 +1080,15 @@ class ScratchProductPathGroupParamGroup(ProductPathGroupParamGroup):
 
     def __post_init__(self):
         # VALIDATE INPUTS
-        super().__post_init__()
+
+        if not isinstance(self.qa_output_dir, (str, os.PathLike)):
+            raise TypeError(f"`qa_output_dir` must be path-like")
+
+        # If this directory does not exist, make it.
+        if not os.path.isdir(self.qa_output_dir):
+            log = nisarqa.get_logger()
+            log.info(f"Creating QA output directory: {self.qa_output_dir}")
+            os.makedirs(self.qa_output_dir, exist_ok=True)
 
         if not isinstance(self.scratch_dir, (str, os.PathLike)):
             raise TypeError(f"`scratch_dir` must be path-like")
@@ -1139,9 +1111,13 @@ class ScratchProductPathGroupParamGroup(ProductPathGroupParamGroup):
         # the scratch directory is created and (possibly) deleted per
         # the user's request.
 
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "product_path_group"]
+
 
 @dataclass(frozen=True)
-class SoftwareConfigGroupParamGroup(YamlParamGroup):
+class SoftwareConfigParamGroup(YamlParamGroup):
     """
     Parameters from the Software Config Group runconfig group.
 
@@ -1244,6 +1220,7 @@ class RootParamGroup(ABC):
     workflows: WorkflowsParamGroup
     input_f: Optional[InputFileGroupParamGroup] = None
     prodpath: Optional[ProductPathGroupParamGroup] = None
+    software_config: Optional[SoftwareConfigParamGroup] = None
     validation: Optional[ValidationGroupParamGroup] = None
 
     # Create a namedtuple which maps the workflows requested
@@ -1897,18 +1874,6 @@ class RootParamGroup(ABC):
         log.info("Loading of user runconfig complete.")
 
         return root_params
-
-
-@dataclass
-class NonInsarRootParamGroup(RootParamGroup):
-    """Abstract Base Class for RSLC, GSLC, and GCOV `*RootParamGroup`s."""
-
-    # Note: If the InSAR *RootParamGroups need the scratch directory, then
-    # `SoftwareConfigGroupParamGroup` should be absorbed into the parent
-    # `RootParamGroup` class.
-
-    prodpath: Optional[ScratchProductPathGroupParamGroup] = None
-    software_config: Optional[SoftwareConfigGroupParamGroup] = None
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

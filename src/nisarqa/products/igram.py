@@ -74,6 +74,7 @@ def verify_igram(
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
+    use_cache = root_params.software_config.use_cache
 
     msg = f"Starting Quality Assurance for input file: {input_file}"
     log.info(msg)
@@ -86,12 +87,12 @@ def verify_igram(
 
     try:
         if product_type == "rifg":
-            product = nisarqa.RIFG(input_file)
+            product = nisarqa.RIFG(input_file, use_cache=use_cache)
         elif product_type == "runw":
-            product = nisarqa.RUNW(input_file)
+            product = nisarqa.RUNW(input_file, use_cache=use_cache)
         else:
             assert product_type == "gunw"
-            product = nisarqa.GUNW(input_file)
+            product = nisarqa.GUNW(input_file, use_cache=use_cache)
     except:
         # Input product could not be opened via the product reader.
         summary.check_can_open_input_file(result="FAIL")
