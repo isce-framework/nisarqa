@@ -114,9 +114,6 @@ class GCOVRootParamGroup(RootParamGroup):
         Histogram Group parameters for GCOV QA
     """
 
-    # Overwrite parent's attributes b/c new type
-    prodpath: Optional[ProductPathGroupParamGroup] = None
-
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
     histogram: Optional[GCOVHistogramParamGroup] = None

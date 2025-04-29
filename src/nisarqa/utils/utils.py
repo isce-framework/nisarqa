@@ -18,7 +18,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
 from pathlib import Path
-from typing import Any, Generic, Optional, Protocol, overload
+from typing import Optional, overload
 
 import h5py
 import numpy as np
@@ -457,32 +457,6 @@ def log_runtime(msg: str) -> Generator[None, None, None]:
     nisarqa.get_logger().info(f"Runtime: {msg} took {toc - tic}")
 
 
-def log_function_runtime(
-    func: Callable[..., nisarqa.T],
-) -> Callable[..., nisarqa.T]:
-    """
-    Function decorator to log the runtime of a function.
-
-    Parameters
-    ----------
-    func : callable
-        Function that will have its runtime logged.
-
-    See Also
-    --------
-    log_runtime :
-        Context manager to log runtime of a code block with a custom message.
-    """
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-
-        with log_runtime(f"`{func.__name__}`"):
-            return func(*args, **kwargs)
-
-    return wrapper
-
-
 @contextmanager
 def log_runtime(msg: str) -> Generator[None, None, None]:
     """
@@ -826,40 +800,6 @@ def get_global_scratch() -> Path:
         )
 
     return getattr(set_global_scratch, "_scratch_path")
-
-
-# TODO delete this function if unused
-def make_scratch_file(
-    *,
-    dir_: os.PathLike | str | None = None,
-    prefix: str | None = None,
-    suffix: str | None = None,
-) -> Path:
-    """
-    Create a uniquely-named scratch filepath as though by `tempfile.mkstemp()`.
-
-    Parameters
-    ----------
-    dir_ : path-like or None, optional
-        If dir_ is not None, the file will be created in that directory.
-        Otherwise, a default directory is used per `tempfile.mkstemp()`:
-        https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp
-        Defaults to None.
-    prefix, suffix : str or None, optional
-        Prefix and suffix for the scratch file, as per `tempfile.mkstemp()`:
-        https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp
-        Defaults to None.
-
-    Returns
-    -------
-    path : pathlib.Path
-        Filepath to a uniquely-named scratch file.
-    """
-    if dir_ is not None:
-        dir_ = os.fsdecode(dir_)
-    file, filename = tempfile.mkstemp(dir=dir_, prefix=prefix, suffix=suffix)
-    os.close(file)
-    return Path(filename)
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

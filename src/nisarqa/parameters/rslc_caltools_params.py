@@ -1022,7 +1022,6 @@ class RSLCRootParamGroup(RootParamGroup):
 
     # Overwrite parent's attributes b/c new type
     workflows: RSLCWorkflowsParamGroup
-    prodpath: ProductPathGroupParamGroup = None
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None

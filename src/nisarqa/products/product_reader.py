@@ -14,6 +14,8 @@ import h5py
 import isce3
 import numpy as np
 import shapely
+import uuid
+import warnings
 
 import nisarqa
 
@@ -377,15 +379,16 @@ def _get_or_create_cached_memmap(
     img_memmap : numpy.memmap
         `memmap` copy of the `dataset_path` Dataset.
 
-    Raises
-    ------
-    ValueError :
-        If a file already exists on the disk with the exact filepath as
-        determined within this function. This might occur if the
-        function is called subsequently with the same `input_file`
-        and `dataset_path` arguments, but a different `default_tile_height`
-        argument; if so, then please call this function with the same
-        `default_tile_height` as before.
+    Warns
+    -----
+    RuntimeWarning
+        If a file with the same filepath already exists on the disk.
+        This might occur on a subsequent call to this function with
+        the same `input_file` and `dataset_path` arguments, but a
+        different `default_tile_height` argument.
+        Or, it might occur if the global scratch directory did not have
+        a unique name, and the user re-runs QA on the same input file without
+        first clearing that existing scratch directory.
     """
     # Note: numpy.memmap relies on mmap.mmap, which, prior to Python 3.13,
     # had no interface to close the underlying file descriptor.
@@ -403,14 +406,20 @@ def _get_or_create_cached_memmap(
     )
 
     if mmap_file.exists():
-        raise ValueError(
-            "Cached memory-mapped file already created for input file"
-            f" {input_file} and Dataset {dataset_path}, located in the"
-            f" global scratch directory at: {mmap_file}."
-            " Suggest using the same `default_tile_height` argument"
-            " as when `_get_or_create_cached_memmap()` was first called for"
-            " this input file and Dataset pair."
+        existing_file = mmap_file
+        mmap_file = mmap_file.replace(".dat", f"{uuid.uuid4()}.dat")
+        msg = (
+            "A file already with the function's standard choice for the"
+            f" memory-mapped filename already exists: '{existing_file}'."
+            f" Creating new memory-mapped file at '{mmap_file}', but suggest"
+            " checking for disk space leaks. See docstring for suggestions."
         )
+
+        warnings.warn(msg,
+            RuntimeWarning,
+        )
+        log.warning(msg)
+
 
     # Create a memmap with dtype and shape that matches our data
     with h5py.File(input_file, "r") as h5_f:

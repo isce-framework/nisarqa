@@ -121,7 +121,6 @@ class GSLCRootParamGroup(RootParamGroup):
 
     # Overwrite parent's attributes b/c new type
     workflows: SLCWorkflowsParamGroup
-    prodpath: ProductPathGroupParamGroup = None
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
