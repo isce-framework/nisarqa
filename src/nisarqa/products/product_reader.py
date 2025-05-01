@@ -358,7 +358,7 @@ def _get_or_create_cached_memmap(
     The Dataset contents are copied tile-by-tile to avoid oversubscribing
     system memory. If the Dataset is chunked, the tile shape will match the
     chunk dimensions. Otherwise, the tile shape defaults to:
-        (<default_tile_height>, <Dataset axis 1 width>)
+        (<default_tile_height>, <dataset.shape[1]>)
     The full width is used because HDF5 Datasets use row-major ordering.
 
     Parameters
@@ -371,24 +371,13 @@ def _get_or_create_cached_memmap(
         Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
     default_tile_height : int, optional
         If Dataset is not chunked, then the tile shape used to copy the data
-        defaults to: (<default_tile_height>, <dataset axis 1 width>).
+        defaults to: (<default_tile_height>, <dataset.shape[1]>).
         Ignored if Dataset is chunked. Defaults to 32.
 
     Returns
     -------
     img_memmap : numpy.memmap
         `memmap` copy of the `dataset_path` Dataset.
-
-    Warns
-    -----
-    RuntimeWarning
-        If a file with the same filepath already exists on the disk.
-        This might occur on a subsequent call to this function with
-        the same `input_file` and `dataset_path` arguments, but a
-        different `default_tile_height` argument.
-        Or, it might occur if the global scratch directory did not have
-        a unique name, and the user re-runs QA on the same input file without
-        first clearing that existing scratch directory.
     """
     # Note: numpy.memmap relies on mmap.mmap, which, prior to Python 3.13,
     # had no interface to close the underlying file descriptor.
@@ -401,25 +390,18 @@ def _get_or_create_cached_memmap(
     log = nisarqa.get_logger()
 
     # Construct file name for memory-mapped file
-    mmap_file = (
-        nisarqa.get_global_scratch() / f"{dataset_path.replace('/', '-')}.dat"
+    filename = f"{dataset_path.replace('/', '-')}.dat"
+    mmap_file = nisarqa.get_global_scratch() / filename
+
+    # A user should never be able to trip this assert because the scratch
+    # directory should always be unique. But if we change the behavior
+    # of the QA scratch directory without thinking through all consequences,
+    # this assertion will alert us to the issue.
+    msg = (
+        "A file already exists with the memory-mapped file's default path" 
+        f" and name: {mmap_file}"
     )
-
-    if mmap_file.exists():
-        existing_file = mmap_file
-        mmap_file = mmap_file.replace(".dat", f"{uuid.uuid4()}.dat")
-        msg = (
-            "A file already with the function's standard choice for the"
-            f" memory-mapped filename already exists: '{existing_file}'."
-            f" Creating new memory-mapped file at '{mmap_file}', but suggest"
-            " checking for disk space leaks. See docstring for suggestions."
-        )
-
-        warnings.warn(msg,
-            RuntimeWarning,
-        )
-        log.warning(msg)
-
+    assert not mmap_file.exists(), msg
 
     # Create a memmap with dtype and shape that matches our data
     with h5py.File(input_file, "r") as h5_f:

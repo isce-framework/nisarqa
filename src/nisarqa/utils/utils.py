@@ -626,7 +626,7 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
 
 def _create_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
     """
-    Prepare the scratch directory and return the absolute path.
+    Prepare the scratch directory and return the path.
 
     Parameters
     ----------
@@ -641,17 +641,13 @@ def _create_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
     Returns
     -------
     path : pathlib.Path
-        Absolute path to the scratch directory.
+        Path to the scratch directory.
     """
     if dir_ is None:
         path = Path(tempfile.mkdtemp())
     else:
         path = Path(dir_)
         path.mkdir(parents=True, exist_ok=True)
-
-    # Expand ~ to the user’s home directory. Make path an absolute path.
-    # Also resolves symlinks (if they exist).
-    path = path.expanduser().resolve()
 
     return path
 
@@ -693,8 +689,6 @@ def scratch_directory_manager(
 
     try:
         yield scratchdir
-    except Exception:
-        raise
     finally:
         log = nisarqa.get_logger()
         current_scratch = get_global_scratch()
@@ -752,7 +746,7 @@ def set_global_scratch(scratch_dir: str | os.PathLike | None = None) -> None:
     --------
     get_global_scratch :
         After the global scratch directory has been set, use this function
-        to get the absolute Path to the global scratch directory.
+        to get the Path to the global scratch directory.
     """
     log = nisarqa.get_logger()
     scratch_path = _create_scratch_directory(dir_=scratch_dir)
