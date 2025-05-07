@@ -341,7 +341,7 @@ def _get_dataset_handle(
         return dataset
 
 
-@lru_cache
+@nisarqa.lru_cache_with_frozen_argument("default_tile_height")
 def _get_or_create_cached_memmap(
     input_file: str | os.PathLike,
     dataset_path: str,
@@ -373,6 +373,11 @@ def _get_or_create_cached_memmap(
         If Dataset is not chunked, then the tile shape used to copy the data
         defaults to: (<default_tile_height>, <dataset.shape[1]>).
         Ignored if Dataset is chunked. Defaults to 32.
+        Warning: This parameter's argument value is "frozen" upon first
+        invocation of `_get_or_create_cached_memmap()`, regardless of the
+        changes to the other parameters. Please ensure that the argument
+        provided the first time this function is called will be appropriate
+        for all subsequent non-chuncked Datasets that will be cached.
 
     Returns
     -------
@@ -468,10 +473,17 @@ class NisarProduct(ABC):
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to False.
+    default_tile_height : int, optional
+        If `use_cache` is True and if a Dataset is not chunked, then when a
+        Dataset is copied to a memory-mapped file, the tile shape used to copy
+        the data defaults to: (<default_tile_height>, <dataset.shape[1]>).
+        Ignored if a Dataset is chunked. Ignored if `use_cache` is False.
+        Defaults to 32.
     """
 
     filepath: str
     use_cache: bool = False
+    default_tile_height: int = 32
 
     def __post_init__(self):
         # Verify that the input product contained a product spec version.
@@ -1626,6 +1638,7 @@ class NisarRadarProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
+                default_tile_height=self.default_tile_height,
             )
         else:
             kwargs["data"] = dataset
@@ -1908,6 +1921,7 @@ class NisarGeoProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
+                default_tile_height=self.default_tile_height,
             )
         else:
             kwargs["data"] = dataset

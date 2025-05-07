@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import inspect
 import logging
 import math
 import os
@@ -16,9 +17,9 @@ from collections.abc import (
 )
 from contextlib import contextmanager
 from datetime import datetime
-from functools import wraps
+from functools import lru_cache, wraps
 from pathlib import Path
-from typing import Optional, overload
+from typing import Any, Callable, Optional, overload
 
 import h5py
 import numpy as np
@@ -794,6 +795,76 @@ def get_global_scratch() -> Path:
         )
 
     return getattr(set_global_scratch, "_scratch_path")
+
+
+def lru_cache_with_frozen_argument(
+    param_name: str,
+) -> Callable[[Callable[..., qa_typing.T]], Callable[..., qa_typing.T]]:
+    """
+    Decorator akin to `functools.lru_cache` but with one frozen argument.
+
+    Decorator to cache a function using LRU caching and freeze one argument
+    after the first call. On subsequent calls, the specified argument is always
+    overridden with the frozen value, even if a different value is passed.
+
+    This decorator uses `functools.lru_cache`, so all caveats about
+    threadsafe executions, argument patterns, argument types, etc. apply here.
+    See: https://docs.python.org/3/library/functools.html#functools.lru_cache
+
+    Parameters
+    ----------
+    param_name : str
+        The name of one of the decorated function's parameters, whose argument
+        will be frozen after the first invocation.
+    """
+
+    def decorator(
+        func: Callable[..., qa_typing.T],
+    ) -> Callable[..., qa_typing.T]:
+
+        frozen_value: dict[str, Any] = {}  # Stores the frozen argument value
+        sig = inspect.signature(func)  # Used to bind arguments by name
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Bind positional and keyword arguments to named parameters
+            # https://docs.python.org/3/library/inspect.html#inspect.BoundArguments
+            bound_args = sig.bind(*args, **kwargs)
+            # Apply default values where needed
+            bound_args.apply_defaults()
+
+            if param_name not in bound_args.arguments:
+                raise ValueError(
+                    f"Requested parameter to be frozen is '{param_name}',"
+                    " but must be one of the wrapped function's parameters:"
+                    f" {list(bound_args.arguments.keys())} "
+                )
+
+            new_val = bound_args.arguments[param_name]
+
+            if "value" not in frozen_value:
+                # On first call, freeze the value
+                frozen_value["value"] = new_val
+            else:
+                # Override the provided argument value with the frozen one
+                frz_val = frozen_value["value"]
+                nisarqa.get_logger().debug(
+                    f"Overriding argument for '{param_name}': received"
+                    f" `{new_val}`, using persistent frozen value `{frz_val}`"
+                )
+                bound_args.arguments[param_name] = frz_val
+
+            # Call the cached function with possibly modified arguments
+            return cached_func(*bound_args.args, **bound_args.kwargs)
+
+        # Apply LRU caching to the original function
+        # The result is a new function `cached_func` that behaves identically
+        # to func, but it remembers previous calls based on the argument values.
+        cached_func = lru_cache()(func)
+
+        return wrapper
+
+    return decorator
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

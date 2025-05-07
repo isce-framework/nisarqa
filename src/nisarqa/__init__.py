@@ -116,6 +116,8 @@ from .parameters.rslc_caltools_params import *
 from .parameters.gslc_params import *
 from .parameters.gcov_params import *
 from .parameters.insar_params import *
+from .utils import typing
+from .utils.utils import *
 from .products.product_reader import *
 from .utils.file_verification.policy import *
 from .utils.file_verification.data_annotation import *
@@ -128,7 +130,6 @@ from .utils.file_verification.xml_check import *
 from .utils.file_verification.xml_parser import *
 
 from .utils.metadata_checks import *
-from .utils.utils import *
 
 # keep individual products in their own namespace
 from .products import (
@@ -150,6 +151,5 @@ from .utils.summary_csv import *
 from .utils.stats_h5_writer.metrics_writer import *
 from .utils.stats_h5_writer.setup_writer import *
 from .utils.sanity_checks import *
-from .utils import typing
 
 # isort: on
