@@ -3,7 +3,6 @@ from __future__ import annotations
 import traceback
 from dataclasses import dataclass
 from itertools import chain
-from typing import TypeVar
 
 import h5py
 import numpy as np
@@ -143,7 +142,9 @@ class MetadataLUT3D(MetadataLUT2D):
 
         len_z = len(self.z_coord_vector)
         if self.shape[-3] != len_z:
-            if self.name.endswith("Baseline"):
+            if self.name.endswith("Baseline") or self.name.endswith(
+                "TidesPhase"
+            ):
                 # `parallelBaseline` and `perpendicularBaseline` LUTs
                 # either have a height of 2 or the length of the z coordinates
                 if self.shape[-3] != 2:

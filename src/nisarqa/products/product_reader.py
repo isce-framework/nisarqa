@@ -1,18 +1,21 @@
 from __future__ import annotations
 
 import os
+import tempfile
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass
 from functools import cached_property, lru_cache
 from pathlib import Path
-from typing import Any, overload
+from typing import overload
 
 import h5py
 import isce3
 import numpy as np
 import shapely
+import uuid
+import warnings
 
 import nisarqa
 
@@ -338,6 +341,123 @@ def _get_dataset_handle(
         return dataset
 
 
+@nisarqa.lru_cache_with_frozen_argument("default_tile_height")
+def _get_or_create_cached_memmap(
+    input_file: str | os.PathLike,
+    dataset_path: str,
+    default_tile_height: int = 32,
+) -> np.memmap:
+    """
+    Get or create a cached memmap of the requested Dataset.
+
+    On first invocation, creates a memory-mapped file in the global
+    scratch directory and copies the contents of a 2D HDF5 Dataset to that file.
+    The memory map object is cached and simply returned on subsequent
+    invocations with the same arguments.
+
+    The Dataset contents are copied tile-by-tile to avoid oversubscribing
+    system memory. If the Dataset is chunked, the tile shape will match the
+    chunk dimensions. Otherwise, the tile shape defaults to:
+        (<default_tile_height>, <dataset.shape[1]>)
+    The full width is used because HDF5 Datasets use row-major ordering.
+
+    Parameters
+    ----------
+    input_file : path-like
+        HDF5 input file.
+    dataset_path : string
+        Path in the HDF5 input file to the 2D Dataset to be copied to a
+        memory-mapped file.
+        Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
+    default_tile_height : int, optional
+        If Dataset is not chunked, then the tile shape used to copy the data
+        defaults to: (<default_tile_height>, <dataset.shape[1]>).
+        Ignored if Dataset is chunked. Defaults to 32.
+        Warning: This parameter's argument value is "frozen" upon first
+        invocation of `_get_or_create_cached_memmap()`, regardless of the
+        changes to the other parameters. Please ensure that the argument
+        provided the first time this function is called will be appropriate
+        for all subsequent non-chuncked Datasets that will be cached.
+
+    Returns
+    -------
+    img_memmap : numpy.memmap
+        `memmap` copy of the `dataset_path` Dataset.
+    """
+    # Note: numpy.memmap relies on mmap.mmap, which, prior to Python 3.13,
+    # had no interface to close the underlying file descriptor.
+    # In addition, numpy.memmap doesn't provide an API to close the mmap object.
+    # (And, since numpy.memmap hides the details of how it calls mmap.mmap,
+    # it doesn't have a way to close the file handle either, even in
+    # Python 3.13+.) So both the file descriptor and the memory map may
+    # stay open for the lifetime of the process.
+
+    log = nisarqa.get_logger()
+
+    # Construct file name for memory-mapped file
+    filename = f"{dataset_path.replace('/', '-')}.dat"
+    mmap_file = nisarqa.get_global_scratch() / filename
+
+    # A user should never be able to trip this assert because the scratch
+    # directory should always be unique. But if we change the behavior
+    # of the QA scratch directory without thinking through all consequences,
+    # this assertion will alert us to the issue.
+    msg = (
+        "A file already exists with the memory-mapped file's default path"
+        f" and name: {mmap_file}"
+    )
+    assert not mmap_file.exists(), msg
+
+    # Create a memmap with dtype and shape that matches our data
+    with h5py.File(input_file, "r") as h5_f:
+        h5_ds = _get_dataset_handle(h5_file=h5_f, raster_path=dataset_path)
+        shape = np.shape(h5_ds)
+        if len(shape) != 2:
+            raise ValueError(
+                f"Input array has {len(shape)} dimensions, but must be 2D."
+            )
+
+        img_memmap = np.memmap(
+            mmap_file, dtype=h5_ds.dtype, mode="w+", shape=shape
+        )
+
+        # Copy data to memory-mapped file.
+        # Note: This is an expensive operation. All decompression, etc. costs
+        # are incurred here.
+
+        # tuple giving the chunk shape, or None if chunked storage is not used
+        if (chunks := h5_ds.chunks) is not None:
+            log.info(f"Dataset {dataset_path} has chunk shape {chunks}.")
+            # Number of chunk dimensions must match number of Dataset dimensions.
+            assert len(chunks) == 2
+            # Edge case: dimension(s) are smaller than the chunk size,
+            # so adjust the lengths which will be used for the tile iterators
+            tile_height = min(chunks[0], shape[0])
+            tile_width = min(chunks[1], shape[1])
+
+        else:
+            # HDF5 uses row-major ordering, so use full rows
+            tile_height = min(default_tile_height, shape[0])
+            tile_width = shape[1]
+            log.info(
+                f"Dataset {dataset_path} not written with chunked storage."
+                f" Input array with shape {shape} will be copied tile-by-tile"
+                " to memory-mapped file using tile shape"
+                f" ({tile_height}, {tile_width})."
+            )
+
+        msg = f"Copy Dataset contents to memory-mapped file: {dataset_path}"
+        with nisarqa.log_runtime(msg):
+            for i in range(0, shape[0], tile_height):
+                for j in range(0, shape[1], tile_width):
+                    slices = np.s_[i : (i + tile_height), j : (j + tile_width)]
+                    img_memmap[slices] = h5_ds[slices]
+
+        log.info(f"Memory-mapped scratch file saved: {mmap_file}")
+
+        return img_memmap
+
+
 @dataclass
 class NisarProduct(ABC):
     """
@@ -347,10 +467,23 @@ class NisarProduct(ABC):
     ----------
     filepath : path-like
         Filepath to the input product.
+    use_cache : bool, optional
+        True to use memory map(s) to cache select Dataset(s) in
+        memory-mapped files in the global scratch directory.
+        False to always read data directly from the input file.
+        Generally, enabling caching should reduce runtime.
+        Defaults to False.
+    default_tile_height : int, optional
+        If `use_cache` is True and if a Dataset is not chunked, then when a
+        Dataset is copied to a memory-mapped file, the tile shape used to copy
+        the data defaults to: (<default_tile_height>, <dataset.shape[1]>).
+        Ignored if a Dataset is chunked. Ignored if `use_cache` is False.
+        Defaults to 32.
     """
 
-    # Full file path to the input product file.
     filepath: str
+    use_cache: bool = False
+    default_tile_height: int = 32
 
     def __post_init__(self):
         # Verify that the input product contained a product spec version.
@@ -1500,7 +1633,15 @@ class NisarRadarProduct(NisarProduct):
 
         # Get dataset object and check for correct dtype
         dataset = _get_dataset_handle(h5_file, raster_path)
-        kwargs["data"] = dataset
+
+        if self.use_cache:
+            kwargs["data"] = _get_or_create_cached_memmap(
+                input_file=self.filepath,
+                dataset_path=raster_path,
+                default_tile_height=self.default_tile_height,
+            )
+        else:
+            kwargs["data"] = dataset
 
         kwargs["units"] = _get_units(dataset)
         kwargs["fill_value"] = _get_fill_value(dataset)
@@ -1771,7 +1912,15 @@ class NisarGeoProduct(NisarProduct):
 
         # Get dataset object and check for correct dtype
         dataset = _get_dataset_handle(h5_file, raster_path)
-        kwargs["data"] = dataset
+
+        if self.use_cache:
+            kwargs["data"] = _get_or_create_cached_memmap(
+                input_file=self.filepath,
+                dataset_path=raster_path,
+                default_tile_height=self.default_tile_height,
+            )
+        else:
+            kwargs["data"] = dataset
 
         kwargs["units"] = _get_units(dataset)
         kwargs["fill_value"] = _get_fill_value(dataset)

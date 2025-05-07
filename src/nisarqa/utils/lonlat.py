@@ -5,7 +5,6 @@ import textwrap
 from dataclasses import dataclass
 from pathlib import Path
 
-import isce3
 import numpy as np
 
 import nisarqa

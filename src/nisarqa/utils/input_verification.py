@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import os
 import re
-from datetime import datetime
 
 import h5py
 import numpy as np
-from numpy.typing import ArrayLike
 
 import nisarqa
 

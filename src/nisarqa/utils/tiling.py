@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import warnings
-from collections.abc import Callable, Sequence
+from collections.abc import Callable
 from typing import Optional
 
 import numpy as np
@@ -727,8 +727,6 @@ def compute_az_spectra_by_tiling(
 
     To reduce processing time, users can decrease the interval of `col_indices`.
     """
-    log = nisarqa.get_logger()
-
     arr_shape = np.shape(arr)
     if len(arr_shape) != 2:
         raise ValueError(

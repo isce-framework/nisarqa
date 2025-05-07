@@ -6,7 +6,6 @@ import os
 from collections.abc import Iterator, Mapping, Sequence
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass
-from tempfile import NamedTemporaryFile
 from typing import Any
 
 import h5py
@@ -142,26 +141,28 @@ def run_abscal_single_freq_pol(
     assert "pthresh" not in kwds
     kwds["pthresh"] = kwds.pop("power_threshold")
 
-    # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run AbsCal tool.
-        estimate_abscal_factor.main(
-            corner_reflector_csv=corner_reflector_csv,
-            csv_format="nisar",
-            rslc_hdf5=rslc_hdf5,
-            output_json=tmpfile.name,
-            freq=freq,
-            pol=pol,
-            external_orbit_xml=None,  # Use the orbit in the RSLC product.
-            **kwds,
-        )
+    # Create a scratch file to store the JSON output of the tool.
+    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Run AbsCal tool.
+    estimate_abscal_factor.main(
+        corner_reflector_csv=corner_reflector_csv,
+        csv_format="nisar",
+        rslc_hdf5=rslc_hdf5,
+        output_json=tmpfile,
+        freq=freq,
+        pol=pol,
+        external_orbit_xml=None,  # Use the orbit in the RSLC product.
+        **kwds,
+    )
+
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            return json.load(f)
 
 
 def populate_abscal_hdf5_output(
@@ -443,26 +444,28 @@ def run_rslc_pta_single_freq_pol(
     # code will need to be updated accordingly.
     kwds = asdict(pta_params)
 
-    # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run PTA tool.
-        point_target_analysis.process_corner_reflector_csv(
-            corner_reflector_csv=corner_reflector_csv,
-            csv_format="nisar",
-            rslc_hdf5=rslc_hdf5,
-            output_json=tmpfile.name,
-            freq=freq,
-            pol=pol,
-            cuts=True,
-            **kwds,
-        )
+    # Create a scratch file to store the JSON output of the tool.
+    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Run PTA tool.
+    point_target_analysis.process_corner_reflector_csv(
+        corner_reflector_csv=corner_reflector_csv,
+        csv_format="nisar",
+        rslc_hdf5=rslc_hdf5,
+        output_json=tmpfile,
+        freq=freq,
+        pol=pol,
+        cuts=True,
+        **kwds,
+    )
+
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            return json.load(f)
 
 
 def run_gslc_pta_single_freq_pol(
@@ -531,27 +534,29 @@ def run_gslc_pta_single_freq_pol(
     # QA code will need to be updated accordingly.
     kwds = asdict(pta_params)
 
-    # Create a temporary file to store the JSON output of the tool.
-    with NamedTemporaryFile(suffix=".json") as tmpfile:
-        # Run PTA tool.
-        gslc_point_target_analysis.analyze_gslc_point_targets_csv(
-            gslc_filename=gslc_hdf5,
-            output_file=tmpfile.name,
-            corner_reflector_csv=corner_reflector_csv,
-            freq=freq,
-            pol=pol,
-            dem_path=dem_file,
-            cuts=True,
-            cr_format="nisar",
-            **kwds,
-        )
+    # Create a scratch file to store the JSON output of the tool.
+    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
 
-        # Parse the JSON output.
-        # `json.load()` fails if the file is empty.
-        if file_is_empty(tmpfile.name):
-            return []
-        else:
-            return json.load(tmpfile)
+    # Run PTA tool.
+    gslc_point_target_analysis.analyze_gslc_point_targets_csv(
+        gslc_filename=gslc_hdf5,
+        output_file=tmpfile,
+        corner_reflector_csv=corner_reflector_csv,
+        freq=freq,
+        pol=pol,
+        dem_path=dem_file,
+        cuts=True,
+        cr_format="nisar",
+        **kwds,
+    )
+
+    # Parse the JSON output.
+    # `json.load()` fails if the file is empty.
+    if file_is_empty(tmpfile):
+        return []
+    else:
+        with open(tmpfile, "r") as f:
+            return json.load(f)
 
 
 def populate_pta_hdf5_output(

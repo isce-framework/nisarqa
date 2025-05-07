@@ -11,6 +11,7 @@ from nisarqa import (
     ProductPathGroupParamGroup,
     RootParamGroup,
     SLCWorkflowsParamGroup,
+    SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     YamlAttrs,
 )
@@ -104,6 +105,8 @@ class GSLCRootParamGroup(RootParamGroup):
         Input File Group parameters for QA
     prodpath : ProductPathGroupParamGroup or None, optional
         Product Path Group parameters for QA
+    software_config : SoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
@@ -116,10 +119,8 @@ class GSLCRootParamGroup(RootParamGroup):
         Point Target Analyzer group parameters for GSLC QA-Caltools
     """
 
-    # Shared parameters
-    workflows: (
-        SLCWorkflowsParamGroup  # overwrite parent's `workflows` b/c new type
-    )
+    # Overwrite parent's attributes b/c new type
+    workflows: SLCWorkflowsParamGroup
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -185,6 +186,11 @@ class GSLCRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=ProductPathGroupParamGroup,
             ),
             Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=SoftwareConfigParamGroup,
+            ),
+            Grp(
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=ValidationGroupParamGroup,
@@ -222,6 +228,7 @@ class GSLCRootParamGroup(RootParamGroup):
             "anc_files": GSLCDynamicAncillaryFileParamGroup,
             "prodpath": ProductPathGroupParamGroup,
             "workflows": SLCWorkflowsParamGroup,
+            "software_config": SoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": HistogramParamGroup,

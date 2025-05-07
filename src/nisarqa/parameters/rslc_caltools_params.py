@@ -3,7 +3,7 @@ from __future__ import annotations
 import numbers
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields, replace
-from typing import ClassVar, Optional, Type, Union
+from typing import ClassVar, Optional, Union
 
 import numpy as np
 from matplotlib.colors import to_rgba
@@ -18,6 +18,7 @@ from nisarqa import (
     ProductPathGroupParamGroup,
     RootParamGroup,
     RSLCPointTargetAnalyzerParamGroup,
+    SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
     YamlAttrs,
@@ -999,6 +1000,8 @@ class RSLCRootParamGroup(RootParamGroup):
         Input File Group parameters for RSLC QA
     prodpath : ProductPathGroupParamGroup or None, optional
         Product Path Group parameters for RSLC QA
+    software_config : SoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
@@ -1017,10 +1020,8 @@ class RSLCRootParamGroup(RootParamGroup):
         Point Target Analyzer group parameters for RSLC QA-Caltools
     """
 
-    # Shared parameters
-    workflows: (
-        RSLCWorkflowsParamGroup  # overwrite parent's `workflows` b/c new type
-    )
+    # Overwrite parent's attributes b/c new type
+    workflows: RSLCWorkflowsParamGroup
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -1133,6 +1134,11 @@ class RSLCRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=ProductPathGroupParamGroup,
             ),
             Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=SoftwareConfigParamGroup,
+            ),
+            Grp(
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=ValidationGroupParamGroup,
@@ -1185,6 +1191,7 @@ class RSLCRootParamGroup(RootParamGroup):
             "anc_files": DynamicAncillaryFileParamGroup,
             "prodpath": ProductPathGroupParamGroup,
             "workflows": RSLCWorkflowsParamGroup,
+            "software_config": SoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": HistogramParamGroup,

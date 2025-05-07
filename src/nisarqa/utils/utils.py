@@ -1,14 +1,17 @@
 from __future__ import annotations
 
-from functools import wraps
+import inspect
 import logging
 import os
+import shutil
+import tempfile
 import warnings
 from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from typing import Optional
 from datetime import datetime
-
+from functools import lru_cache, wraps
+from pathlib import Path
+from typing import Any, Callable, Optional
 
 import h5py
 import numpy as np
@@ -16,6 +19,7 @@ from numpy.typing import ArrayLike
 from ruamel.yaml import YAML
 
 import nisarqa
+from nisarqa import typing as qa_typing
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -506,8 +510,8 @@ def log_runtime(msg: str) -> Generator[None, None, None]:
 
 
 def log_function_runtime(
-    func: Callable[..., nisarqa.typing.T],
-) -> Callable[..., nisarqa.typing.T]:
+    func: Callable[..., qa_typing.T],
+) -> Callable[..., qa_typing.T]:
     """
     Function decorator to log the runtime of a function.
 
@@ -546,7 +550,7 @@ def ignore_runtime_warnings() -> Iterator[None]:
 
 def load_user_runconfig(
     runconfig_yaml: str | os.PathLike,
-) -> nisarqa.typing.RunConfigDict:
+) -> qa_typing.RunConfigDict:
     """
     Load a QA runconfig YAML file into a dict format.
 
@@ -557,7 +561,7 @@ def load_user_runconfig(
 
     Returns
     -------
-    user_rncfg : nisarqa.typing.RunConfigDict
+    user_rncfg : nisarqa.utils.typing.RunConfigDict
         `runconfig_yaml` loaded into a dict format
     """
     # parse runconfig into a dict structure
@@ -565,6 +569,248 @@ def load_user_runconfig(
     with open(runconfig_yaml, "r") as f:
         user_rncfg = parser.load(f)
     return user_rncfg
+
+
+def _create_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
+    """
+    Prepare the scratch directory and return the path.
+
+    Parameters
+    ----------
+    dir_ : path-like or None, optional
+        Scratch directory path.
+        If `dir_` is a path-like object, a directory will be created at the
+        specified file system path if it did not already exist.
+        If `dir_` is None, a temporary directory will be created as though by
+        `tempfile.mkdtemp()`.
+        Defaults to None.
+
+    Returns
+    -------
+    path : pathlib.Path
+        Path to the scratch directory.
+    """
+    if dir_ is None:
+        path = Path(tempfile.mkdtemp())
+    else:
+        path = Path(dir_)
+        path.mkdir(parents=True, exist_ok=True)
+
+    return path
+
+
+@contextmanager
+def scratch_directory_manager(
+    dir_: str | os.PathLike | None = None, *, delete: bool = True
+) -> Generator[Path, None, None]:
+    """
+    Context manager for a (possibly temporary) file system directory.
+
+    Parameters
+    ----------
+    dir_ : path-like or None, optional
+        Scratch directory path.
+        If `dir_` is a path-like object, a directory will be created at the
+        specified file system path if it did not already exist.
+        If `dir_` is None, a temporary directory will be created as though by
+        `tempfile.mkdtemp()`.
+        Defaults to None.
+    delete : bool, optional
+        If True, the directory and its contents are recursively removed from the
+        file system upon exiting the context manager.
+        Defaults to True.
+
+    Yields
+    ------
+    pathlib.Path
+        Scratch directory path. If `delete` was True, the directory will be
+        removed from the file system upon exiting the context manager scope.
+
+    Warnings
+    --------
+    Even if `dir_` previously existed on the file system, if `delete` is True,
+    then `dir_` will be deleted.
+    """
+    set_global_scratch(scratch_dir=dir_)
+    scratchdir = get_global_scratch()
+
+    try:
+        yield scratchdir
+    finally:
+        log = nisarqa.get_logger()
+        current_scratch = get_global_scratch()
+
+        if scratchdir != current_scratch:
+            msg = (
+                f"Global scratch directory was '{scratchdir}', but it was"
+                f" most-recently updated to '{current_scratch}' external to"
+                " (but within the context of) this context manager."
+            )
+            if delete:
+                msg += (
+                    f" Only original scratch directory '{scratchdir}'"
+                    " will be deleted."
+                )
+            log.warning(msg)
+
+        if delete:
+            try:
+                shutil.rmtree(scratchdir)
+            except FileNotFoundError:
+                msg = (
+                    f"Global scratch directory was '{scratchdir}', but it was"
+                    " deleted external to (but within the context of)"
+                    " this context manager."
+                )
+                log.error(msg)
+                raise FileNotFoundError(msg)
+            else:
+                log.info(
+                    f"Scratch directory deleted recursively: '{scratchdir}'"
+                )
+
+
+def set_global_scratch(scratch_dir: str | os.PathLike | None = None) -> None:
+    """
+    Set the persistent global scratch directory path.
+
+    For subsequent call to this function, the stored path is updated.
+
+    If the path does not exist, it is created (including parent directories).
+
+    Parameters
+    ----------
+    scratch_dir : path-like or None
+        If `scratch_dir` is a path-like object, the directory (with parents)
+        will created if it does not already exist.
+        If `scratch_dir` is None, a new temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
+        The user is responsible for deleting the cache directory and its
+        contents when done with it.
+        Defaults to None.
+
+    See Also
+    --------
+    get_global_scratch :
+        After the global scratch directory has been set, use this function
+        to get the Path to the global scratch directory.
+    """
+    log = nisarqa.get_logger()
+    scratch_path = _create_scratch_directory(dir_=scratch_dir)
+
+    if (
+        hasattr(set_global_scratch, "_scratch_path")
+        and set_global_scratch._scratch_path == scratch_path
+    ):
+        old_dir = set_global_scratch._scratch_path
+        log.info(
+            f"Global scratch directory path was '{old_dir}'."
+            f" Updating it to '{scratch_path}'."
+        )
+
+    # Set function attribute to the globale scratch path
+    set_global_scratch._scratch_path = scratch_path
+
+    log.info(
+        f"Global scratch directory path set to '{set_global_scratch._scratch_path}'."
+    )
+
+
+def get_global_scratch() -> Path:
+    """
+    Get the persistent global scratch directory path.
+
+    User must call `set_global_scratch()` prior to calling this function.
+
+    Returns
+    -------
+    path : pathlib.Path
+        Path to global scratch directory.
+
+    See Also
+    --------
+    set_global_scratch :
+        Set the global scratch directory. Must be called prior to calling
+        `get_global_scratch()`.
+    """
+
+    if not hasattr(set_global_scratch, "_scratch_path"):
+        raise ValueError(
+            "Scratch path not set. User must call `set_global_scratch()`"
+            " prior to calling this function."
+        )
+
+    return getattr(set_global_scratch, "_scratch_path")
+
+
+def lru_cache_with_frozen_argument(
+    param_name: str,
+) -> Callable[[Callable[..., qa_typing.T]], Callable[..., qa_typing.T]]:
+    """
+    Decorator akin to `functools.lru_cache` but with one frozen argument.
+
+    Decorator to cache a function using LRU caching and freeze one argument
+    after the first call. On subsequent calls, the specified argument is always
+    overridden with the frozen value, even if a different value is passed.
+
+    This decorator uses `functools.lru_cache`, so all caveats about
+    threadsafe executions, argument patterns, argument types, etc. apply here.
+    See: https://docs.python.org/3/library/functools.html#functools.lru_cache
+
+    Parameters
+    ----------
+    param_name : str
+        The name of one of the decorated function's parameters, whose argument
+        will be frozen after the first invocation.
+    """
+
+    def decorator(
+        func: Callable[..., qa_typing.T],
+    ) -> Callable[..., qa_typing.T]:
+
+        frozen_value: dict[str, Any] = {}  # Stores the frozen argument value
+        sig = inspect.signature(func)  # Used to bind arguments by name
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Bind positional and keyword arguments to named parameters
+            # https://docs.python.org/3/library/inspect.html#inspect.BoundArguments
+            bound_args = sig.bind(*args, **kwargs)
+            # Apply default values where needed
+            bound_args.apply_defaults()
+
+            if param_name not in bound_args.arguments:
+                raise ValueError(
+                    f"Requested parameter to be frozen is '{param_name}',"
+                    " but must be one of the wrapped function's parameters:"
+                    f" {list(bound_args.arguments.keys())} "
+                )
+
+            new_val = bound_args.arguments[param_name]
+
+            if "value" not in frozen_value:
+                # On first call, freeze the value
+                frozen_value["value"] = new_val
+            else:
+                # Override the provided argument value with the frozen one
+                frz_val = frozen_value["value"]
+                nisarqa.get_logger().debug(
+                    f"Overriding argument for '{param_name}': received"
+                    f" `{new_val}`, using persistent frozen value `{frz_val}`"
+                )
+                bound_args.arguments[param_name] = frz_val
+
+            # Call the cached function with possibly modified arguments
+            return cached_func(*bound_args.args, **bound_args.kwargs)
+
+        # Apply LRU caching to the original function
+        # The result is a new function `cached_func` that behaves identically
+        # to func, but it remembers previous calls based on the argument values.
+        cached_func = lru_cache()(func)
+
+        return wrapper
+
+    return decorator
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
