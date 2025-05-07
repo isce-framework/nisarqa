@@ -403,7 +403,7 @@ def _get_or_create_cached_memmap(
     # of the QA scratch directory without thinking through all consequences,
     # this assertion will alert us to the issue.
     msg = (
-        "A file already exists with the memory-mapped file's default path" 
+        "A file already exists with the memory-mapped file's default path"
         f" and name: {mmap_file}"
     )
     assert not mmap_file.exists(), msg
