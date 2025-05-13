@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections import namedtuple
 from collections.abc import Sequence
 
 import h5py

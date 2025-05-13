@@ -9,6 +9,7 @@ from nisarqa.parameters.nisar_params import (
     InputFileGroupParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
+    SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,
 )
@@ -103,6 +104,8 @@ class GCOVRootParamGroup(RootParamGroup):
         Input File Group parameters for QA
     prodpath : ProductPathGroupParamGroup or None, optional
         Product Path Group parameters for QA
+    software_config : SoftwareConfigParamGroup or None, optional
+        General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
@@ -110,10 +113,6 @@ class GCOVRootParamGroup(RootParamGroup):
     histogram : GCOVHistogramParamGroup or None, optional
         Histogram Group parameters for GCOV QA
     """
-
-    # Shared parameters
-    input_f: Optional[InputFileGroupParamGroup] = None
-    prodpath: Optional[ProductPathGroupParamGroup] = None
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -137,6 +136,11 @@ class GCOVRootParamGroup(RootParamGroup):
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=ProductPathGroupParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=flag_any_workflows_true,
+                root_param_grp_attr_name="software_config",
+                param_grp_cls_obj=SoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -165,6 +169,7 @@ class GCOVRootParamGroup(RootParamGroup):
             "input_f": InputFileGroupParamGroup,
             "prodpath": ProductPathGroupParamGroup,
             "workflows": WorkflowsParamGroup,
+            "software_config": SoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": GCOVHistogramParamGroup,

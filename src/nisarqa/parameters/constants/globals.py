@@ -1,5 +1,4 @@
 from datetime import datetime, timezone
-from functools import cache
 from itertools import product
 from pathlib import Path
 
@@ -190,6 +189,7 @@ STATS_H5_NEB_PROCESSING_GROUP = (
 STATS_H5_NEB_DATA_GROUP = STATS_H5_NEB_STATS_H5_BASE_GROUP + data_group
 
 complex32 = np.dtype([("r", np.float16), ("i", np.float16)])
+
 
 # The are global constants and not functions nor classes,
 # so manually create the __all__ attribute.

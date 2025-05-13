@@ -56,7 +56,11 @@ def verify_gcov(
     summary = nisarqa.get_summary()
 
     try:
-        product = nisarqa.GCOV(filepath=input_file)
+        product = nisarqa.GCOV(
+            filepath=input_file,
+            use_cache=root_params.software_config.use_cache,
+            # prime_the_cache=True,  # we analyze all images, so prime the cache
+        )
     except:
         # Input product could not be opened via the product reader.
         summary.check_can_open_input_file(result="FAIL")

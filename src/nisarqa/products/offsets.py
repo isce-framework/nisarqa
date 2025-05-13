@@ -61,6 +61,7 @@ def verify_offset(
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
+    use_cache = root_params.software_config.use_cache
 
     msg = f"Starting Quality Assurance for input file: {input_file}"
     log.info(msg)
@@ -70,13 +71,12 @@ def verify_offset(
     # Initialize the PASS/FAIL checks summary file
     nisarqa.setup_summary_csv(summary_file)
     summary = nisarqa.get_summary()
-
     try:
         if product_type == "roff":
-            product = nisarqa.ROFF(input_file)
+            product = nisarqa.ROFF(input_file, use_cache=use_cache)
         else:
             assert product_type == "goff"
-            product = nisarqa.GOFF(input_file)
+            product = nisarqa.GOFF(input_file, use_cache=use_cache)
     except:
         # Input product could not be opened via the product reader.
         summary.check_can_open_input_file(result="FAIL")

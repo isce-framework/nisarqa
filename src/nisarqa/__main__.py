@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
-import os
-
 import matplotlib
 
 # Switch backend to one that doesn't require DISPLAY to be set since we're
@@ -188,18 +186,24 @@ def run():
 
     # Run QA SAS
     verbose = args.verbose
-    if subcommand == "rslc_qa":
-        nisarqa.rslc.verify_rslc(root_params=root_params, verbose=verbose)
-    elif subcommand == "gslc_qa":
-        nisarqa.gslc.verify_gslc(root_params=root_params, verbose=verbose)
-    elif subcommand == "gcov_qa":
-        nisarqa.gcov.verify_gcov(root_params=root_params, verbose=verbose)
-    elif subcommand in ("rifg_qa", "runw_qa", "gunw_qa"):
-        nisarqa.igram.verify_igram(root_params=root_params, verbose=verbose)
-    elif subcommand in ("roff_qa", "goff_qa"):
-        nisarqa.offsets.verify_offset(root_params=root_params, verbose=verbose)
-    else:
-        raise ValueError(f"Unknown subcommand: {subcommand}")
+    with nisarqa.scratch_directory_manager(
+        dir_=root_params.prodpath.scratch_dir,
+        delete=root_params.software_config.delete_scratch_dir,
+    ):
+        if subcommand == "rslc_qa":
+            nisarqa.rslc.verify_rslc(root_params=root_params, verbose=verbose)
+        elif subcommand == "gslc_qa":
+            nisarqa.gslc.verify_gslc(root_params=root_params, verbose=verbose)
+        elif subcommand == "gcov_qa":
+            nisarqa.gcov.verify_gcov(root_params=root_params, verbose=verbose)
+        elif subcommand in ("rifg_qa", "runw_qa", "gunw_qa"):
+            nisarqa.igram.verify_igram(root_params=root_params, verbose=verbose)
+        elif subcommand in ("roff_qa", "goff_qa"):
+            nisarqa.offsets.verify_offset(
+                root_params=root_params, verbose=verbose
+            )
+        else:
+            raise ValueError(f"Unknown subcommand: {subcommand}")
 
 
 def main():
