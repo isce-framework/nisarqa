@@ -2,26 +2,61 @@ from __future__ import annotations
 
 import os
 import textwrap
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
-
-import isce3
-import numpy as np
 
 import nisarqa
 
 objects_to_skip = nisarqa.get_all(__name__)
 
 
+def unwrap_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+    """
+    Normalize longitudes so that they form a continuous quadrilateral
+    across the antimeridian.
+
+    Arguments
+    ---------
+    lon_lat_points : Sequence of nisarqa.LonLat
+        List of nisarqa.LonLat (in degrees)
+
+    Returns
+    -------
+    unwrapped_lon_lat : list of nisarqa.LonLat
+        Copy of `lon_lat`, but in the case of an antimeridian crossing
+        the longitude values are "unwrapped" to extend beyond the
+        interval of +/-180 degrees. The ordering of the points is preserved.
+    """
+    unwrapped = [lon_lat_points[0]]
+
+    for i in range(1, len(lon_lat_points)):
+        prev_lon = lon_lat_points[i - 1].lon
+        current_lon = lon_lat_points[i].lon
+
+        delta = current_lon - prev_lon
+
+        # If it's a large jump to the west, subtract 360
+        if delta > 180:
+            current_lon -= 360
+        # If it's a large jump to the east, add 360
+        elif delta < -180:
+            current_lon += 360
+
+        unwrapped.append(LonLat(current_lon, lon_lat_points[i].lat))
+
+    return unwrapped
+
+
 @dataclass
 class LonLat:
     """
-    A point in Lon/Lat space.
+    A point in Lon/Lat space (units of degrees).
 
     Attributes
     ----------
     lon, lat : float
-        The geodetic longitude and latitude, in radians.
+        The geodetic longitude and latitude, in degrees.
     """
 
     lon: float
@@ -31,7 +66,7 @@ class LonLat:
 @dataclass
 class LatLonQuad:
     """
-    A quadrilateral defined by four Lon/Lat corner points.
+    A quadrilateral defined by four Lon/Lat corner points (in degrees).
 
     This class represents a KML gx:LatLonQuad, as described in
     https://developers.google.com/kml/documentation/kmlreference#gx:latlonquad
@@ -51,13 +86,22 @@ class LatLonQuad:
     Attributes
     ----------
     ul, ur, ll, lr : LonLat
-        The upper-left, upper-right, lower-left, and lower-right corners.
+        The upper-left, upper-right, lower-left, and lower-right corners
+        in units of degrees.
+        If there is an antimeridian crossing, longitude values will be
+        automatically unwrapped during initialization to ensure continuity.
+        For example, a quad with longitudes [179, -179] will be interpreted
+        as crossing the antimeridian and corrected to [179, 181].
     """
 
     ul: LonLat
     ur: LonLat
     ll: LonLat
     lr: LonLat
+
+    def __post_init__(self):
+        unwrapped = unwrap_longitudes((self.ul, self.ur, self.lr, self.ll))
+        self.ul, self.ur, self.lr, self.ll = unwrapped
 
 
 def write_latlonquad_to_kml(
@@ -88,15 +132,14 @@ def write_latlonquad_to_kml(
         to `output_dir`. Defaults to 'BROWSE.png'.
     """
 
-    # extract upper/lower left/right corners
-    ul, ur, ll, lr = llq.ul, llq.ur, llq.ll, llq.lr
-
-    # convert lon/lat radians to string in degrees suitable for LatLonQuad
-    ll_str = lambda c: str(np.rad2deg(c.lon)) + "," + str(np.rad2deg(c.lat))
-
+    # Construct LatLonQuad coordinates string in correct format for KML.
     # The coordinates are specified in counter-clockwise order with the first
     # point corresponding to the lower-left corner of the overlayed image.
     # (https://developers.google.com/kml/documentation/kmlreference#gx:latlonquad)
+    kml_lat_lon_quad = " ".join(
+        [f"{p.lon},{p.lat}" for p in (llq.ll, llq.lr, llq.ur, llq.ul)]
+    )
+
     kml_file = textwrap.dedent(
         f"""
         <?xml version="1.0" encoding="UTF-8"?>
@@ -109,7 +152,7 @@ def write_latlonquad_to_kml(
                 <href>{png_filename}</href>
               </Icon>
               <gx:LatLonQuad>
-                <coordinates>{' '.join(ll_str(llh) for llh in (ll, lr, ur, ul))}</coordinates>
+                <coordinates>{kml_lat_lon_quad}</coordinates>
               </gx:LatLonQuad>
             </GroundOverlay>
           </Document>
