@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import tempfile
 from abc import ABC, abstractmethod
 from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
@@ -14,8 +13,6 @@ import h5py
 import isce3
 import numpy as np
 import shapely
-import uuid
-import warnings
 
 import nisarqa
 
@@ -341,11 +338,10 @@ def _get_dataset_handle(
         return dataset
 
 
-@nisarqa.lru_cache_with_frozen_argument("default_tile_height")
+@lru_cache
 def _get_or_create_cached_memmap(
     input_file: str | os.PathLike,
     dataset_path: str,
-    default_tile_height: int = 32,
 ) -> np.memmap:
     """
     Get or create a cached memmap of the requested Dataset.
@@ -358,7 +354,7 @@ def _get_or_create_cached_memmap(
     The Dataset contents are copied tile-by-tile to avoid oversubscribing
     system memory. If the Dataset is chunked, the tile shape will match the
     chunk dimensions. Otherwise, the tile shape defaults to:
-        (<default_tile_height>, <dataset.shape[1]>)
+        (32, <dataset.shape[1]>)
     The full width is used because HDF5 Datasets use row-major ordering.
 
     Parameters
@@ -369,15 +365,6 @@ def _get_or_create_cached_memmap(
         Path in the HDF5 input file to the 2D Dataset to be copied to a
         memory-mapped file.
         Example: "/science/LSAR/RSLC/swaths/frequencyA/HH".
-    default_tile_height : int, optional
-        If Dataset is not chunked, then the tile shape used to copy the data
-        defaults to: (<default_tile_height>, <dataset.shape[1]>).
-        Ignored if Dataset is chunked. Defaults to 32.
-        Warning: This parameter's argument value is "frozen" upon first
-        invocation of `_get_or_create_cached_memmap()`, regardless of the
-        changes to the other parameters. Please ensure that the argument
-        provided the first time this function is called will be appropriate
-        for all subsequent non-chuncked Datasets that will be cached.
 
     Returns
     -------
@@ -437,6 +424,7 @@ def _get_or_create_cached_memmap(
 
         else:
             # HDF5 uses row-major ordering, so use full rows
+            default_tile_height = 32
             tile_height = min(default_tile_height, shape[0])
             tile_width = shape[1]
             log.info(
@@ -473,17 +461,10 @@ class NisarProduct(ABC):
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to False.
-    default_tile_height : int, optional
-        If `use_cache` is True and if a Dataset is not chunked, then when a
-        Dataset is copied to a memory-mapped file, the tile shape used to copy
-        the data defaults to: (<default_tile_height>, <dataset.shape[1]>).
-        Ignored if a Dataset is chunked. Ignored if `use_cache` is False.
-        Defaults to 32.
     """
 
     filepath: str
     use_cache: bool = False
-    default_tile_height: int = 32
 
     def __post_init__(self):
         # Verify that the input product contained a product spec version.
@@ -1638,7 +1619,6 @@ class NisarRadarProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
-                default_tile_height=self.default_tile_height,
             )
         else:
             kwargs["data"] = dataset
@@ -1921,7 +1901,6 @@ class NisarGeoProduct(NisarProduct):
             kwargs["data"] = _get_or_create_cached_memmap(
                 input_file=self.filepath,
                 dataset_path=raster_path,
-                default_tile_height=self.default_tile_height,
             )
         else:
             kwargs["data"] = dataset
