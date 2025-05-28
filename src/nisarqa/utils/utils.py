@@ -669,11 +669,11 @@ def create_unique_subdirectory(
         # Create a uniquely-named subdirectory
         utc_now = datetime.now(timezone.utc)
         # The colon character `:` is not advised for POSIX paths
-        utc_now = utc_now.strftime("%Y-%m-%dT%Hh%Mm%SsZ")
-        prefix_str = "" if prefix is None else prefix
-        path = Path(parent_dir) / f"{prefix_str}{utc_now}-{uuid.uuid4()}"
+        utc_now = utc_now.strftime("%Y%m%d%H%M%S")
 
-        path.mkdir(parents=True, exist_ok=True)
+        prefix_str = f"{'' if prefix is None else (prefix + '-')}{utc_now}-"
+
+        path = Path(tempfile.mkdtemp(prefix=prefix_str, dir=parent_dir))
 
     try:
         yield path

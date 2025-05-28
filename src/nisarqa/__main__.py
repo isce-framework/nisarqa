@@ -189,7 +189,7 @@ def run():
 
     with nisarqa.create_unique_subdirectory(
         parent_dir=root_params.prodpath.scratch_dir_parent,
-        prefix="qa_",
+        prefix=f"qa-{product_type}",
         delete=root_params.software_config.delete_scratch_files,
     ) as scratch_dir:
 
