@@ -1405,6 +1405,7 @@ class NisarRadarProduct(NisarProduct):
                 ur=corners[1],
                 ll=corners[3],
                 lr=corners[2],
+                normalize_longitudes=True,
             )
         else:
             # boundingPolygon is specifed in counter-clockwise order in
@@ -1422,6 +1423,7 @@ class NisarRadarProduct(NisarProduct):
                     ur=corners[3],
                     ll=corners[1],
                     lr=corners[2],
+                    normalize_longitudes=True,
                 )
             else:
                 # In the right-looking case, the counter-clockwise orientation
@@ -1434,6 +1436,7 @@ class NisarRadarProduct(NisarProduct):
                     ur=corners[1],
                     ll=corners[3],
                     lr=corners[2],
+                    normalize_longitudes=True,
                 )
 
         return geo_corners
@@ -1655,7 +1658,7 @@ class NisarGeoProduct(NisarProduct):
                 point = nisarqa.LonLat(np.rad2deg(lon), np.rad2deg(lat))
                 geo_corners += (point,)
 
-        return nisarqa.LatLonQuad(*geo_corners)
+        return nisarqa.LatLonQuad(*geo_corners, normalize_longitudes=True)
 
     @cached_property
     def _data_group_path(self) -> str:

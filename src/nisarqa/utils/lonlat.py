@@ -11,10 +11,15 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(__name__)
 
 
-def unwrap_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+def normalize_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
     """
-    Normalize longitudes so that they form a continuous quadrilateral
-    across the antimeridian.
+    Normalize longitudes so that the absolute difference between any
+    adjacent pair of longitude values is <= 180 degrees.
+
+    In essence, this function ensures that all longitude values are first
+    wrapped to within the interval of +/-360 degrees, and in the case
+    of the an antimeridian crossing then longitude values are "unwrapped"
+    to extend beyond the interval of +/-180 degrees for the crossing.
 
     Arguments
     ---------
@@ -23,29 +28,33 @@ def unwrap_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
 
     Returns
     -------
-    unwrapped_lon_lat : list of nisarqa.LonLat
-        Copy of `lon_lat`, but in the case of an antimeridian crossing
-        the longitude values are "unwrapped" to extend beyond the
-        interval of +/-180 degrees. The ordering of the points is preserved.
+    normalized : list of nisarqa.LonLat
+        Copy of `lon_lat`, but normalized so that the absolute difference
+        between any adjacent pair of longitude values is <= 180 degrees.
+        The ordering of the points is preserved.
     """
-    unwrapped = [lon_lat_points[0]]
+    lon_lat_360 = [
+        LonLat(lon=(ll.lon % 360), lat=ll.lat) for ll in lon_lat_points
+    ]
 
-    for i in range(1, len(lon_lat_points)):
-        prev_lon = lon_lat_points[i - 1].lon
-        curr_lon = lon_lat_points[i].lon
+    normalized = [lon_lat_360[0]]
 
-        delta = current_lon - prev_lon
+    for i in range(1, len(lon_lat_360)):
+        prev_lon = lon_lat_360[i - 1].lon
+        curr_lon = lon_lat_360[i].lon
+
+        delta = curr_lon - prev_lon
 
         # If it's a large jump to the west, subtract 360
         if delta > 180:
-            current_lon -= 360
+            curr_lon -= 360
         # If it's a large jump to the east, add 360
         elif delta < -180:
-            current_lon += 360
+            curr_lon += 360
 
-        unwrapped.append(LonLat(current_lon, lon_lat_points[i].lat))
+        normalized.append(LonLat(curr_lon, lon_lat_360[i].lat))
 
-    return unwrapped
+    return normalized
 
 
 @dataclass
@@ -63,7 +72,7 @@ class LonLat:
     lat: float
 
 
-@dataclass
+@dataclass(frozen=True)
 class LatLonQuad:
     """
     A quadrilateral defined by four Lon/Lat corner points (in degrees).
@@ -88,10 +97,13 @@ class LatLonQuad:
     ul, ur, ll, lr : LonLat
         The upper-left, upper-right, lower-left, and lower-right corners,
         in degrees.
-        If there is an antimeridian crossing, longitude values will be
-        automatically unwrapped during initialization to ensure continuity.
-        For example, a quad with longitudes [179, -179] will be interpreted
-        as crossing the antimeridian and corrected to [179, 181].
+    normalize_longitudes : bool, optional
+        Normalize longitudes during post init so that the absolute difference
+        between any adjacent pair of longitude values is <= 180 degrees.
+        In essence, within the interval of +/-360 degrees, and in the case
+        of the an antimeridian crossing then longitude values are "unwrapped"
+        to extend beyond the interval of +/-180 degrees for the crossing.
+        Defaults to True.
     """
 
     ul: LonLat
@@ -99,9 +111,17 @@ class LatLonQuad:
     ll: LonLat
     lr: LonLat
 
+    normalize_longitudes: bool = True
+
     def __post_init__(self):
-        unwrapped = unwrap_longitudes((self.ul, self.ur, self.lr, self.ll))
-        self.ul, self.ur, self.lr, self.ll = unwrapped
+        if self.normalize_longitudes:
+            unwrapped = normalize_longitudes(
+                (self.ul, self.ur, self.lr, self.ll)
+            )
+            object.__setattr__(self, "ul", unwrapped[0])
+            object.__setattr__(self, "ur", unwrapped[1])
+            object.__setattr__(self, "lr", unwrapped[2])
+            object.__setattr__(self, "ll", unwrapped[3])
 
 
 def write_latlonquad_to_kml(
