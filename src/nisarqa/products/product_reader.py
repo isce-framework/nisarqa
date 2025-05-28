@@ -382,7 +382,7 @@ class NisarProduct(ABC):
         -------
         llq : LatLonQuad
             A LatLonQuad object containing the four corner coordinates for this
-            product's browse image, in units of degrees.
+            product's browse image, in degrees.
         """
         pass
 

@@ -19,7 +19,7 @@ def unwrap_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
     Arguments
     ---------
     lon_lat_points : Sequence of nisarqa.LonLat
-        List of nisarqa.LonLat (in degrees)
+        List of nisarqa.LonLat (in degrees).
 
     Returns
     -------
@@ -32,7 +32,7 @@ def unwrap_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
 
     for i in range(1, len(lon_lat_points)):
         prev_lon = lon_lat_points[i - 1].lon
-        current_lon = lon_lat_points[i].lon
+        curr_lon = lon_lat_points[i].lon
 
         delta = current_lon - prev_lon
 
@@ -86,8 +86,8 @@ class LatLonQuad:
     Attributes
     ----------
     ul, ur, ll, lr : LonLat
-        The upper-left, upper-right, lower-left, and lower-right corners
-        in units of degrees.
+        The upper-left, upper-right, lower-left, and lower-right corners,
+        in degrees.
         If there is an antimeridian crossing, longitude values will be
         automatically unwrapped during initialization to ensure continuity.
         For example, a quad with longitudes [179, -179] will be interpreted
