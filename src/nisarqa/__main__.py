@@ -186,10 +186,15 @@ def run():
 
     # Run QA SAS
     verbose = args.verbose
-    with nisarqa.scratch_directory_manager(
-        dir_=root_params.prodpath.scratch_dir,
-        delete=root_params.software_config.delete_scratch_dir,
-    ):
+
+    with nisarqa.create_unique_subdirectory(
+        parent_dir=root_params.prodpath.scratch_dir_parent,
+        prefix="qa_",
+        delete=root_params.software_config.delete_scratch_files,
+    ) as scratch_dir:
+
+        nisarqa.set_global_scratch_dir(scratch_dir)
+
         if subcommand == "rslc_qa":
             nisarqa.rslc.verify_rslc(root_params=root_params, verbose=verbose)
         elif subcommand == "gslc_qa":

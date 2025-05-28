@@ -5,6 +5,7 @@ import math
 import os
 import shutil
 import tempfile
+import uuid
 import warnings
 from collections.abc import (
     Callable,
@@ -15,7 +16,7 @@ from collections.abc import (
     Sequence,
 )
 from contextlib import contextmanager
-from datetime import datetime
+from datetime import datetime, timezone
 from functools import wraps
 from pathlib import Path
 from typing import Callable, Optional, overload
@@ -624,156 +625,126 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
         a = b
 
 
-def _create_scratch_directory(dir_: str | os.PathLike | None = None) -> Path:
-    """
-    Prepare the scratch directory and return the path.
-
-    Parameters
-    ----------
-    dir_ : path-like or None, optional
-        Scratch directory path.
-        If `dir_` is a path-like object, a directory will be created at the
-        specified file system path if it did not already exist.
-        If `dir_` is None, a temporary directory will be created as though by
-        `tempfile.mkdtemp()`.
-        Defaults to None.
-
-    Returns
-    -------
-    path : pathlib.Path
-        Path to the scratch directory.
-    """
-    if dir_ is None:
-        path = Path(tempfile.mkdtemp())
-    else:
-        path = Path(dir_)
-        path.mkdir(parents=True, exist_ok=True)
-
-    return path
-
-
 @contextmanager
-def scratch_directory_manager(
-    dir_: str | os.PathLike | None = None, *, delete: bool = True
+def create_unique_subdirectory(
+    parent_dir: str | os.PathLike | None = None,
+    prefix: str = None,
+    delete: bool = True,
 ) -> Generator[Path, None, None]:
     """
-    Context manager for a (possibly temporary) file system directory.
+    Create a uniquely-named subdirectory or temp directory.
 
     Parameters
     ----------
-    dir_ : path-like or None, optional
-        Scratch directory path.
-        If `dir_` is a path-like object, a directory will be created at the
+    parent_dir : path-like or None, optional
+        Path for a local directory where a new, uniquely-named subdirectory
+        will be created.
+        If `parent_dir` is a path-like object, it will be created at the
         specified file system path if it did not already exist.
-        If `dir_` is None, a temporary directory will be created as though by
-        `tempfile.mkdtemp()`.
+        If `parent_dir` is None, a temporary directory will be created as
+        though by `tempfile.mkdtemp()`.
         Defaults to None.
+    prefix : str or None, optional
+        If not None, the subdirectory name will begin with that prefix.
     delete : bool, optional
-        If True, the directory and its contents are recursively removed from the
-        file system upon exiting the context manager.
+        If True, the directory and its contents are recursively removed from
+        the file system upon exiting the context manager.
         Defaults to True.
 
     Yields
     ------
     pathlib.Path
-        Scratch directory path. If `delete` was True, the directory will be
-        removed from the file system upon exiting the context manager scope.
-
-    Warnings
-    --------
-    Even if `dir_` previously existed on the file system, if `delete` is True,
-    then `dir_` will be deleted.
+        Path to the uniquely-named subdirectory. If `delete` was True,
+        the directory will be removed from the file system upon exiting
+        the context manager.
     """
-    set_global_scratch(scratch_dir=dir_)
-    scratchdir = get_global_scratch()
+
+    if parent_dir is None:
+        # Make a temporary directory inside a default directory, which is
+        # chosen from a platform-dependent list, but can be controlled
+        # by setting the TMPDIR, TEMP or TMP environment variables.
+        # The directory is readable and writable only by the creating user ID.
+        path = Path(tempfile.mkdtemp(prefix=prefix))
+    else:
+        # Create a uniquely-named subdirectory
+        utc_now = datetime.now(timezone.utc)
+        # The colon character `:` is not advised for POSIX paths
+        utc_now = utc_now.strftime("%Y-%m-%dT%Hh%Mm%SsZ")
+        prefix_str = "" if prefix is None else prefix
+        path = Path(parent_dir) / f"{prefix_str}{utc_now}-{uuid.uuid4()}"
+
+        path.mkdir(parents=True, exist_ok=True)
 
     try:
-        yield scratchdir
+        yield path
     finally:
         log = nisarqa.get_logger()
-        current_scratch = get_global_scratch()
-
-        if scratchdir != current_scratch:
-            msg = (
-                f"Global scratch directory was '{scratchdir}', but it was"
-                f" most-recently updated to '{current_scratch}' external to"
-                " (but within the context of) this context manager."
-            )
-            if delete:
-                msg += (
-                    f" Only original scratch directory '{scratchdir}'"
-                    " will be deleted."
-                )
-            log.warning(msg)
-
         if delete:
             try:
-                shutil.rmtree(scratchdir)
+                shutil.rmtree(path)
             except FileNotFoundError:
                 msg = (
-                    f"Global scratch directory was '{scratchdir}', but it was"
+                    f"Created directory was '{path}', but it was"
                     " deleted external to (but within the context of)"
                     " this context manager."
                 )
                 log.error(msg)
                 raise FileNotFoundError(msg)
             else:
-                log.info(
-                    f"Scratch directory deleted recursively: '{scratchdir}'"
-                )
+                log.info(f"Directory deleted recursively: '{path}'")
 
 
-def set_global_scratch(scratch_dir: str | os.PathLike | None = None) -> None:
+def set_global_scratch_dir(
+    scratch_dir: str | os.PathLike | None = None,
+) -> None:
     """
     Set the persistent global scratch directory path.
 
     For subsequent call to this function, the stored path is updated.
 
-    If the path does not exist, it is created (including parent directories).
-
     Parameters
     ----------
     scratch_dir : path-like or None
-        If `scratch_dir` is a path-like object, the directory (with parents)
-        will created if it does not already exist.
-        If `scratch_dir` is None, a new temporary directory will be created as
-        though by `tempfile.mkdtemp()`.
-        The user is responsible for deleting the cache directory and its
-        contents when done with it.
+        Path to the scratch directory. The user is responsible for
+        deleting the scratch directory and its contents when done with it.
         Defaults to None.
 
     See Also
     --------
-    get_global_scratch :
+    get_global_scratch_dir :
         After the global scratch directory has been set, use this function
-        to get the Path to the global scratch directory.
+        to get the Path to the current global scratch directory.
     """
     log = nisarqa.get_logger()
-    scratch_path = _create_scratch_directory(dir_=scratch_dir)
 
+    if not Path(scratch_dir).is_dir():
+        raise ValueError(f"{scratch_dir=}, must be an existing directory.")
+
+    # Log if the global scratch directory already existed and is being updated.
     if (
-        hasattr(set_global_scratch, "_scratch_path")
-        and set_global_scratch._scratch_path == scratch_path
+        hasattr(set_global_scratch_dir, "_scratch_dir")
+        and set_global_scratch_dir._scratch_dir != scratch_dir
     ):
-        old_dir = set_global_scratch._scratch_path
+        old_dir = set_global_scratch_dir._scratch_dir
         log.info(
             f"Global scratch directory path was '{old_dir}'."
-            f" Updating it to '{scratch_path}'."
+            f" Updating it to '{scratch_dir}'."
         )
 
-    # Set function attribute to the globale scratch path
-    set_global_scratch._scratch_path = scratch_path
+    # Set function attribute to the new global scratch path
+    set_global_scratch_dir._scratch_dir = scratch_dir
 
     log.info(
-        f"Global scratch directory path set to '{set_global_scratch._scratch_path}'."
+        f"Global scratch directory path set to "
+        f" '{set_global_scratch_dir._scratch_dir}'."
     )
 
 
-def get_global_scratch() -> Path:
+def get_global_scratch_dir() -> Path:
     """
     Get the persistent global scratch directory path.
 
-    User must call `set_global_scratch()` prior to calling this function.
+    User must call `set_global_scratch_dir()` prior to calling this function.
 
     Returns
     -------
@@ -782,18 +753,18 @@ def get_global_scratch() -> Path:
 
     See Also
     --------
-    set_global_scratch :
+    set_global_scratch_dir :
         Set the global scratch directory. Must be called prior to calling
-        `get_global_scratch()`.
+        `get_global_scratch_dir()`.
     """
 
-    if not hasattr(set_global_scratch, "_scratch_path"):
+    if not hasattr(set_global_scratch_dir, "_scratch_dir"):
         raise ValueError(
-            "Scratch path not set. User must call `set_global_scratch()`"
+            "Scratch path not set. User must call `set_global_scratch_dir()`"
             " prior to calling this function."
         )
 
-    return getattr(set_global_scratch, "_scratch_path")
+    return Path(getattr(set_global_scratch_dir, "_scratch_dir"))
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

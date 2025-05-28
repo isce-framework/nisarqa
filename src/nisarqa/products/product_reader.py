@@ -383,7 +383,7 @@ def _get_or_create_cached_memmap(
 
     # Construct file name for memory-mapped file
     filename = f"{dataset_path.replace('/', '-')}.dat"
-    mmap_file = nisarqa.get_global_scratch() / filename
+    mmap_file = nisarqa.get_global_scratch_dir() / filename
 
     # A user should never be able to trip this assert because the scratch
     # directory should always be unique. But if we change the behavior

@@ -142,7 +142,7 @@ def run_abscal_single_freq_pol(
     kwds["pthresh"] = kwds.pop("power_threshold")
 
     # Create a scratch file to store the JSON output of the tool.
-    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
+    tmpfile = nisarqa.get_global_scratch_dir() / f"abscal-{freq}-{pol}.json"
 
     # Run AbsCal tool.
     estimate_abscal_factor.main(
@@ -445,7 +445,7 @@ def run_rslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a scratch file to store the JSON output of the tool.
-    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
+    tmpfile = nisarqa.get_global_scratch_dir() / f"abscal-{freq}-{pol}.json"
 
     # Run PTA tool.
     point_target_analysis.process_corner_reflector_csv(
@@ -535,7 +535,7 @@ def run_gslc_pta_single_freq_pol(
     kwds = asdict(pta_params)
 
     # Create a scratch file to store the JSON output of the tool.
-    tmpfile = nisarqa.get_global_scratch() / f"abscal-{freq}-{pol}.json"
+    tmpfile = nisarqa.get_global_scratch_dir() / f"abscal-{freq}-{pol}.json"
 
     # Run PTA tool.
     gslc_point_target_analysis.analyze_gslc_point_targets_csv(

@@ -5,11 +5,9 @@ import dataclasses
 import io
 import os
 import sys
-import uuid
 from abc import ABC, abstractmethod
 from collections.abc import Iterable, Sequence
 from dataclasses import dataclass, field, fields
-from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, ClassVar, Optional, Type, Union
 
@@ -1043,13 +1041,12 @@ class ProductPathGroupParamGroup(YamlParamGroup):
         Filepath to the output directory to store NISAR QA output files.
         If the directory does not exist, it will be created.
         Defaults to './qa'
-    scratch_dir : path-like, optional
-        Directory where QA software may write temporary data.
+    scratch_dir_parent : path-like, optional
+        Directory where software may write temporary data.
         If the directory does not exist, it will be created.
         Because this scratch directory might be shared with e.g. ISCE3
         science product SASes, QA will create a uniquely-named
-        directory inside `scratch_path` for any QA scratch files.
-        Provided `scratch_dir` argument will be converted to a Path object.
+        directory inside `scratch_dir_parent` for any QA scratch files.
         Defaults to './scratch'
     """
 
@@ -1064,12 +1061,12 @@ class ProductPathGroupParamGroup(YamlParamGroup):
         },
     )
 
-    scratch_dir: str | os.PathLike = field(
+    scratch_dir_parent: str | os.PathLike = field(
         default="./scratch",
         metadata={
             "yaml_attrs": YamlAttrs(
                 name="scratch_path",
-                descr="""Directory where QA software may write temporary data.
+                descr="""Directory where software may write temporary data.
                 If the directory does not exist, it will be created.
                 Because this scratch directory might be shared with e.g. ISCE3
                 science product SASes, QA will create a uniquely-named
@@ -1081,35 +1078,16 @@ class ProductPathGroupParamGroup(YamlParamGroup):
     def __post_init__(self):
         # VALIDATE INPUTS
 
-        if not isinstance(self.qa_output_dir, (str, os.PathLike)):
-            raise TypeError(f"`qa_output_dir` must be path-like")
+        for param_name in ("qa_output_dir", "scratch_dir_parent"):
+            val = getattr(self, param_name)
+            if not isinstance(val, (str, os.PathLike)):
+                raise TypeError(f"`{param_name}` must be path-like")
 
-        # If this directory does not exist, make it.
-        if not os.path.isdir(self.qa_output_dir):
-            log = nisarqa.get_logger()
-            log.info(f"Creating QA output directory: {self.qa_output_dir}")
-            os.makedirs(self.qa_output_dir, exist_ok=True)
-
-        if not isinstance(self.scratch_dir, (str, os.PathLike)):
-            raise TypeError(f"`scratch_dir` must be path-like")
-
-        # Update the path to have a QA subdirectory, and make it uniquely-named
-        utc_now = datetime.now(timezone.utc)
-        # The colon character `:` is not advised for POSIX paths
-        utc_now = utc_now.strftime("%Y-%m-%dT%Hh%Mm%SsZ")
-
-        scratchdir = (
-            Path(self.scratch_dir) / f"qa_scratch-{utc_now}-{uuid.uuid4()}"
-        )
-        object.__setattr__(self, "scratch_dir", scratchdir)
-
-        # Note: Unlike the output directory, do not create the scratch
-        # directory here in the `__post_init__()`. The output directory should
-        # not need to be deleted by QA SAS, whereas the scratch directory
-        # could be deleted (per related user runconfig options.)
-        # Instead, use an e.g. context manager or other method to ensure that
-        # the scratch directory is created and (possibly) deleted per
-        # the user's request.
+            # If this directory does not exist, make it.
+            if not os.path.isdir(val):
+                log = nisarqa.get_logger()
+                log.info(f"Creating {param_name} directory: '{val}'")
+                os.makedirs(val, exist_ok=True)
 
     @staticmethod
     def get_path_to_group_in_runconfig():
@@ -1128,9 +1106,9 @@ class SoftwareConfigParamGroup(YamlParamGroup):
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to True.
-    delete_scratch_dir : bool, optional
-        True to delete the nested QA scratch directory
-        from inside `scratch_path` when QA SAS is finished.
+    delete_scratch_files : bool, optional
+        True to delete the nested QA scratch directory and its contents
+        from inside `scratch_dir_parent` when QA SAS is finished.
         Defaults to True.
     """
 
@@ -1149,13 +1127,13 @@ class SoftwareConfigParamGroup(YamlParamGroup):
     # For NISAR mission operations, the scratch directory parameter will be
     # shared by QA with the L1/L2 ISCE3 Science Data product SASes.
     # Those SASes do not delete the scratch directory, and QA should not either.
-    delete_scratch_dir: bool = field(
+    delete_scratch_files: bool = field(
         default=True,
         metadata={
             "yaml_attrs": YamlAttrs(
-                name="delete_qa_scratch_dir",
-                descr="""True to delete the nested QA scratch directory 
-                in `scratch_path` when QA SAS is finished.""",
+                name="delete_qa_scratch_files",
+                descr="""True to delete the nested QA scratch directory in
+                `scratch_path` and its contents when QA SAS is finished.""",
             )
         },
     )
@@ -1165,8 +1143,8 @@ class SoftwareConfigParamGroup(YamlParamGroup):
         if not isinstance(self.use_cache, bool):
             raise TypeError(f"`{self.use_cache=}`, must be bool.")
 
-        if not isinstance(self.delete_scratch_dir, bool):
-            raise TypeError(f"`{self.delete_scratch_dir=}`, must be bool.")
+        if not isinstance(self.delete_scratch_files, bool):
+            raise TypeError(f"`{self.delete_scratch_files=}`, must be bool.")
 
     @staticmethod
     def get_path_to_group_in_runconfig():
