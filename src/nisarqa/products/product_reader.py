@@ -414,7 +414,7 @@ def _get_or_create_cached_memmap(
 
         # tuple giving the chunk shape, or None if chunked storage is not used
         if (chunks := h5_ds.chunks) is not None:
-            log.info(f"Dataset {dataset_path} has chunk shape {chunks}.")
+            log.debug(f"Dataset {dataset_path} has chunk shape {chunks}.")
             # Number of chunk dimensions must match number of Dataset dimensions.
             assert len(chunks) == 2
             # Edge case: dimension(s) are smaller than the chunk size,
@@ -427,7 +427,7 @@ def _get_or_create_cached_memmap(
             default_tile_height = 32
             tile_height = min(default_tile_height, shape[0])
             tile_width = shape[1]
-            log.info(
+            log.debug(
                 f"Dataset {dataset_path} not written with chunked storage."
                 f" Input array with shape {shape} will be copied tile-by-tile"
                 " to memory-mapped file using tile shape"
