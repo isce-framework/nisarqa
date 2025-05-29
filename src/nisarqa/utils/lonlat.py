@@ -11,14 +11,62 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(__name__)
 
 
-def normalize_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+def normalize_longitudes(lons: Sequence[float]) -> list[float]:
     """
-    Normalize longitudes so that the absolute difference between any
-    adjacent pair of longitude values is <= 180 degrees.
+    Normalize longitudes to within +/-360 and unwrapped across the antimeridian.
 
-    In essence, this function ensures that all longitude values are first
-    wrapped to within the interval of +/-360 degrees, and in the case
-    of the an antimeridian crossing then longitude values are "unwrapped"
+    Specifically, longitudes are normalized so that the absolute difference
+    between any adjacent pair of longitude values is <= 180 degrees.
+
+    All given longitude values are first wrapped to +/-360 degrees, and
+    then in the case of the an antimeridian crossing they are "unwrapped"
+    to extend beyond the interval of +/-180 degrees for the crossing.
+
+    Arguments
+    ---------
+    lons : Sequence of nisarqa.LonLat
+        Sequence of longitude values (in degrees).
+
+    Returns
+    -------
+    normalized : list of nisarqa.LonLat
+        Copy of `lons`, but normalized so that the absolute difference
+        between any adjacent pair of longitude values is <= 180 degrees.
+        The ordering of the points is preserved.
+    """
+    # If first longitude is negative (e.g. -179.5), keep longitudes negative
+    mod = -360 if lons[0] < 0 else 360
+    lons_360 = [lon % mod for lon in lons]
+
+    normalized = [lons_360[0]]
+
+    for i in range(1, len(lons_360)):
+        prev_lon = lons_360[i - 1]
+        curr_lon = lons_360[i]
+
+        delta = curr_lon - prev_lon
+
+        # If it's a large jump to the west, subtract 360
+        if delta > 180:
+            curr_lon -= 360
+        # If it's a large jump to the east, add 360
+        elif delta < -180:
+            curr_lon += 360
+
+        normalized.append(curr_lon)
+
+    return normalized
+
+
+def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+    """
+    Normalize so that longitudes's are <= +/-360 and unwrapped at antimeridian.
+
+    Specifically, longitudes are normalized so that the absolute difference
+    between any adjacent pair of longitude values is <= 180 degrees.
+
+    All given longitude values are first wrapped to +/-360 degrees, and
+    then in the case of the an antimeridian crossing they are "unwrapped"
     to extend beyond the interval of +/-180 degrees for the crossing.
 
     Arguments
@@ -33,28 +81,11 @@ def normalize_longitudes(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
         between any adjacent pair of longitude values is <= 180 degrees.
         The ordering of the points is preserved.
     """
-    lon_lat_360 = [
-        LonLat(lon=(ll.lon % 360), lat=ll.lat) for ll in lon_lat_points
-    ]
 
-    normalized = [lon_lat_360[0]]
+    lons = normalize_longitudes([pt.lon for pt in lon_lat_points])
+    lats = [pt.lat for pt in lon_lat_points]
 
-    for i in range(1, len(lon_lat_360)):
-        prev_lon = lon_lat_360[i - 1].lon
-        curr_lon = lon_lat_360[i].lon
-
-        delta = curr_lon - prev_lon
-
-        # If it's a large jump to the west, subtract 360
-        if delta > 180:
-            curr_lon -= 360
-        # If it's a large jump to the east, add 360
-        elif delta < -180:
-            curr_lon += 360
-
-        normalized.append(LonLat(curr_lon, lon_lat_360[i].lat))
-
-    return normalized
+    return [nisarqa.LonLat(lon=lon, lat=lat) for lon, lat in zip(lons, lats)]
 
 
 @dataclass
@@ -98,11 +129,9 @@ class LatLonQuad:
         The upper-left, upper-right, lower-left, and lower-right corners,
         in degrees.
     normalize_longitudes : bool, optional
-        Normalize longitudes during post init so that the absolute difference
-        between any adjacent pair of longitude values is <= 180 degrees.
-        In essence, within the interval of +/-360 degrees, and in the case
-        of the an antimeridian crossing then longitude values are "unwrapped"
-        to extend beyond the interval of +/-180 degrees for the crossing.
+        True to modify the longitudes values during post init so the absolute
+        difference between any adjacent pair of longitudes is <= 180 degrees.
+        This prepares the coordinates for use in the KML's gx:LatLonQuad.
         Defaults to True.
     """
 
@@ -115,7 +144,7 @@ class LatLonQuad:
 
     def __post_init__(self):
         if self.normalize_longitudes:
-            unwrapped = normalize_longitudes(
+            unwrapped = normalize_lon_lat_pts(
                 (self.ul, self.ur, self.lr, self.ll)
             )
             object.__setattr__(self, "ul", unwrapped[0])
