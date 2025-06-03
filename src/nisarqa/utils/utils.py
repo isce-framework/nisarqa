@@ -5,7 +5,6 @@ import math
 import os
 import shutil
 import tempfile
-import uuid
 import warnings
 from collections.abc import (
     Callable,
@@ -628,19 +627,20 @@ def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
 @contextmanager
 def create_unique_subdirectory(
     parent_dir: str | os.PathLike | None = None,
-    prefix: str = None,
+    prefix: str | None = None,
+    *,
     delete: bool = True,
 ) -> Generator[Path, None, None]:
     """
-    Create a uniquely-named subdirectory or temp directory.
+    Create a uniquely-named subdirectory or temporary directory.
 
     Parameters
     ----------
     parent_dir : path-like or None, optional
         Path for a local directory where a new, uniquely-named subdirectory
         will be created.
-        If `parent_dir` is a path-like object, it will be created at the
-        specified file system path if it did not already exist.
+        If `parent_dir` is a path-like object, it will be created if it
+        did not already exist.
         If `parent_dir` is None, a temporary directory will be created as
         though by `tempfile.mkdtemp()`.
         Defaults to None.
@@ -694,13 +694,16 @@ def create_unique_subdirectory(
                 log.info(f"Directory deleted recursively: '{path}'")
 
 
-def set_global_scratch_dir(
-    scratch_dir: str | os.PathLike | None = None,
-) -> None:
+def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
     """
     Set the persistent global scratch directory path.
 
-    For subsequent call to this function, the stored path is updated.
+    This function sets the persistent global scratch directory that is
+    returned by `get_global_scratch_dir()`.
+    Initially, the global scratch directory used by nisarqa is unset
+    and calls to `get_global_scratch_dir()` will raise a `RuntimeError` until
+    the first time `set_global_scratch_dir()` is called. Subsequent calls will
+    update the stored path.
 
     Parameters
     ----------
@@ -721,10 +724,7 @@ def set_global_scratch_dir(
         raise ValueError(f"{scratch_dir=}, must be an existing directory.")
 
     # Log if the global scratch directory already existed and is being updated.
-    if (
-        hasattr(set_global_scratch_dir, "_scratch_dir")
-        and set_global_scratch_dir._scratch_dir != scratch_dir
-    ):
+    if hasattr(set_global_scratch_dir, "_scratch_dir"):
         old_dir = set_global_scratch_dir._scratch_dir
         log.info(
             f"Global scratch directory path was '{old_dir}'."
@@ -759,12 +759,12 @@ def get_global_scratch_dir() -> Path:
     """
 
     if not hasattr(set_global_scratch_dir, "_scratch_dir"):
-        raise ValueError(
+        raise RuntimeError(
             "Scratch path not set. User must call `set_global_scratch_dir()`"
             " prior to calling this function."
         )
 
-    return Path(getattr(set_global_scratch_dir, "_scratch_dir"))
+    return set_global_scratch_dir._scratch_dir
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
