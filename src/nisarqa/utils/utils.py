@@ -3,11 +3,18 @@ from __future__ import annotations
 import logging
 import os
 import warnings
-from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
+from collections.abc import (
+    Callable,
+    Generator,
+    Iterable,
+    Iterator,
+    Mapping,
+    Sequence,
+)
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Optional
+from typing import Any, Optional
 
 import h5py
 import numpy as np
@@ -505,6 +512,88 @@ def load_user_runconfig(
     with open(runconfig_yaml, "r") as f:
         user_rncfg = parser.load(f)
     return user_rncfg
+
+
+def wrap_to_interval(val: float, start: float, stop: float) -> float:
+    pass
+
+
+def wrap_to_interval(
+    val: Iterable[float], start: float, stop: float
+) -> list[float]:
+    pass
+
+
+def wrap_to_interval(val, *, start, stop):
+    """
+    Wrap float value(s) to the interval [start, stop).
+
+    Parameters
+    ----------
+    val : float or Iterable of float
+        Value(s) to wrap.
+    start : float
+        Start of the interval (inclusive).
+    stop : float
+        End of the interval (exclusive).
+
+    Returns
+    -------
+    float or list of float
+        Wrapped value(s) in the interval [start, stop).
+        Returns a float if input is a scalar, otherwise returns a list.
+
+    Examples
+    --------
+    >>> wrap_to_interval(190, -180, 180)
+    -170.0
+
+    >>> wrap_to_interval([-370, 370], -180, 180)
+    array([-10.,  10.])
+
+    >>> import numpy as np
+    >>> wrap_to_interval(np.pi * 3, 0, 2 * np.pi)
+    3.141592653589793
+    """
+    if stop <= start:
+        raise ValueError("`stop` must be greater than `start`")
+
+    is_scalar = False if isinstance(val, Iterable) else True
+    width = stop - start
+    wrap = lambda v: ((v - start) % width) + start
+
+    return wrap(val) if is_scalar else [wrap(v) for v in val]
+
+
+def pairwise(
+    iterable: Iterable[nisarqa.typing.T],
+) -> Generator[tuple[nisarqa.typing.T, nisarqa.typing.T], Any, Any]:
+    """
+    Return successive overlapping pairs taken from the input iterable.
+
+    Example: pairwise('ABCDEFG') -> AB BC CD DE EF FG
+
+    Source: https://docs.python.org/3/library/itertools.html#itertools.pairwise
+
+    Parameters
+    ----------
+    iterable : Iterable of T
+        An Iterable of type T.
+
+    Yields
+    ------
+    pair : pair of T
+        Successive overlapping pairs taken from the input iterable.
+        The number of 2-tuples in the output iterator will be one fewer than
+        the number of inputs. It will be empty if the input iterable has
+        fewer than two values.
+    """
+
+    iterator = iter(iterable)
+    a = next(iterator, None)
+    for b in iterator:
+        yield a, b
+        a = b
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

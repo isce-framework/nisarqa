@@ -2,47 +2,48 @@ from __future__ import annotations
 
 import os
 import textwrap
-from collections.abc import Sequence
+from collections.abc import Generator, Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
+
+import numpy as np
 
 import nisarqa
 
 objects_to_skip = nisarqa.get_all(__name__)
 
 
-def normalize_longitudes(lons: Sequence[float]) -> list[float]:
+def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     """
-    Normalize longitudes to within +/-360 and unwrapped across the antimeridian.
+    Unwrap longitudes if the values cross the antimeridian.
 
     Specifically, longitudes are normalized so that the absolute difference
     between any adjacent pair of longitude values is <= 180 degrees.
 
-    All given longitude values are first wrapped to +/-360 degrees, and
-    then in the case of the an antimeridian crossing they are "unwrapped"
-    to extend beyond the interval of +/-180 degrees for the crossing.
+    Of note, in the case of the an antimeridian crossing, longitude values
+    are "unwrapped" to extend beyond the interval of +/-180 degrees
+    for the crossing.
 
     Arguments
     ---------
-    lons : Sequence of nisarqa.LonLat
+    lons : Sequence of float
         Sequence of longitude values (in degrees).
 
     Returns
     -------
-    normalized : list of nisarqa.LonLat
-        Copy of `lons`, but normalized so that the absolute difference
+    unwrapped : list of nisarqa.LonLat
+        Copy of `lons`, but unwrapped so that the absolute difference
         between any adjacent pair of longitude values is <= 180 degrees.
         The ordering of the points is preserved.
     """
-    # If first longitude is negative (e.g. -179.5), keep longitudes negative
-    mod = -360 if lons[0] < 0 else 360
-    lons_360 = [lon % mod for lon in lons]
 
-    normalized = [lons_360[0]]
+    # since `lons` is an Iterable, `wrap_to_interval` returns a list
+    lons_360 = nisarqa.wrap_to_interval(val=lons, start=-360, stop=360)
 
-    for i in range(1, len(lons_360)):
-        prev_lon = lons_360[i - 1]
-        curr_lon = lons_360[i]
+    unwrapped = [lons_360[0]]
+
+    for prev_lon, curr_lon in nisarqa.pairwise(iterable=lons_360):
 
         delta = curr_lon - prev_lon
 
@@ -53,12 +54,12 @@ def normalize_longitudes(lons: Sequence[float]) -> list[float]:
         elif delta < -180:
             curr_lon += 360
 
-        normalized.append(curr_lon)
+        unwrapped.append(curr_lon)
 
-    return normalized
+    return unwrapped
 
 
-def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
     """
     Normalize so that longitudes's are <= +/-360 and unwrapped at antimeridian.
 
@@ -71,7 +72,7 @@ def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
 
     Arguments
     ---------
-    lon_lat_points : Sequence of nisarqa.LonLat
+    lon_lat_points : Iterable of nisarqa.LonLat
         List of nisarqa.LonLat (in degrees).
 
     Returns
@@ -82,7 +83,7 @@ def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
         The ordering of the points is preserved.
     """
 
-    lons = normalize_longitudes([pt.lon for pt in lon_lat_points])
+    lons = unwrap_longitudes([pt.lon for pt in lon_lat_points])
     lats = [pt.lat for pt in lon_lat_points]
 
     return [nisarqa.LonLat(lon=lon, lat=lat) for lon, lat in zip(lons, lats)]
