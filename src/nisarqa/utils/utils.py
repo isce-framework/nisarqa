@@ -637,8 +637,8 @@ def create_unique_subdirectory(
     Parameters
     ----------
     parent_dir : path-like or None, optional
-        Path for a local directory where a new, uniquely-named subdirectory
-        will be created.
+        Local file system path to a directory where a new, uniquely-named
+        subdirectory will be created.
         If `parent_dir` is a path-like object, it will be created if it
         did not already exist.
         If `parent_dir` is None, a temporary directory will be created as
@@ -707,10 +707,10 @@ def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
 
     Parameters
     ----------
-    scratch_dir : path-like or None
-        Path to the scratch directory. The user is responsible for
-        deleting the scratch directory and its contents when done with it.
-        Defaults to None.
+    scratch_dir : path-like
+        Path to the scratch directory. Must be an existing directory
+        in the local file system. The user is responsible for deleting
+        the scratch directory and its contents when done with it.
 
     See Also
     --------
@@ -720,7 +720,9 @@ def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
     """
     log = nisarqa.get_logger()
 
-    if not Path(scratch_dir).is_dir():
+    path = Path(scratch_dir)
+
+    if not path.is_dir():
         raise ValueError(f"{scratch_dir=}, must be an existing directory.")
 
     # Log if the global scratch directory already existed and is being updated.
@@ -728,11 +730,11 @@ def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
         old_dir = set_global_scratch_dir._scratch_dir
         log.info(
             f"Global scratch directory path was '{old_dir}'."
-            f" Updating it to '{scratch_dir}'."
+            f" Updating it to '{path}'."
         )
 
     # Set function attribute to the new global scratch path
-    set_global_scratch_dir._scratch_dir = scratch_dir
+    set_global_scratch_dir._scratch_dir = path
 
     log.info(
         f"Global scratch directory path set to "
