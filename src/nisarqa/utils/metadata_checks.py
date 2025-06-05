@@ -9,6 +9,7 @@ import numpy as np
 from osgeo import gdal, osr
 
 import nisarqa
+from nisarqa.utils.typing import MetadataLUTT
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -440,7 +441,7 @@ def is_gdal_friendly(input_filepath: str, ds_path: str) -> bool:
         return False
 
 
-def _lut_has_finite_pixels(ds: nisarqa.typing.MetadataLUTT) -> bool:
+def _lut_has_finite_pixels(ds: MetadataLUTT) -> bool:
     """
     Return False if LUT contains all non-finite values; True otherwise.
 
@@ -480,7 +481,7 @@ def _lut_has_finite_pixels(ds: nisarqa.typing.MetadataLUTT) -> bool:
     return True
 
 
-def _lut_is_not_all_zeros(ds: nisarqa.typing.MetadataLUTT) -> bool:
+def _lut_is_not_all_zeros(ds: MetadataLUTT) -> bool:
     """
     Return False if metadata LUT contains all near-zeros; True otherwise.
 

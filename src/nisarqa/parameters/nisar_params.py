@@ -15,6 +15,7 @@ import h5py
 from ruamel.yaml import YAML, CommentedMap, CommentedSeq
 
 import nisarqa
+from nisarqa.utils.typing import RootParamGroupT, RunConfigDict
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -1615,10 +1616,10 @@ class RootParamGroup(ABC):
 
     @classmethod
     def from_runconfig_dict(
-        cls: type[nisarqa.typing.RootParamGroupT],
-        user_rncfg: nisarqa.typing.RunConfigDict,
+        cls: type[RootParamGroupT],
+        user_rncfg: RunConfigDict,
         product_type: str,
-    ) -> nisarqa.typing.RootParamGroupT:
+    ) -> RootParamGroupT:
         """
         Build a *RootParamGroup for `product_type` from a QA runconfig dict.
 
@@ -1797,10 +1798,10 @@ class RootParamGroup(ABC):
 
     @classmethod
     def from_runconfig_file(
-        cls: type[nisarqa.typing.RootParamGroupT],
+        cls: type[RootParamGroupT],
         runconfig_yaml: str | os.PathLike,
         product_type: str,
-    ) -> nisarqa.typing.RootParamGroupT:
+    ) -> RootParamGroupT:
         """
         Get a *RootParamGroup for `product_type` from a QA Runconfig YAML file.
 

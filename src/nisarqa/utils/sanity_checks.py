@@ -6,6 +6,7 @@ import h5py
 import numpy as np
 
 import nisarqa
+from nisarqa.utils.typing import T
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -85,8 +86,8 @@ def identification_sanity_checks(
         return True
 
     def _verify_data_is_in_list(
-        value: nisarqa.typing.T | None,
-        valid_options: Container[nisarqa.typing.T],
+        value: T | None,
+        valid_options: Container[T],
         ds_name: str,
     ) -> bool:
         if (value is None) or (value not in valid_options):

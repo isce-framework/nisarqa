@@ -457,28 +457,6 @@ def log_runtime(msg: str) -> Generator[None, None, None]:
     nisarqa.get_logger().info(f"Runtime: {msg} took {toc - tic}")
 
 
-@contextmanager
-def log_runtime(msg: str) -> Generator[None, None, None]:
-    """
-    Log the runtime of the context manager's block with microsecond precision.
-
-    Parameters
-    ----------
-    msg : str
-        Prefix for the log message. Format of logged message will be:
-            "Runtime: <msg> took <duration>".
-
-    See Also
-    --------
-    log_function_runtime :
-        Function decorator to log runtime of a function.
-    """
-    tic = datetime.now()
-    yield
-    toc = datetime.now()
-    nisarqa.get_logger().info(f"Runtime: {msg} took {toc - tic}")
-
-
 def log_function_runtime(func: Callable[..., T]) -> Callable[..., T]:
     """
     Function decorator to log the runtime of a function.
@@ -529,7 +507,7 @@ def load_user_runconfig(
 
     Returns
     -------
-    user_rncfg : nisarqa.utils.typing.RunConfigDict
+    user_rncfg : nisarqa.typing.RunConfigDict
         `runconfig_yaml` loaded into a dict format
     """
     # parse runconfig into a dict structure
