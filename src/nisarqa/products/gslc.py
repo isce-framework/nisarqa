@@ -104,17 +104,6 @@ def verify_gslc(
         if not verbose:
             print(msg)
 
-    # If running these workflows, save the processing parameters and
-    # identification group to STATS.h5
-    if root_params.workflows.qa_reports or root_params.workflows.point_target:
-        # This is the first time opening the STATS.h5 file for GSLC
-        # workflow, so open in 'w' mode.
-        # After this, always open STATS.h5 in 'r+' mode.
-        with h5py.File(stats_file, mode="w") as stats_h5:
-            nisarqa.setup_stats_h5_all_products(
-                product=product, stats_h5=stats_h5, root_params=root_params
-            )
-
     # Both the `qa_reports` and/or `point_target` steps may generate a report
     # PDF. If both are workflows are enabled, this can cause an issue, since
     # closing and re-opening a `PdfPages` object causes the file to be

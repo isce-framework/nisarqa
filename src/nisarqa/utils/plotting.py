@@ -36,6 +36,11 @@ def add_metadata_to_report_pdf(
         Input NISAR product.
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output PDF file to set the global metadata for.
+
+    See Also
+    --------
+    nisarqa.utils.stats_h5_writer.setup_writer.add_global_metadata_to_stats_h5
+        Sister function which adds global metadata to the STATS.h5 file.
     """
     product_type = product.product_type.upper()
 

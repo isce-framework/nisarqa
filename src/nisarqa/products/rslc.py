@@ -118,31 +118,6 @@ def verify_rslc(
         if not verbose:
             print(msg)
 
-<<<<<<< HEAD
-=======
-    # If running these workflows, save the processing parameters and
-    # identification group to STATS.h5
-    if (
-        root_params.workflows.qa_reports
-        or root_params.workflows.abs_cal
-        or root_params.workflows.neb
-        or root_params.workflows.point_target
-    ):
-        # This is the first time opening the STATS.h5 file for RSLC
-        # workflow, so open in 'w' mode.
-        # After this, always open STATS.h5 in 'r+' mode.
-        with h5py.File(stats_file, mode="w") as stats_h5:
-
-            nisarqa.setup_stats_h5_all_products(
-                product=product, stats_h5=stats_h5, root_params=root_params
-            )
-
-            nisarqa.copy_rfi_metadata_to_stats_h5(
-                product=product, stats_h5=stats_h5
-            )
-            log.info(f"Input file RFI metadata copied to {stats_file}")
-
->>>>>>> 5037f38 (copy source runconfig. modularize stats.h5 setup)
     # Both the `qa_reports` and/or `point_target` steps may generate a report
     # PDF. If both are workflows are enabled, this can cause an issue, since
     # closing and re-opening a `PdfPages` object causes the file to be
