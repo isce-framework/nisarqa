@@ -21,29 +21,29 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     Specifically, longitudes are normalized so that the absolute difference
     between any adjacent pair of longitude values is <= 180 degrees.
 
-    Of note, in the case of the an antimeridian crossing, longitude values
-    are "unwrapped" to extend beyond the interval of +/-180 degrees
-    for the crossing.
+    All given longitude values are first wrapped to +/-360 degrees, and
+    then in the case of the an antimeridian crossing they are "unwrapped"
+    to extend beyond the interval of +/-180 degrees for the crossing.
 
     Arguments
     ---------
-    lons : Sequence of float
+    lons : iterable of float
         Sequence of longitude values (in degrees).
 
     Returns
     -------
-    unwrapped : list of nisarqa.LonLat
+    unwrapped : list of float
         Copy of `lons`, but unwrapped so that the absolute difference
         between any adjacent pair of longitude values is <= 180 degrees.
         The ordering of the points is preserved.
     """
 
-    # since `lons` is an Iterable, `wrap_to_interval` returns a list
-    lons_360 = nisarqa.wrap_to_interval(val=lons, start=-360, stop=360)
+    # since `lons` is an iterable, `wrap_to_interval` returns an iterator
+    lons_360 = list(nisarqa.wrap_to_interval(val=lons, start=-360, stop=360))
 
     unwrapped = [lons_360[0]]
 
-    for prev_lon, curr_lon in nisarqa.pairwise(iterable=lons_360):
+    for prev_lon, curr_lon in nisarqa.pairwise(lons_360):
 
         delta = curr_lon - prev_lon
 
@@ -59,7 +59,7 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     return unwrapped
 
 
-def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
+def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
     """
     Normalize so that longitudes's are <= +/-360 and unwrapped at antimeridian.
 
@@ -70,21 +70,21 @@ def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
     then in the case of the an antimeridian crossing they are "unwrapped"
     to extend beyond the interval of +/-180 degrees for the crossing.
 
-    Arguments
-    ---------
-    lon_lat_points : Iterable of nisarqa.LonLat
+    Parameters
+    ----------
+    lon_lat_points : iterable of nisarqa.LonLat
         List of nisarqa.LonLat (in degrees).
 
     Returns
     -------
     normalized : list of nisarqa.LonLat
-        Copy of `lon_lat`, but normalized so that the absolute difference
+        Copy of `lon_lat_points`, but normalized so that the absolute difference
         between any adjacent pair of longitude values is <= 180 degrees.
         The ordering of the points is preserved.
     """
 
-    lons = unwrap_longitudes([pt.lon for pt in lon_lat_points])
-    lats = [pt.lat for pt in lon_lat_points]
+    lons = unwrap_longitudes(pt.lon for pt in lon_lat_points)
+    lats = (pt.lat for pt in lon_lat_points)
 
     return [nisarqa.LonLat(lon=lon, lat=lat) for lon, lat in zip(lons, lats)]
 

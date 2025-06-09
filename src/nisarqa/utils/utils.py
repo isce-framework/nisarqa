@@ -520,7 +520,7 @@ def wrap_to_interval(val: float, start: float, stop: float) -> float:
 
 def wrap_to_interval(
     val: Iterable[float], start: float, stop: float
-) -> list[float]:
+) -> Iterator[float]:
     pass
 
 
@@ -539,30 +539,30 @@ def wrap_to_interval(val, *, start, stop):
 
     Returns
     -------
-    float or list of float
+    float or iterator of float
         Wrapped value(s) in the interval [start, stop).
-        Returns a float if input is a scalar, otherwise returns a list.
+        Returns a float if input is a scalar, otherwise returns an iterator.
 
     Examples
     --------
-    >>> wrap_to_interval(190, -180, 180)
+    >>> wrap_to_interval(190, start=-180, stop=180)
     -170.0
 
-    >>> wrap_to_interval([-370, 370], -180, 180)
+    >>> wrap_to_interval([-370, 370], start=-180, stop=180)
     array([-10.,  10.])
 
     >>> import numpy as np
-    >>> wrap_to_interval(np.pi * 3, 0, 2 * np.pi)
+    >>> wrap_to_interval(np.pi * 3, start=0, stop=2 * np.pi)
     3.141592653589793
     """
-    if stop <= start:
-        raise ValueError("`stop` must be greater than `start`")
+    if not (stop > start):
+        raise ValueError(f"{stop=} must be greater than {start=}")
 
     is_scalar = False if isinstance(val, Iterable) else True
     width = stop - start
-    wrap = lambda v: ((v - start) % width) + start
+    wrap = lambda v: math.fmod(v - start, width) + start
 
-    return wrap(val) if is_scalar else [wrap(v) for v in val]
+    return wrap(val) if is_scalar else (wrap(v) for v in val)
 
 
 def pairwise(
@@ -577,8 +577,8 @@ def pairwise(
 
     Parameters
     ----------
-    iterable : Iterable of T
-        An Iterable of type T.
+    iterable : iterable of T
+        The input iterable.
 
     Yields
     ------
