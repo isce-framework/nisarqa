@@ -1,14 +1,13 @@
 from __future__ import annotations
 
-from functools import wraps
 import logging
 import os
 import warnings
 from collections.abc import Callable, Generator, Iterator, Mapping, Sequence
 from contextlib import contextmanager
-from typing import Optional
 from datetime import datetime
-
+from functools import wraps
+from typing import Optional
 
 import h5py
 import numpy as np
@@ -120,65 +119,6 @@ def raise_(exc):
     Exception: error
     """
     raise exc
-
-
-def compute_non_zero_mask(arr, epsilon=1.0e-05):
-    """
-    Create a mask of the non-zero pixels in the input array.
-
-    Elements in the input array that are approximately equal to zero,
-    based on the specified tolerance, are masked out.
-    TODO - after development of the RSLC QA code is complete,
-    check that this function is used. If not, delete.
-
-    Parameters
-    ----------
-    arr : array_like
-        The input array.
-    epsilon : float, optional
-        Absolute tolerance for determining if an element in `arr`
-        is nearly zero.
-
-    Returns
-    -------
-    mask : Boolean array
-        Array with same shape as `arr`.
-        True for non-zero entries. False where the absolute
-        value of the entry is less than `epsilon`.
-    """
-    zero_real = np.abs(arr) < epsilon
-    return ~zero_real
-
-
-def compute_mask_ok(arr, epsilon=1.0e-05):
-    """
-    Create a mask of the valid (finite, non-zero) pixels in arr.
-
-    TODO - after development of the RSLC QA code is complete,
-    check that this function is used. If not, delete.
-
-    Parameters
-    ----------
-    arr : array_like
-        The input array
-    epsilon : float, optional
-        Tolerance for if an element in `arr` is considered 'zero'
-
-    Returns
-    -------
-    mask_ok : array_like
-        Array with same shape as `arr`.
-        True for valid entries. Valid entries are finite values that are
-        not approximately equal to zero.
-        False for entries that have a nan or inf in either the real
-        or imaginary component, or a zero in both real and imag components.
-    """
-
-    finite_mask = np.isfinite(arr)
-    non_zero_mask = compute_non_zero_mask(arr, epsilon)
-    mask_ok = finite_mask & non_zero_mask
-
-    return mask_ok
 
 
 def create_dataset_in_h5group(
