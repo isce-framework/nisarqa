@@ -15,7 +15,7 @@ from collections.abc import (
 from contextlib import contextmanager
 from datetime import datetime
 from functools import wraps
-from typing import Any, Optional
+from typing import Any, Optional, overload
 
 import h5py
 import numpy as np
@@ -514,10 +514,12 @@ def load_user_runconfig(
     return user_rncfg
 
 
+@overload
 def wrap_to_interval(val: float, start: float, stop: float) -> float:
     pass
 
 
+@overload
 def wrap_to_interval(
     val: Iterable[float], start: float, stop: float
 ) -> Iterator[float]:

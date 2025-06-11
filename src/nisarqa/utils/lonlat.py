@@ -59,7 +59,7 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     return unwrapped
 
 
-def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
+def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
     """
     Normalize so that longitudes's are <= +/-360 and unwrapped at antimeridian.
 
@@ -73,7 +73,8 @@ def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
     Parameters
     ----------
     lon_lat_points : iterable of nisarqa.LonLat
-        List of nisarqa.LonLat (in degrees).
+        Iterable of nisarqa.LonLat (in degrees); must be able to support
+        multi-pass iteration (such as a list or sequence).
 
     Returns
     -------
