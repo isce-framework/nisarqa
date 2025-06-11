@@ -22,7 +22,7 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     between any adjacent pair of longitude values is <= 180 degrees.
 
     All given longitude values are first wrapped to +/-360 degrees, and
-    then in the case of the an antimeridian crossing they are "unwrapped"
+    then in the case of an antimeridian crossing they are "unwrapped"
     to extend beyond the interval of +/-180 degrees for the crossing.
 
     Arguments
@@ -59,7 +59,7 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
     return unwrapped
 
 
-def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
+def normalize_lon_lat_pts(lon_lat_points: Iterable[LonLat]) -> list[LonLat]:
     """
     Normalize so that longitudes's are <= +/-360 and unwrapped at antimeridian.
 
@@ -67,7 +67,7 @@ def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
     between any adjacent pair of longitude values is <= 180 degrees.
 
     All given longitude values are first wrapped to +/-360 degrees, and
-    then in the case of the an antimeridian crossing they are "unwrapped"
+    then in the case of an antimeridian crossing they are "unwrapped"
     to extend beyond the interval of +/-180 degrees for the crossing.
 
     Parameters

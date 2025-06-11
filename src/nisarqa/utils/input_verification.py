@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import re
 from datetime import datetime
+from typing import Any
 
 import h5py
 import numpy as np
@@ -810,6 +811,23 @@ def verify_datetime_matches_template_with_addl_text(
         dt_template_str=dt_tmpl,
         dataset_name=dataset_name,
     )
+
+
+def is_iterable(obj: Any) -> bool:
+    """
+    Return True if object is an iterable; False if not.
+    """
+    # Note: The isinstance(e, collections.abc.Iterable) check works for
+    # sequence types with __iter__ method, but would fail on e.g. strings.
+    # So, use the `iter` built-in, whic checks for the __iter__ method
+    # or in the case of strings the __getitem__ method.
+    # Source: https://stackoverflow.com/a/1952481/6038094
+    try:
+        iter(obj)
+    except TypeError:
+        return False
+    else:
+        return True
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
