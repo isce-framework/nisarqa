@@ -17,6 +17,9 @@ STATS_H5_QA_FREQ_GROUP = (
     STATS_H5_QA_DATA_GROUP + "/frequency%s"
 )  # Two '%s' here!
 
+# Input Granule Source Data group (for copying Datasets verbatim)
+STATS_H5_SOURCE_DATA = STATS_H5_BASE_GROUP + "/sourceData"
+
 # RFI Group
 STATS_H5_RFI_BASE_GROUP = STATS_H5_BASE_GROUP + "/RFI"
 STATS_H5_RFI_DATA_GROUP = STATS_H5_RFI_BASE_GROUP + data_group
@@ -53,6 +56,7 @@ __all__ = [
     "STATS_H5_QA_PROCESSING_GROUP",
     "STATS_H5_QA_DATA_GROUP",
     "STATS_H5_QA_FREQ_GROUP",
+    "STATS_H5_SOURCE_DATA",
     "STATS_H5_RFI_BASE_GROUP",
     "STATS_H5_RFI_DATA_GROUP",
     "STATS_H5_ABSCAL_STATS_H5_BASE_GROUP",

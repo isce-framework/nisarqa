@@ -617,6 +617,42 @@ class NisarProduct(ABC):
             return spec_version
 
     @cached_property
+    def runconfig_contents(self) -> str:
+        """
+        Contents (verbatim) of input granule's `runConfigurationContents`.
+
+        Returns the Dataset contents as-is, with no further processing.
+        It is a known issue that the L1/L2 product types use different formats
+        for `runConfigurationContents` (e.g. JSON, YAML). If that format is
+        updated within ISCE3, then this function will simply continue to
+        copy the Dataset's contents as-is.
+
+        Returns
+        -------
+        runconfig_contents : str
+            Contents (verbatim) of input granule's `runConfigurationContents`.
+            If the product does not contain that Dataset (such as for older
+            granules), "N/A" is returned.
+        """
+        path = (
+            self._processing_info_metadata_group_path
+            + "/parameters/runConfigurationContents"
+        )
+        with h5py.File(self.filepath) as f:
+            if path in f:
+                runconfig = f[path][...]
+                return nisarqa.byte_string_to_python_str(runconfig)
+            else:
+                # Very old test datasets did not have this field.
+                # Discrepancies between this and the spec will be logged
+                # via the XML checker; no need to report again here.
+                nisarqa.get_logger().error(
+                    f"`runConfigurationContents` not found in input product"
+                    f" at the path {path}. Defaulting to 'N/A'."
+                )
+                return "N/A"
+
+    @cached_property
     def list_of_frequencies(self) -> tuple[str, ...]:
         """
         The contents of .../identification/listOfFrequencies in input file.

@@ -148,16 +148,9 @@ def verify_igram(
             # Add file metadata and title page to report PDF.
             nisarqa.setup_report_pdf(product=product, report_pdf=report_pdf)
 
-            # Save the processing parameters to the stats.h5 file
-            root_params.save_processing_params_to_stats_h5(
-                h5_file=stats_h5, band=product.band
+            nisarqa.setup_stats_h5_all_products(
+                product=product, stats_h5=stats_h5, root_params=root_params
             )
-            log.info(f"QA Processing Parameters saved to {stats_file}")
-
-            nisarqa.copy_identification_group_to_stats_h5(
-                product=product, stats_h5=stats_h5
-            )
-            log.info(f"Input file Identification group copied to {stats_file}")
 
             # Save frequency/polarization info to stats file
             product.save_qa_metadata_to_h5(stats_h5=stats_h5)
