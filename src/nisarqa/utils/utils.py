@@ -133,6 +133,50 @@ def raise_(exc):
     raise exc
 
 
+def _prep_data_for_hdf5_using_nisar_conventions(
+    data: ArrayLike | str | bool,
+) -> ArrayLike | np.bytes_:
+    """Prep data for writing to the STATS.h5 file, per NISAR conventions."""
+
+    # If a string or a list of strings, convert to fixed-length byte strings
+
+    # If `data` is an e.g. numpy array with a numeric dtype,
+    # do not alter it.
+    if isinstance(data, str) or (
+        isinstance(data, Sequence) and all(isinstance(s, str) for s in data)
+    ):
+        # If `data` is a scalar Python (Unicode) string,
+        # numpy.char.encode() returns a 0D array of byte strings.
+        # If a sequence of Python strings, numpy.char.encode() returns a
+        # NumPy array of byte strings.
+        # We want to use `np.char.encode()` to handle non-ASCII characters,
+        # such as the copyright symbol.
+        # (`numpy.bytes_()` can only handle ASCII characters.)
+        data = np.char.encode(data, encoding="utf-8")
+    elif isinstance(data, np.ndarray) and (
+        np.issubdtype(data.dtype, np.object_)
+        or np.issubdtype(data.dtype, np.str_)
+    ):
+        raise NotImplementedError(
+            f"`{data=}` and has dtype `{data.dtype}`, which is not"
+            " currently supported. Suggestion: Make `ds_data` a list or tuple"
+            " of Python strings, or an ndarray of fixed-length byte strings."
+        )
+    elif isinstance(data, bool):
+        data = "True" if data else "False"
+        data = np.bytes_(data)
+    elif (
+        isinstance(data, Sequence) and all(isinstance(b, bool) for b in data)
+    ) or (
+        isinstance(data, np.ndarray) and (np.issubdtype(data.dtype, np.bool_))
+    ):
+        raise NotImplementedError(
+            f"`{data=}` is a sequence or array of boolean values"
+            " which is not currently supported"
+        )
+    return data
+
+
 def create_dataset_in_h5group(
     h5_file: h5py.File,
     grp_path: str,
@@ -188,6 +232,12 @@ def create_dataset_in_h5group(
                       "freqBins" : "science/LSAR/QA/data/freqA/azSpectraFreq"}
         Defaults to None.
 
+    See Also
+    --------
+    add_attribute_to_h5_object :
+        To add a new Attribute to an existing h5py Dataset, Group, or File
+        following NISAR conventions.
+
     Notes
     -----
     Please supply Python strings for arguments. This function handles the
@@ -207,58 +257,68 @@ def create_dataset_in_h5group(
 
     grp = h5_file.require_group(grp_path)
 
-    # If a string or a list of strings, convert to fixed-length byte strings
-    def _to_fixed_length_str(
-        data: ArrayLike | str | bool,
-    ) -> ArrayLike | np.bytes_:
-        # If `data` is an e.g. numpy array with a numeric dtype,
-        # do not alter it.
-        if isinstance(data, str) or (
-            isinstance(data, Sequence) and all(isinstance(s, str) for s in data)
-        ):
-            # If `data` is a scalar Python (Unicode) string,
-            # numpy.char.encode() returns a 0D array of byte strings.
-            # If a sequence of Python strings, numpy.char.encode() returns a
-            # NumPy array of byte strings.
-            # We want to use `np.char.encode()` to handle non-ASCII characters,
-            # such as the copyright symbol.
-            # (`numpy.bytes_()` can only handle ASCII characters.)
-            data = np.char.encode(data, encoding="utf-8")
-        elif isinstance(data, np.ndarray) and (
-            np.issubdtype(data.dtype, np.object_)
-            or np.issubdtype(data.dtype, np.str_)
-        ):
-            raise NotImplementedError(
-                f"`{data=}` and has dtype `{data.dtype}`, which is not"
-                " currently supported. Suggestion: Make `ds_data` a list or tuple"
-                " of Python strings, or an ndarray of fixed-length byte strings."
-            )
-        elif isinstance(data, bool):
-            data = "True" if data else "False"
-            data = np.bytes_(data)
-        elif (
-            isinstance(data, Sequence)
-            and all(isinstance(b, bool) for b in data)
-        ) or (
-            isinstance(data, np.ndarray)
-            and (np.issubdtype(data.dtype, np.bool_))
-        ):
-            raise NotImplementedError(
-                f"`{data=}` is a sequence or array of boolean values"
-                " which is not currently supported"
-            )
-        return data
+    # Create Dataset
+    ds = grp.create_dataset(
+        ds_name, data=_prep_data_for_hdf5_using_nisar_conventions(ds_data)
+    )
 
-    # Create dataset and add attributes
-    ds = grp.create_dataset(ds_name, data=_to_fixed_length_str(ds_data))
+    # Add Attributes
     if ds_units is not None:
-        ds.attrs.create(name="units", data=np.bytes_(ds_units))
+        add_attribute_to_h5_object(
+            h5_object=ds, attr_key="units", attr_value=ds_units
+        )
 
-    ds.attrs.create(name="description", data=np.bytes_(ds_description))
+    add_attribute_to_h5_object(
+        h5_object=ds, attr_key="description", attr_value=ds_description
+    )
 
     if ds_attrs is not None:
         for name, val in ds_attrs.items():
-            ds.attrs.create(name=name, data=_to_fixed_length_str(val))
+            add_attribute_to_h5_object(
+                h5_object=ds, attr_key=name, attr_value=val
+            )
+
+
+def add_attribute_to_h5_object(
+    h5_object: h5py.Dataset | h5py.Group | h5py.File,
+    attr_key: str,
+    attr_value: ArrayLike | str,
+) -> None:
+    """
+    Add an Attribute to an existing HDF5 Dataset or Group.
+
+    This function will prepare the Attribute value to follow NISAR conventions.
+    For example, if the value is a boolean value, then per NISAR conventions
+    it will be saved as its "True" or "False" byte string representation.
+
+    Parameters
+    ----------
+    h5_object : h5py.File
+        HDF5 object to write the new Attribute to.
+        Per h5py documentation, "the File object does double duty as
+        the HDF5 root group". So if `h5_object` is an h5py.File, the new
+        Attribute will be written to the root Group.
+    attr_key : str
+        Name (key) for the new Attribute.
+    attr_value : array_like or str or bool
+        The data to be stored as the new Attribute's value.
+
+    See Also
+    --------
+    create_dataset_in_h5group :
+        To create a new Dataset (including Attributes) in the HDF5 file.
+        Please use that function to ensure all NISAR conventions are followed
+        regarding add a `description`, `units`, etc.
+
+    Notes
+    -----
+    Please supply Python strings for arguments. This function handles the
+    conversion to fixed-length byte strings to meet ISCE3 conventions for R4.
+    """
+    h5_object.attrs.create(
+        name=attr_key,
+        data=_prep_data_for_hdf5_using_nisar_conventions(attr_value),
+    )
 
 
 def multi_line_string_iter(multiline_str):

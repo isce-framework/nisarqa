@@ -28,6 +28,10 @@ def setup_stats_h5_all_products(
     log = nisarqa.get_logger()
     stats_file = stats_h5.filename
 
+    add_global_metadata_to_stats_h5(
+        product_type=product.product_type, stats_h5=stats_h5
+    )
+
     # Save the processing parameters to the stats.h5 file
     # Note: If only the validate workflow is requested,
     # this will do nothing.
@@ -41,6 +45,57 @@ def setup_stats_h5_all_products(
 
     copy_src_runconfig_to_stats_h5(product=product, stats_h5=stats_h5)
     log.info(f"Input file's runconfig copied to {stats_file}")
+
+
+def add_global_metadata_to_stats_h5(
+    product_type: str, stats_h5: h5py.File
+) -> None:
+    """
+    Write global metadata as Attributes to the root directory of a HDF5 file.
+
+    Parameters
+    ----------
+    product_type : str
+        One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'.
+    stats_h5 : h5py.File
+        Handle to an h5 file where the global metadata will be written.
+
+    See Also
+    --------
+    nisarqa.utils.plotting.add_metadata_to_report_pdf
+        Sister function which adds global metadata to the REPORT.pdf.
+    """
+
+    if product_type.lower() not in nisarqa.LIST_OF_NISAR_PRODUCTS:
+        raise ValueError(
+            f"{product_type=}, must one of: {nisarqa.LIST_OF_NISAR_PRODUCTS}"
+        )
+
+    product_type = product_type.upper()
+
+    global_attrs = {
+        "Conventions": "CF-1.7",
+        "contact": "nisar-sds-ops@jpl.nasa.gov",
+        "institution": "NASA JPL",
+        "mission_name": "NISAR",
+        "reference_document": (
+            "D-107726 NASA SDS Product Specification for Level-1 and"
+            " Level-2 Quality Assurance"
+        ),
+        "title": (
+            f"NISAR Quality Assurance Statistical Summary of {product_type}"
+            " HDF5 Product"
+        ),
+    }
+
+    # Unfortunately, we cannot use `nisarqa.create_dataset_in_h5group()`
+    # because that function creates a new Dataset (not updating a Group).
+    # Here, we simply need to add Attributes to the root Group.
+    # Since all Attributes are
+    for key, val in global_attrs.items():
+        nisarqa.add_attribute_to_h5_object(
+            h5_object=stats_h5, attr_key=key, attr_value=val
+        )
 
 
 def copy_identification_group_to_stats_h5(
