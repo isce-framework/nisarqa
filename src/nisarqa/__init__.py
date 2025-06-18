@@ -106,7 +106,7 @@ def get_all(name, objects_to_skip=None, skip_private=True):
 # isort: off
 
 # Import Globals first (these must be imported before the parameters)
-from .parameters.constants.globals import *
+from .globals import *
 from .utils.stats_h5_writer.stats_h5_globals import *
 
 # Next import parameters, products, utils, etc.

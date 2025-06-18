@@ -139,7 +139,7 @@ def get_possible_pols(product_type):
         raise NotImplementedError
 
 
-PRODUCT_SPECS_PATH = Path(__file__).parent.parent / "product_specs"
+PRODUCT_SPECS_PATH = Path(__file__).parent / "product_specs"
 
 complex32 = np.dtype([("r", np.float16), ("i", np.float16)])
 
