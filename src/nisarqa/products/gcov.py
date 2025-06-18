@@ -138,20 +138,9 @@ def verify_gcov(
             # Add file metadata and title page to report PDF.
             nisarqa.setup_report_pdf(product=product, report_pdf=report_pdf)
 
-            nisarqa.setup_stats_h5_all_products(
+            nisarqa.setup_stats_h5_non_insar_products(
                 product=product, stats_h5=stats_h5, root_params=root_params
             )
-
-            # Save frequency/polarization info from `pols` to stats file
-            nisarqa.save_nisar_freq_metadata_to_h5(
-                product=product, stats_h5=stats_h5
-            )
-
-            # Copy imagery metrics into stats.h5
-            nisarqa.copy_non_insar_imagery_metrics(
-                product=product, stats_h5=stats_h5
-            )
-            log.info(f"Input file imagery metrics copied to {stats_file}")
 
             input_raster_represents_power = True
             name_of_backscatter_content = (

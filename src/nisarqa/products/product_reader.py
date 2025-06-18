@@ -647,7 +647,7 @@ class NisarProduct(ABC):
                 # Discrepancies between this and the spec will be logged
                 # via the XML checker; no need to report again here.
                 nisarqa.get_logger().error(
-                    f"`runConfigurationContents` not found in input product"
+                    "`runConfigurationContents` not found in input product"
                     f" at the path {path}. Defaulting to 'N/A'."
                 )
                 return "N/A"
@@ -2009,6 +2009,67 @@ class NisarGeoProduct(NisarProduct):
 class NonInsarProduct(NisarProduct):
     """Common functionality for RSLC, GLSC, and GCOV products."""
 
+    def get_rfi_likelihood_path(self, freq: str, pol: str) -> str:
+        """
+        Get the path to the RFI likelihood h5py Dataset.
+
+        Parameters
+        ----------
+        freq : {'A', 'B'}
+            The frequency sub-band. Must be a valid sub-band in the product.
+        pol : str
+            The desired polarization, e.g. "HH" or "HV".
+            Warning: For GCOV, this should be a polarization (e.g. "HH"), and
+            not a GCOV term (e.g. "HHHH"). The list of available polarizations
+            in the input product can be accessed via the product reader's
+            `nisarqa.NisarProduct.get_list_of_polarizations()` method.
+
+        Returns
+        -------
+        rfi_likelihood_path : str
+            The path to the radio frequency interference (RFI) likelihood
+            Dataset for the given freq and pol.
+
+        Warnings
+        --------
+        `rfiLikelihood` was added in ISCE3 v0.17.0 for R3.4.1.
+        Unfortunately, that release does not correspond directly to product
+        specification version number. Product Specification v1.1.0 and later
+        should have this dataset, but it's messy to algorithmically
+        handle the products generated prior to that. The returned
+        `rfi_likelihood_path` will be correct for products generated with
+        ISCE3 v0.17.0 and later, but might not exist in earlier test datasets.
+        The calling function should handle this case accordingly.
+
+        See Also
+        --------
+        copy_rfi_metadata_to_stats_h5 :
+            Copies RFI likelihood Dataset from the input product to STATS.h5.
+
+        Notes
+        -----
+        Typically, QA returns the Dataset's actual values, and not a path
+        to an h5py.Dataset. However, this Dataset is only being used by
+        `copy_rfi_metadata_to_stats_h5()`, which needs to wholesale copy
+        the Dataset and its Attributes. By returning just the path, then
+        any new Attributes in subsequent ISCE3 releases will be automatically
+        get copied as well.
+        """
+        path = (
+            f"{self._calibration_metadata_path}/"
+            + f"frequency{freq}/{pol}/rfiLikelihood"
+        )
+
+        spec = nisarqa.Version.from_string(self.product_spec_version)
+        if spec < nisarqa.Version(1, 1, 0):
+            nisarqa.get_logger().warning(
+                "Input product was generated with an older product spec; the"
+                " `rfiLikelihood` Dataset might not exist for"
+                f" frequency {freq}, polarization {pol}. Path: {path}"
+            )
+
+        return path
+
     def metadata_neb_luts(self, freq: str) -> Iterator[nisarqa.MetadataLUT2D]:
         """
         Generator for metadata LUTs in noise equivalent backscatter Group.
@@ -2992,63 +3053,6 @@ class RSLC(SLC, NisarRadarProduct):
             return proc_center_freq
 
         return _get_proc_center_freq(freq)
-
-    def get_rfi_likelihood_path(self, freq: str, pol: str) -> str:
-        """
-        Get the path to the RFI likelihood h5py Dataset.
-
-        Parameters
-        ----------
-        freq : {'A', 'B'}
-            The frequency sub-band. Must be a valid sub-band in the product.
-        pol : str
-            The desired polarization, e.g. "HH" or "HV".
-
-        Returns
-        -------
-        rfi_likelihood_path : str
-            The path to the radio frequency interference (RFI) likelihood
-            Dataset for the given freq and pol.
-
-        Warnings
-        --------
-        `rfiLikelihood` was added in ISCE3 v0.17.0 for R3.4.1.
-        Unfortunately, that release does not correspond directly to product
-        specification version number. Product Specification v1.1.0 and later
-        should have this dataset, but it's messy to algorithmically
-        handle the products generated prior to that. The returned
-        `rfi_likelihood_path` will be correct for products generated with
-        ISCE3 v0.17.0 and later, but might not exist in earlier test datasets.
-        The calling function should handle this case accordingly.
-
-        See Also
-        --------
-        copy_rfi_metadata_to_stats_h5 :
-            Copies RFI likelihood Dataset from the input product to STATS.h5.
-
-        Notes
-        -----
-        Typically, QA returns the Dataset's actual values, and not a path
-        to an h5py.Dataset. However, this Dataset is only being used by
-        `copy_rfi_metadata_to_stats_h5()`, which needs to wholesale copy
-        the Dataset and its Attributes. By returning just the path, then
-        any new Attributes in subsequent ISCE3 releases will be automatically
-        get copied as well.
-        """
-        path = (
-            f"{self._calibration_metadata_path}/"
-            + f"frequency{freq}/{pol}/rfiLikelihood"
-        )
-
-        spec = nisarqa.Version.from_string(self.product_spec_version)
-        if spec < nisarqa.Version(1, 1, 0):
-            nisarqa.get_logger().warning(
-                "Input product was generated with an older product spec; the"
-                " `rfiLikelihood` Dataset might not exist for"
-                f" frequency {freq}, polarization {pol}. Path: {path}"
-            )
-
-        return path
 
     def metadata_crosstalk_luts(
         self,

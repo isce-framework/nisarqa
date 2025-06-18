@@ -139,7 +139,7 @@ def verify_rslc(
             # After this, always open STATS.h5 in 'r+' mode.
             with h5py.File(stats_file, mode="w") as stats_h5:
 
-                nisarqa.setup_stats_h5_all_products(
+                nisarqa.setup_stats_h5_non_insar_products(
                     product=product, stats_h5=stats_h5, root_params=root_params
                 )
 
@@ -168,16 +168,6 @@ def verify_rslc(
             log.info(f"Browse image kml file saved to {browse_file_kml}")
 
             with h5py.File(stats_file, mode="r+") as stats_h5:
-                # Save frequency/polarization info to stats file
-                nisarqa.save_nisar_freq_metadata_to_h5(
-                    stats_h5=stats_h5, product=product
-                )
-
-                # Copy imagery metrics into stats.h5
-                nisarqa.copy_non_insar_imagery_metrics(
-                    product=product, stats_h5=stats_h5
-                )
-                log.info(f"Input file imagery metrics copied to {stats_file}")
 
                 input_raster_represents_power = False
                 name_of_backscatter_content = (

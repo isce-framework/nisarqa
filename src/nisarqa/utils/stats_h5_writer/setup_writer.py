@@ -23,7 +23,7 @@ def setup_stats_h5_all_products(
     stats_h5 : h5py.File
         Handle to the output HDF5 file.
     root_params : nisarqa.typing.RootParamGroupT
-        *RootParamGroup object for the product type of `product`.
+        *RootParamGroup object corresponding to the product type of `product`.
     """
     log = nisarqa.get_logger()
     stats_file = stats_h5.filename
@@ -41,6 +41,47 @@ def setup_stats_h5_all_products(
 
     copy_src_runconfig_to_stats_h5(product=product, stats_h5=stats_h5)
     log.info(f"Input file's runconfig copied to {stats_file}")
+
+
+def setup_stats_h5_non_insar_products(
+    product: nisarqa.NonInsarProduct,
+    stats_h5: h5py.File,
+    root_params: nisarqa.typing.RootParamGroupT,
+) -> None:
+    """
+    Setup the STATS.h5 file for Non-InSAR products (RSLC, GSLC, GCOV).
+
+    Parameters
+    ----------
+    product : nisarqa.NonInsarProduct
+        Instance of a NonInsarProduct (RSLC, GSLC, GCOV).
+    stats_h5 : h5py.File
+        Handle to an h5 file where the identification metadata
+        should be saved.
+    root_params : nisarqa.typing.RootParamGroupT
+        *RootParamGroup object corresponding to the product type of `product`.
+    """
+    log = nisarqa.get_logger()
+    stats_file = stats_h5.filename
+
+    setup_stats_h5_all_products(
+        product=product, stats_h5=stats_h5, root_params=root_params
+    )
+
+    copy_rfi_metadata_to_stats_h5(product=product, stats_h5=stats_h5)
+    log.info(f"Input file RFI metadata copied to {stats_file}")
+
+    if root_params.workflows.qa_reports:
+        # Save frequency/polarization info to stats file
+        nisarqa.save_nisar_freq_metadata_to_h5(
+            stats_h5=stats_h5, product=product
+        )
+
+        # Copy imagery metrics into stats.h5
+        nisarqa.copy_non_insar_imagery_metrics(
+            product=product, stats_h5=stats_h5
+        )
+        log.info(f"Input file imagery metrics copied to {stats_file}")
 
 
 def copy_identification_group_to_stats_h5(
@@ -110,23 +151,32 @@ def copy_src_runconfig_to_stats_h5(
 
 
 def copy_rfi_metadata_to_stats_h5(
-    product: nisarqa.RSLC,
+    product: nisarqa.NonInsarProduct,
     stats_h5: h5py.File,
 ) -> None:
     """
-    Copy the RFI metadata from the RSLC product into the STATS HDF5 file.
+    Copy the RFI metadata from input product into the STATS HDF5 file.
 
     Parameters
     ----------
-    product : nisarqa.RSLC
-        The RSLC product.
+    product : nisarqa.NonInsarProduct
+        Instance of a NonInsarProduct (RSLC, GSLC, GCOV).
     stats_h5 : h5py.File
-        Handle to an HDF5 file where the identification metadata
-        should be saved.
+        Handle to an HDF5 file where the RFI metadata should be saved.
     """
     with h5py.File(product.filepath, "r") as in_file:
         for freq in product.freqs:
-            for pol in product.get_pols(freq=freq):
+            # Use `product.get_list_of_polarizations()` instead of the
+            # typical `product.get_pols()`. There should make no difference
+            # for RSLC and GSLC, but there is a difference for GCOV.
+            # For GCOV, `product.get_pols()` actually returns the GCOV terms
+            # (e.g. ["HHHH", "HVHVH"]), instead of the polarization pairs
+            # (e.g. ["HH", "HV"]). The RFI likelihood values are accessed via
+            # polarization pairs for GCOV (not the GCOV terms).
+            # In contrast, `get_list_of_polarizations` returns the input RSLC,
+            # GSLC, or GCOV granule's `listOfPolarizations` Dataset contents,
+            # which are always the polarization pairs.
+            for pol in product.get_list_of_polarizations(freq=freq):
                 src_path = product.get_rfi_likelihood_path(freq=freq, pol=pol)
 
                 basename = src_path.split("/")[-1]
@@ -142,7 +192,7 @@ def copy_rfi_metadata_to_stats_h5(
                     #       RuntimeError: Unable to synchronously copy object
                     #       (component not found)
                     nisarqa.get_logger().error(
-                        "Cannot copy `rfiLikelihood`. Input RSLC product is"
+                        "Cannot copy `rfiLikelihood`. Input granule is"
                         " missing `rfiLikelihood` for"
                         f" frequency {freq}, polarization {pol} at {src_path}"
                     )
