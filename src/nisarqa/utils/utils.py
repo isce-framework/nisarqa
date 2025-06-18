@@ -359,6 +359,21 @@ def byte_string_to_python_str(byte_str):
     # found in the runconfigs)
     out = np.char.decode(byte_str, encoding="utf-8")
 
+    # As of June 2025, InSAR products have a bug where `orbitFiles` was being
+    # written with shape (1, 2), instead of shape (2,). Given the prevalence of
+    # existing test data and sample products, QA should log and then attempt to
+    # workaround this issue to continue processing.
+    # If the squeezed array still fails below, then let it raise an exception.
+    if out.ndim > 1:
+        out_squeezed = np.squeeze(out)
+        if out.ndim != out_squeezed.ndim:
+            nisarqa.get_logger().error(
+                f"Provided array of byte strings has shape {byte_str.shape}."
+                f" QA will squeeze it to shape {out_squeezed.shape},"
+                f" but the input product should be fixed. Array: {byte_str!r}"
+            )
+        out = out_squeezed
+
     # Step 2: Use str(...) to cast from NumPy string to Python string (Unicode)
     if out.ndim == 0:
         # scalar input
