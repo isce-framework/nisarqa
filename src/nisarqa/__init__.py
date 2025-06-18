@@ -119,17 +119,17 @@ from .parameters.insar_params import *
 from .utils import typing
 from .utils.utils import *
 from .products.product_reader import *
-from .utils.file_verification.policy import *
-from .utils.file_verification.data_annotation import *
-from .utils.file_verification.dataset import *
-from .utils.file_verification.checks import *
-from .utils.file_verification.h5_parser import *
-from .utils.file_verification.dataset_inclusion_rules import *
-from .utils.file_verification.verify import *
-from .utils.file_verification.xml_check import *
-from .utils.file_verification.xml_parser import *
+from .validate.xml_spec_checker.policy import *
+from .validate.xml_spec_checker.data_annotation import *
+from .validate.xml_spec_checker.dataset import *
+from .validate.xml_spec_checker.checks import *
+from .validate.xml_spec_checker.h5_parser import *
+from .validate.xml_spec_checker.dataset_inclusion_rules import *
+from .validate.xml_spec_checker.verify import *
+from .validate.xml_spec_checker.xml_check import *
+from .validate.xml_spec_checker.xml_parser import *
 
-from .utils.metadata_checks import *
+from .validate.metadata_checks import *
 
 # keep individual products in their own namespace
 from .products import (
@@ -150,6 +150,6 @@ from .utils.tiling import *
 from .utils.summary_csv import *
 from .utils.stats_h5_writer.metrics_writer import *
 from .utils.stats_h5_writer.setup_writer import *
-from .utils.sanity_checks import *
+from .validate.sanity_checks import *
 
 # isort: on
