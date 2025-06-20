@@ -12,13 +12,9 @@ from numpy.typing import DTypeLike
 # List of objects from the import statements that
 # should not be included when importing this module
 import nisarqa
-from nisarqa import (
-    DataAnnotation,
-    DataShape,
-    HDF5Dataset,
-    XMLAnnotation,
-    XMLDataset,
-)
+
+from .data_annotation import DataAnnotation, XMLAnnotation
+from .dataset import DataShape, HDF5Dataset, XMLDataset
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

@@ -5,7 +5,8 @@ from dataclasses import dataclass, fields
 from typing import Optional
 
 import nisarqa
-from nisarqa.parameters.nisar_params import (
+
+from .nisar_params import (
     InputFileGroupParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
@@ -15,7 +16,7 @@ from nisarqa.parameters.nisar_params import (
 )
 
 # TODO Remove the rslc_caltools_params imports after re-org of code
-from nisarqa.parameters.rslc_caltools_params import (
+from .rslc_caltools_params import (
     BackscatterImageParamGroup,
     HistogramParamGroup,
 )
@@ -78,7 +79,7 @@ class GCOVHistogramParamGroup(HistogramParamGroup):
     """
 
     phase_histogram_y_axis_range: None | Sequence[int | float | None] = (
-        nisarqa.HistogramParamGroup.get_field_with_updated_default(
+        HistogramParamGroup.get_field_with_updated_default(
             param_name="phase_histogram_y_axis_range", default=None
         )
     )

@@ -3,8 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
 
 objects_to_skip = nisarqa.get_all(name=__name__)

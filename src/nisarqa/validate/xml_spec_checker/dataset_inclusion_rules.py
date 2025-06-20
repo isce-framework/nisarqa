@@ -6,10 +6,9 @@ from collections.abc import Iterable, Mapping
 from string import Template
 from typing import Tuple
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
-from nisarqa import pol_options, subswaths_options
+
+from .policy import pol_options, subswaths_options
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

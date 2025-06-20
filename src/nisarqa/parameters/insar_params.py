@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import ClassVar, Optional
 
 import nisarqa
-from nisarqa import (
+
+from .nisar_params import (
     HDF5Attrs,
     HDF5ParamGroup,
     InputFileGroupParamGroup,
@@ -1577,26 +1578,22 @@ class ConnectedComponentsParamGroup(ThresholdParamGroup):
         Defaults to None.
     """
 
-    nan_threshold: float = (
-        nisarqa.ThresholdParamGroup.get_field_with_updated_default(
-            param_name="nan_threshold", default=0
-        )
+    nan_threshold: float = ThresholdParamGroup.get_field_with_updated_default(
+        param_name="nan_threshold", default=0
     )
 
-    inf_threshold: float = (
-        nisarqa.ThresholdParamGroup.get_field_with_updated_default(
-            param_name="inf_threshold", default=0
-        )
+    inf_threshold: float = ThresholdParamGroup.get_field_with_updated_default(
+        param_name="inf_threshold", default=0
     )
 
     near_zero_threshold: float = (
-        nisarqa.ThresholdParamGroup.get_field_with_updated_default(
+        ThresholdParamGroup.get_field_with_updated_default(
             param_name="near_zero_threshold", default=99.9
         )
     )
 
     total_invalid_threshold: float = (
-        nisarqa.ThresholdParamGroup.get_field_with_updated_default(
+        ThresholdParamGroup.get_field_with_updated_default(
             param_name="total_invalid_threshold", default=99.9
         )
     )
@@ -1682,10 +1679,8 @@ class GUNWConnectedComponentsParamGroup(ConnectedComponentsParamGroup):
         Defaults to None.
     """
 
-    fill_threshold: float = (
-        nisarqa.ThresholdParamGroup.get_field_with_updated_default(
-            param_name="fill_threshold", default=99.0
-        )
+    fill_threshold: float = ThresholdParamGroup.get_field_with_updated_default(
+        param_name="fill_threshold", default=99.0
     )
 
     @staticmethod

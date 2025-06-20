@@ -8,7 +8,9 @@ from xml.etree.ElementTree import Element
 # List of objects from the import statements that
 # should not be included when importing this module
 import nisarqa
-from nisarqa import DataShape, Dimension, XMLAnnotation, XMLDataset
+
+from .data_annotation import Dimension
+from .dataset import DataShape, XMLAnnotation, XMLDataset
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

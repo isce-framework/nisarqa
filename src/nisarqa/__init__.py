@@ -107,49 +107,12 @@ def get_all(name, objects_to_skip=None, skip_private=True):
 
 # Import Globals first (these must be imported before the parameters)
 from .globals import *
-from .utils.stats_h5_writer.stats_h5_globals import *
+from .stats_h5_globals import *
 
 # Next import parameters, products, utils, etc.
-from .parameters.nisar_params import *
-from .parameters.caltools_params import *
-from .parameters.rslc_caltools_params import *
-from .parameters.gslc_params import *
-from .parameters.gcov_params import *
-from .parameters.insar_params import *
-from .utils import typing
-from .utils.utils import *
-from .products.product_reader import *
-from .utils.file_verification.policy import *
-from .utils.file_verification.data_annotation import *
-from .utils.file_verification.dataset import *
-from .utils.file_verification.checks import *
-from .utils.file_verification.h5_parser import *
-from .utils.file_verification.dataset_inclusion_rules import *
-from .utils.file_verification.verify import *
-from .utils.file_verification.xml_check import *
-from .utils.file_verification.xml_parser import *
-
-from .utils.metadata_checks import *
-
-# keep individual products in their own namespace
-from .products import (
-    caltools,
-    gcov,
-    gslc,
-    igram,
-    offsets,
-    rslc,
-)
-from .utils.calc import *
-from .utils.input_verification import *
-from .utils.lonlat import *
-from .utils.multilook import *
-from .utils.plotting import *
-from .utils.raster_classes import *
-from .utils.tiling import *
-from .utils.summary_csv import *
-from .utils.stats_h5_writer.metrics_writer import *
-from .utils.stats_h5_writer.setup_writer import *
-from .utils.sanity_checks import *
+from .parameters import *
+from .utils import *
+from .products import *
+from .validate import *
 
 # isort: on
