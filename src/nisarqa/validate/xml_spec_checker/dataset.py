@@ -8,13 +8,11 @@ from typing import Any, TypeVar
 from xml.etree.ElementTree import Element
 
 import h5py
-import isce3
 import numpy as np
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
-from nisarqa import DataShape, XMLAnnotation
+
+from .data_annotation import DataShape, XMLAnnotation
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

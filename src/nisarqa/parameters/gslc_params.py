@@ -2,18 +2,21 @@ from dataclasses import dataclass, field, fields, replace
 from typing import Optional
 
 import nisarqa
-from nisarqa import (
-    BackscatterImageParamGroup,
-    DynamicAncillaryFileParamGroup,
-    HistogramParamGroup,
+
+from .caltools_params import PointTargetAnalyzerParamGroup
+from .nisar_params import (
     InputFileGroupParamGroup,
-    PointTargetAnalyzerParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
-    SLCWorkflowsParamGroup,
     SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     YamlAttrs,
+)
+from .rslc_caltools_params import (
+    BackscatterImageParamGroup,
+    DynamicAncillaryFileParamGroup,
+    HistogramParamGroup,
+    SLCWorkflowsParamGroup,
 )
 
 objects_to_skip = nisarqa.get_all(__name__)

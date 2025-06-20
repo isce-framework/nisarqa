@@ -10,14 +10,14 @@ from matplotlib.colors import to_rgba
 from numpy.typing import ArrayLike
 
 import nisarqa
-from nisarqa import (
-    AbsCalParamGroup,
+
+from .caltools_params import AbsCalParamGroup, RSLCPointTargetAnalyzerParamGroup
+from .nisar_params import (
     HDF5Attrs,
     HDF5ParamGroup,
     InputFileGroupParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
-    RSLCPointTargetAnalyzerParamGroup,
     SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     WorkflowsParamGroup,

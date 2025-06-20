@@ -1,7 +1,8 @@
 from dataclasses import dataclass, field
 
 import nisarqa
-from nisarqa import HDF5Attrs, HDF5ParamGroup, YamlAttrs, YamlParamGroup
+
+from .nisar_params import HDF5Attrs, HDF5ParamGroup, YamlAttrs, YamlParamGroup
 
 objects_to_skip = nisarqa.get_all(__name__)
 

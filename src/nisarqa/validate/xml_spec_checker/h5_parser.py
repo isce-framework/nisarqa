@@ -10,7 +10,8 @@ import numpy as np
 # List of objects from the import statements that
 # should not be included when importing this module
 import nisarqa
-from nisarqa import HDF5Dataset
+
+from .dataset import HDF5Dataset
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
