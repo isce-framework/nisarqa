@@ -140,7 +140,7 @@ def _prep_data_for_hdf5_using_nisar_conventions(
 
     # If a string or a list of strings, convert to fixed-length byte strings
 
-    # If `data` is an e.g. numpy array with a numeric dtype,
+    # If `data` is an e.g. NumPy array with a numeric dtype,
     # do not alter it.
     if isinstance(data, str) or (
         isinstance(data, Sequence) and all(isinstance(s, str) for s in data)
@@ -163,8 +163,7 @@ def _prep_data_for_hdf5_using_nisar_conventions(
             " of Python strings, or an ndarray of fixed-length byte strings."
         )
     elif isinstance(data, bool):
-        data = "True" if data else "False"
-        data = np.bytes_(data)
+        data = np.bytes_("True" if data else "False")
     elif (
         isinstance(data, Sequence) and all(isinstance(b, bool) for b in data)
     ) or (
@@ -282,7 +281,7 @@ def create_dataset_in_h5group(
 def add_attribute_to_h5_object(
     h5_object: h5py.Dataset | h5py.Group | h5py.File,
     attr_key: str,
-    attr_value: ArrayLike | str,
+    attr_value: ArrayLike | str | bool,
 ) -> None:
     """
     Add an Attribute to an existing HDF5 Dataset or Group.
@@ -307,13 +306,13 @@ def add_attribute_to_h5_object(
     --------
     create_dataset_in_h5group :
         To create a new Dataset (including Attributes) in the HDF5 file.
-        Please use that function to ensure all NISAR conventions are followed
-        regarding add a `description`, `units`, etc.
+        Please use that function to ensure all NISAR conventions are followed,
+        including adding a `description`, `units`, etc.
 
     Notes
     -----
     Please supply Python strings for arguments. This function handles the
-    conversion to fixed-length byte strings to meet ISCE3 conventions for R4.
+    conversion to fixed-length byte strings to meet ISCE3 conventions for R4.0+.
     """
     h5_object.attrs.create(
         name=attr_key,

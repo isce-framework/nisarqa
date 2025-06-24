@@ -58,7 +58,7 @@ def add_global_metadata_to_stats_h5(
     product_type : str
         One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff'.
     stats_h5 : h5py.File
-        Handle to an h5 file where the global metadata will be written.
+        Handle to an HDF5 file where the global metadata will be written.
 
     See Also
     --------
@@ -74,7 +74,6 @@ def add_global_metadata_to_stats_h5(
     product_type = product_type.upper()
 
     global_attrs = {
-        "Conventions": "CF-1.7",
         "contact": "nisar-sds-ops@jpl.nasa.gov",
         "institution": "NASA JPL",
         "mission_name": "NISAR",
