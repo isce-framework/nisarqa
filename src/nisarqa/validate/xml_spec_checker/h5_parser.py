@@ -7,8 +7,6 @@ from typing import Any, Generator
 import h5py
 import numpy as np
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
 
 from .dataset import HDF5Dataset

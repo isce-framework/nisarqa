@@ -5,8 +5,6 @@ from collections.abc import Iterable, Mapping
 from xml.etree import ElementTree as ET
 from xml.etree.ElementTree import Element
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
 
 from .data_annotation import Dimension
