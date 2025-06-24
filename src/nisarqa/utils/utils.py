@@ -138,13 +138,11 @@ def _prep_data_for_hdf5_using_nisar_conventions(
 ) -> ArrayLike | np.bytes_:
     """Prep data for writing to the STATS.h5 file, per NISAR conventions."""
 
-    # If a string or a list of strings, convert to fixed-length byte strings
-
-    # If `data` is an e.g. NumPy array with a numeric dtype,
-    # do not alter it.
     if isinstance(data, str) or (
         isinstance(data, Sequence) and all(isinstance(s, str) for s in data)
     ):
+        # If a string or a list of strings, convert to fixed-length byte strings
+
         # If `data` is a scalar Python (Unicode) string,
         # numpy.char.encode() returns a 0D array of byte strings.
         # If a sequence of Python strings, numpy.char.encode() returns a
@@ -173,6 +171,11 @@ def _prep_data_for_hdf5_using_nisar_conventions(
             f"`{data=}` is a sequence or array of boolean values"
             " which is not currently supported"
         )
+    else:
+        # If `data` is an e.g. NumPy array with a numeric dtype,
+        # do not alter it.
+        pass
+
     return data
 
 
