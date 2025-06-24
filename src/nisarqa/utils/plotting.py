@@ -19,8 +19,6 @@ from matplotlib.ticker import FuncFormatter
 
 import nisarqa
 
-# List of objects from the import statements that
-# should not be included when importing this module
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 

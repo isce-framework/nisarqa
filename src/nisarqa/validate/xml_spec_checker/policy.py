@@ -6,8 +6,6 @@ from pathlib import Path
 from string import Template
 from typing import TypeVar
 
-# List of objects from the import statements that
-# should not be included when importing this module
 import nisarqa
 
 objects_to_skip = nisarqa.get_all(name=__name__)

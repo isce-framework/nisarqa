@@ -1,13 +1,11 @@
 from __future__ import annotations
 
 import os
-from collections.abc import Mapping, Iterable
+from collections.abc import Iterable, Mapping
 from typing import Optional
 
 import nisarqa
 
-# List of objects from the import statements that
-# should not be included when importing this module
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
