@@ -100,11 +100,6 @@ def get_all(name, objects_to_skip=None, skip_private=True):
 # Note: Keep each NISAR product in a unique namespace, due to a higher
 # potential for overlapping function names
 
-# Toggle isort off so that the imports occur in the correct order.
-# Example: if `.parameters.gslc_params` is imported before
-# `.parameters.nisar_params`, then an error is raised
-# isort: off
-
 # Import Globals first (these must be imported before the parameters)
 from .globals import *
 from .stats_h5_globals import *
@@ -114,5 +109,3 @@ from .parameters import *
 from .utils import *
 from .products import *
 from .validate import *
-
-# isort: on
