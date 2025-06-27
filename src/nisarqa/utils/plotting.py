@@ -3534,15 +3534,44 @@ def plot_connected_components_layer(
     # Hint: Visually, the "boundary" between two integer labels is where the
     # colorbar changes from one color to the next color.
 
+    # Kludge: the `labels` returned above use the same dtype as `cc_full`.
+    # As of March 2024, the product spec for the CC layer specifies a
+    # dtype of unsigned int16 with a fill value of 65535. For the CC layer,
+    # `0` designates pixels with invalid unwrapping, so `labels` will
+    # typically be [0, ..., 65535].
+    # Because 0 and 65535 are the min and max values for uint32, when
+    # we try to subtract 1 and add 1 to those values below when creating the
+    # `boundaries` variable, we'll run into overflow errors.
+    # Prior to NumPy 2.0 (e.g. NumPy 1.26), the datatype would automatically
+    # be promoted to avoid overflow. Starting with NumPy 2.0, datatypes were
+    # no longer promoted. So, manually promote the datatype to avoid overflow.
+    # Sources:
+    #     [1] https://numpy.org/doc/stable/numpy_2_0_migration_guide.html#changes-to-numpy-data-type-promotion
+    #     [2] https://numpy.org/neps/nep-0050-scalar-promotion.html
+    if (np.nanmin(labels) <= (-(2**63)) + 1) or (
+        np.nanmax(labels) >= (2**63 - 1) - 1
+    ):
+        # The label values fall outside the permissible interval of NumPy's
+        # int64, +/- 1 to account for the algorithm below.
+        # This could happen if e.g. the CC layer has dtype uint64 and the
+        # fill value is set to 2 ** 63 - 1.
+        # However, this should not occur in nominal products, so simply raise
+        # an error for now.
+        raise NotImplementedError(
+            f"Connected components label value(s) fall outside of the"
+            " permissible interval for QA's plotting tools. Please update QA."
+        )
+    else:
+        labels_modified_dtype = labels.astype(np.int64)
+
     # This assumes that `labels` is in sorted, ascending order.
     boundaries = np.concatenate(
         (
-            [labels[0] - 1],
-            labels[:-1] + np.diff(labels) / 2.0,
-            [labels[-1] + 1],
+            [labels_modified_dtype[0] - 1],
+            labels_modified_dtype[:-1] + np.diff(labels_modified_dtype) / 2.0,
+            [labels_modified_dtype[-1] + 1],
         )
     )
-
     norm = colors.BoundaryNorm(boundaries, len(boundaries) - 1)
 
     # Step 3: Decimate Connected Components array to square pixels and plot
