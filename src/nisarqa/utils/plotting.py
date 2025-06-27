@@ -3535,15 +3535,19 @@ def plot_connected_components_layer(
     # colorbar changes from one color to the next color.
 
     # Kludge: the `labels` returned above use the same dtype as `cc_full`.
-    # As of March 2024, the spec for nominal RUNW/GUNW products changed from
-    # using a dtype of signed int32 with a fill value of 255, to having an
-    # dtype of unsigned int16 with a fill value of 65535. Given that `0`
-    # is used in the CC layer to designate pixels with invalid unwrapping,
-    # the `labels` for GUNW will typically be [0, ..., 65535].
+    # As of March 2024, the product spec for the CC layer specifies a
+    # dtype of unsigned int16 with a fill value of 65535. For the CC layer,
+    # `0` designates pixels with invalid unwrapping, so `labels` will
+    # typically be [0, ..., 65535].
     # Because 0 and 65535 are the min and max values for uint32, when
     # we try to subtract 1 and add 1 to those values below when creating the
     # `boundaries` variable, we'll run into overflow errors.
-    # For now, let's handle this edge case by using a larger, unsigned dtype.
+    # Prior to NumPy 2.0 (e.g. NumPy 1.26), the datatype would automatically
+    # be promoted to avoid overflow. Starting with NumPy 2.0, datatypes were
+    # no longer promoted. So, manually promote the datatype to avoid overflow.
+    # Sources:
+    #     [1] https://numpy.org/doc/stable/numpy_2_0_migration_guide.html#changes-to-numpy-data-type-promotion
+    #     [2] https://numpy.org/neps/nep-0050-scalar-promotion.html
     if (np.nanmin(labels) <= (-(2**63)) + 1) or (
         np.nanmax(labels) >= (2**63 - 1) - 1
     ):
