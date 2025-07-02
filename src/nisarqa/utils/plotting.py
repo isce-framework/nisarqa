@@ -3561,14 +3561,14 @@ def plot_connected_components_layer(
             " permissible interval for QA's plotting tools. Please update QA."
         )
     else:
-        labels_modified_dtype = labels.astype(np.int64)
+        labels_promoted = labels.astype(np.int64)
 
     # This assumes that `labels` is in sorted, ascending order.
     boundaries = np.concatenate(
         (
-            [labels_modified_dtype[0] - 1],
-            labels_modified_dtype[:-1] + np.diff(labels_modified_dtype) / 2.0,
-            [labels_modified_dtype[-1] + 1],
+            [labels_promoted[0] - 1],
+            labels_promoted[:-1] + np.diff(labels_promoted) / 2.0,
+            [labels_promoted[-1] + 1],
         )
     )
     norm = colors.BoundaryNorm(boundaries, len(boundaries) - 1)
