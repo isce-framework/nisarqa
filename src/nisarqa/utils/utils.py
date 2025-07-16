@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import math
 import os
 import shutil
 import tempfile
@@ -691,8 +690,14 @@ def wrap_to_interval(val, *, start, stop):
 
     is_scalar = not nisarqa.is_iterable(val)
     width = stop - start
-    wrap = lambda v: math.fmod(v - start, width) + start
 
+    # Python's `%` (modulo) operator computes the remainder with the same sign
+    # as the right-hand side operand, so the result of the modulo operation
+    # below is in the range [0, b-a), where b is the upper endpoint and a is
+    # the lower endpoint. Then, if we add a, the result will be in the
+    # range [a, b). See:
+    # https://docs.python.org/3/reference/expressions.html#binary-arithmetic-operations.
+    wrap = lambda v: (v - start) % width + start
     return wrap(val) if is_scalar else (wrap(v) for v in val)
 
 
