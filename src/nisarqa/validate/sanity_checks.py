@@ -207,7 +207,14 @@ def identification_sanity_checks(
         data = _get_string_dataset(ds_name=ds_name)
         passes &= _verify_data_is_in_list(
             value=data,
-            valid_options=("Nominal", "Urgent", "Custom", "Undefined"),
+            # Only support "Nominal", "Urgent", and "Custom" values.
+            # As of product specs v1.3.0, "Undefined" was removed,
+            # so all products generated via nominal NISAR mission operations
+            # should not have "Undefined".
+            # Very few (if any) older test datasets used "Undefined", so it is
+            # not worth the added code complexity to handle older test datasets.
+            # Simply let it be logged as a false-negative.
+            valid_options=("Nominal", "Urgent", "Custom"),
             ds_name=ds_name,
         )
 
