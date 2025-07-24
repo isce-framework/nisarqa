@@ -390,6 +390,28 @@ def element_to_annotation(
             f" 'io' are supported. XML Element: {dataset_name}"
         )
 
+    # Datasets named "projection" are required by CF-1.7 Conventions
+    # to contain specific Attributes, and different projections have different
+    # required Attributes. NISAR uses both UTM and polar stereographic
+    # projections. However, for simplicity, ADT decided that the XMLs
+    # should only contain the Attributes for UTM; the DOCX/PDF product specs
+    # would separately describe the polar stereo caveats.
+    # https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/apf.html
+    # Here, ensure that the XML contains all necessary Attributes.
+    if dataset_name.endswith("/projection"):
+        req_attrs = (
+            nisarqa.common_nisar_projection_attributes()
+            | nisarqa.common_cf17_projection_attributes()
+            | nisarqa.unique_cf17_utm_attributes()
+        )
+        for name in req_attrs:
+            if name not in annotation_attribs:
+                log.error(
+                    f"{element.tag} annotation does not contain attribute"
+                    f" '{name}'. This attribute is required for Datasets"
+                    f" named 'projection' - XML Element {dataset_name}"
+                )
+
     return nisarqa.XMLAnnotation(
         attributes=annotation_attribs, description=description
     )

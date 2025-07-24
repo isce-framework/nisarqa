@@ -769,15 +769,61 @@ def attribute_names_check(
     log = nisarqa.get_logger()
 
     # Ignore certain attributes present in the XML, such as "lang" and "app"
-    ignored_xml_attributes = nisarqa.ignored_xml_annotation_attributes()
-    xml_attributes = xml_annotation.attribute_names - ignored_xml_attributes
+    ignored_xml_attrs = nisarqa.ignored_xml_annotation_attributes()
+    xml_attrs = xml_annotation.attribute_names - ignored_xml_attrs
 
     hdf5_attrs = hdf5_annotation.attribute_names
 
-    total_num = len(hdf5_attrs | xml_attributes)
+    # Update `xml_attrs` for "projection" Datasets.
+    # Datasets named "projection" are required by CF-1.7 Conventions
+    # to contain specific Attributes. Different projections have different
+    # required Attributes, but there are some Attributes in common.
+    # NISAR datasets uses either UTM or polar stereographic projections.
+    # For simplicity, ADT decided that the XMLs should only contain the
+    # Attributes for UTM. But, the HDF5 products should contain the
+    # actual required projection-specific parameters.
+    # https://cfconventions.org/Data/cf-conventions/cf-conventions-1.7/build/apf.html
+    if dataset_name.endswith("/projection"):
+        if "grid_mapping_name" not in hdf5_attrs:
+            # All NISAR 'projection' Datasets are required by CF-1.7
+            # Conventions to include the Attribute 'grid_mapping_name'
+            log.error(
+                "Attribute 'grid_mapping_name' not found, so the projection"
+                " could not be determined. By default, QA XML Checker will"
+                f" assume the input granule is in UTM - Dataset {dataset_name}"
+            )
+        else:
+            hdf5_proj = hdf5_annotation.attributes["grid_mapping_name"]
+            if hdf5_proj == "polar_stereographic":
+                # Remove the UTM-specific Attributes
+                xml_attrs -= nisarqa.unique_cf17_utm_attributes()
+                # Add the Attributes specific to polar-stereo
+                xml_attrs |= nisarqa.unique_cf17_polar_stereo_attributes()
+                # TODO -- is there a better place for this log message?
+                # It's useful to document, and this seems like the correct
+                # place in the code, but it gets re-logged for each and every
+                # projection Dataset in the input product.
+                log.info(
+                    "Dataset in polar stereographic projection."
+                    " QA XML Checker will ignore the UTM-specific Attributes"
+                    " listed in the product specification XML, and instead"
+                    " use the Attributes required for polar stereo projection"
+                    f" - Dataset {dataset_name}"
+                )
+            elif hdf5_proj != "transverse_mercator":
+                log.error(
+                    f"Dataset's 'grid_mapping_name' Attribute is '{hdf5_proj}'."
+                    " All geocoded NISAR L2 products should use either"
+                    " 'transverse_mercator' (UTM) or 'polar_stereographic'."
+                    " By default, QA XML Checker will assume the input"
+                    " granule is in UTM and proceed with checks accordingly"
+                    f" - Dataset {dataset_name}"
+                )
+
+    total_num = len(hdf5_attrs | xml_attrs)
 
     # Attributes that exist only in XML but not HDF5.
-    xml_unique_attribs = xml_attributes - hdf5_attrs
+    xml_unique_attribs = xml_attrs - hdf5_attrs
     num_only_in_xml = len(xml_unique_attribs)
     if num_only_in_xml > 0:
         log.error(
@@ -786,7 +832,7 @@ def attribute_names_check(
         )
 
     # Attributes that exist only in HDF5 but not XML.
-    hdf5_unique_attribs = hdf5_attrs - xml_attributes
+    hdf5_unique_attribs = hdf5_attrs - xml_attrs
     num_only_in_hdf5 = len(hdf5_unique_attribs)
     if num_only_in_hdf5 > 0:
         log.error(
@@ -794,7 +840,7 @@ def attribute_names_check(
             f" Dataset {dataset_name}"
         )
 
-    num_in_common = len(hdf5_attrs & xml_attributes)
+    num_in_common = len(hdf5_attrs & xml_attrs)
 
     # Here, `num_inconsistent_hdf5_vs_xml` should be zero because attribute
     # names can only be identical in the HDF5 & XML or missing from one
