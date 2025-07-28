@@ -108,4 +108,5 @@ from .stats_h5_globals import *
 from .parameters import *
 from .utils import *
 from .products import *
+from .input_product_readers import *
 from .validate import *
