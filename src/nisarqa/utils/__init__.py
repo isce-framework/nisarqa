@@ -3,7 +3,6 @@ from .calc import *
 from .input_verification import *
 from .lonlat import *
 from .multilook import *
-from .plotting import *
 from .raster_classes import *
 from .stats_h5_writer import *
 from .summary_csv import *
