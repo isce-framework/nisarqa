@@ -13,7 +13,7 @@
 # specialized, until we finally get to the instantiable product readers.
 
 # Private utility functions
-from ._product_reader_utils import *
+from ._utils import *
 
 # Abstract base class for all NISAR product readers
 from .nisar_base import *

@@ -10,7 +10,7 @@ import numpy as np
 
 import nisarqa
 
-from ._product_reader_utils import (
+from ._utils import (
     _get_dataset_handle,
     _get_fill_value,
     _get_or_create_cached_memmap,

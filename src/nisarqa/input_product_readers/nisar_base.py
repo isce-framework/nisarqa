@@ -11,10 +11,7 @@ import numpy as np
 
 import nisarqa
 
-from ._product_reader_utils import (
-    _get_path_to_nearest_dataset,
-    _get_paths_in_h5,
-)
+from ._utils import _get_path_to_nearest_dataset, _get_paths_in_h5
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
