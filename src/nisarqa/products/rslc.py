@@ -226,7 +226,7 @@ def verify_rslc(
             log.info("Beginning Absolute Radiometric Calibration CalTool...")
 
             # Run Absolute Radiometric Calibration tool
-            nisarqa.caltools.run_abscal_tool(
+            nisarqa.run_abscal_tool(
                 abscal_params=root_params.abs_cal,
                 dyn_anc_params=root_params.anc_files,
                 rslc=product,
@@ -245,7 +245,7 @@ def verify_rslc(
             log.info("Beginning Noise Equivalent Backscatter CalTool...")
 
             # Run NEB tool
-            nisarqa.caltools.run_neb_tool(
+            nisarqa.run_neb_tool(
                 rslc=product,
                 stats_filename=stats_file,
             )
@@ -261,7 +261,7 @@ def verify_rslc(
             log.info("Beginning Point Target Analyzer CalTool...")
 
             # Run Point Target Analyzer tool
-            nisarqa.caltools.run_rslc_pta_tool(
+            nisarqa.run_rslc_pta_tool(
                 pta_params=root_params.pta,
                 dyn_anc_params=root_params.anc_files,
                 rslc=product,
@@ -274,10 +274,8 @@ def verify_rslc(
             # Read the PTA results from `stats_file`, generate plots of
             # azimuth/range cuts, and add them to the PDF report.
             with h5py.File(stats_file, mode="r") as stats_h5:
-                nisarqa.caltools.plot_cr_offsets_to_pdf(
-                    product, stats_h5, report_pdf
-                )
-                nisarqa.caltools.add_pta_plots_to_report(stats_h5, report_pdf)
+                nisarqa.plot_cr_offsets_to_pdf(product, stats_h5, report_pdf)
+                nisarqa.add_pta_plots_to_report(stats_h5, report_pdf)
             log.info(
                 f"Point Target Analyzer CalTool plots saved to {report_file}."
             )

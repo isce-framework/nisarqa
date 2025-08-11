@@ -191,7 +191,7 @@ def verify_gslc(
             log.info("Beginning Point Target Analyzer CalTool...")
 
             # Run Point Target Analyzer tool
-            nisarqa.caltools.run_gslc_pta_tool(
+            nisarqa.run_gslc_pta_tool(
                 pta_params=root_params.pta,
                 dyn_anc_params=root_params.anc_files,
                 gslc=product,
@@ -204,10 +204,8 @@ def verify_gslc(
             # Read the PTA results from `stats_file`, generate plots of
             # azimuth/range cuts, and add them to the PDF report.
             with h5py.File(stats_file, mode="r") as stats_h5:
-                nisarqa.caltools.plot_cr_offsets_to_pdf(
-                    product, stats_h5, report_pdf
-                )
-                nisarqa.caltools.add_pta_plots_to_report(stats_h5, report_pdf)
+                nisarqa.plot_cr_offsets_to_pdf(product, stats_h5, report_pdf)
+                nisarqa.add_pta_plots_to_report(stats_h5, report_pdf)
             log.info(
                 f"Point Target Analyzer CalTool plots saved to {report_file}."
             )
