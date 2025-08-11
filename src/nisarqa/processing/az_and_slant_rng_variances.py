@@ -11,7 +11,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_two_histograms
-from .plotting_utils import downsample_img_to_size_of_axes
+from .plotting_utils import (
+    downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
+)
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -223,7 +226,7 @@ def plot_range_and_az_offsets_variances_to_pdf(
         vmax=cbar_max,
     )
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         xlim=az_offset_variance.x_axis_limits,
         ylim=az_offset_variance.y_axis_limits,
@@ -244,7 +247,7 @@ def plot_range_and_az_offsets_variances_to_pdf(
     )
 
     # No y-axis label nor ticks. This is the right side plot; y-axis is shared.
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax2,
         xlim=rg_offset_variance.x_axis_limits,
         img_arr_shape=np.shape(rg_std),

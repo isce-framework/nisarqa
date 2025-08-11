@@ -12,7 +12,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .plotting_utils import downsample_img_to_size_of_axes, save_mpl_plot_to_png
+from .plotting_utils import (
+    downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
+    save_mpl_plot_to_png,
+)
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -98,7 +102,7 @@ def plot_offsets_quiver_plot_to_pdf(az_offset, rg_offset, params, report_pdf):
     cax = fig.colorbar(im)
     cax.ax.set_ylabel(ylabel="Displacement (m)", rotation=270, labelpad=10.0)
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax,
         xlim=az_offset.x_axis_limits,
         ylim=az_offset.y_axis_limits,

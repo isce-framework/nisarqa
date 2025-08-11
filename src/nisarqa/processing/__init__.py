@@ -1,5 +1,7 @@
 from .plotting_utils import *
 from .processing_utils import *
+
+# InSAR processing+plotting (RIFG, RUNW, GUNW, ROFF, GOFF)
 from .az_and_slant_rng_offsets import *
 from .az_and_slant_rng_variances import *
 from .connected_components import *
@@ -12,3 +14,9 @@ from .setup_pdf import *
 from .unwrapped_coh_mag import *
 from .unwrapped_phase_image import *
 from .wrapped_phase_image_and_coh_mag import *
+
+# Non-InSAR processing+plotting (RSLC, GSLC, GCOV)
+from .backscatter_images_and_browse import *
+from .backscatter_and_phase_histograms import *
+from .range_spectra import *
+from .azimuth_spectra import *

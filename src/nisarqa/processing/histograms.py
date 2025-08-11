@@ -10,6 +10,9 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
+from .plotting_utils import add_hist_to_axis
+from .processing_utils import clip_array
+
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
@@ -64,9 +67,7 @@ def generate_histogram_to_axes_and_h5(
         arr = data_prep_func(arr)
 
     if percentile_for_clipping is not None:
-        arr = nisarqa.rslc.clip_array(
-            arr=arr, percentile_range=percentile_for_clipping
-        )
+        arr = clip_array(arr=arr, percentile_range=percentile_for_clipping)
 
     # Fix the number of bins to keep the output file size small
     # NOTE: InSAR phase histograms were observed to have a spike at 0 radians,
@@ -145,7 +146,7 @@ def add_histogram_to_axes(
     ax.set_prop_cycle(nisarqa.CUSTOM_CYCLER)
 
     # Add backscatter histogram density to the figure
-    nisarqa.rslc.add_hist_to_axis(
+    add_hist_to_axis(
         ax,
         counts=density,
         edges=bin_edges,

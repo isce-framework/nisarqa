@@ -12,6 +12,7 @@ import nisarqa
 from .histograms import process_single_histogram
 from .plotting_utils import (
     downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
     plot_2d_array_and_save_to_png,
 )
@@ -136,7 +137,7 @@ def plot_unwrapped_phase_image_to_pdf(
         vmax=cbar_min_max_unw[1],
     )
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         xlim=phs_raster.x_axis_limits,
         ylim=phs_raster.y_axis_limits,
@@ -180,7 +181,7 @@ def plot_unwrapped_phase_image_to_pdf(
         pi_unicode = "\u03c0"
         title = f"Unwrapped Phase\nrewrapped to [0, {rewrap}{pi_unicode})"
         # No y-axis label nor ticks for the right side plot; y-axis is shared.
-        nisarqa.rslc.format_axes_ticks_and_labels(
+        format_axes_ticks_and_labels(
             ax=ax2,
             xlim=phs_raster.x_axis_limits,
             img_arr_shape=phs_img_rewrapped.shape,

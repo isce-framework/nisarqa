@@ -265,9 +265,7 @@ class GCOV(NonInsarGeoProduct):
 
         if len(pol_imgs) == 1:
             # Single pol. Make a grayscale image.
-            nisarqa.products.rslc.plot_to_grayscale_png(
-                img_arr=first_img, filepath=filepath
-            )
+            nisarqa.plot_to_grayscale_png(img_arr=first_img, filepath=filepath)
 
             # Return early, so that we do not try to plot to RGB
             return

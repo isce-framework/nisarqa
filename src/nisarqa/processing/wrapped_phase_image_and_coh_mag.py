@@ -13,6 +13,7 @@ import nisarqa
 from .histograms import process_two_histograms
 from .plotting_utils import (
     downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
     plot_2d_array_and_save_to_png,
 )
@@ -169,7 +170,7 @@ def plot_wrapped_phase_image_and_coh_mag_to_pdf(
         vmax=cbar_min_max[1],
     )
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         xlim=complex_raster.x_axis_limits,
         ylim=complex_raster.y_axis_limits,
@@ -200,7 +201,7 @@ def plot_wrapped_phase_image_and_coh_mag_to_pdf(
     )
 
     # No y-axis label nor ticks. This is the right side plot; y-axis is shared.
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax2,
         xlim=coh_raster.x_axis_limits,
         img_arr_shape=np.shape(coh_img),

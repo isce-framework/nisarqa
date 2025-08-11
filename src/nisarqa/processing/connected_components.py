@@ -8,6 +8,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
+from .plotting_utils import format_axes_ticks_and_labels
+
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
@@ -190,7 +192,7 @@ def plot_connected_components_layer(
     # Hide the ticks at the boundaries
     cax1.ax.minorticks_off()
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         xlim=cc_raster.x_axis_limits,
         ylim=cc_raster.y_axis_limits,

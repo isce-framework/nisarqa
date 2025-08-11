@@ -312,15 +312,13 @@ class SLCProduct(NonInsarProduct):
             # or the images provided are not one of the expected cases.
             # Either way, WLOG plot one of the image(s) in `pol_imgs`.
             gray_img = pol_imgs.popitem()[1]
-            nisarqa.rslc.plot_to_grayscale_png(
-                img_arr=gray_img, filepath=filepath
-            )
+            nisarqa.plot_to_grayscale_png(img_arr=gray_img, filepath=filepath)
 
             # This `else` is a catch-all clause. Return early, so that
             # we do not try to plot to RGB
             return
 
-        nisarqa.rslc.plot_to_rgb_png(
+        nisarqa.plot_to_rgb_png(
             red=red, green=green, blue=blue, filepath=filepath
         )
 

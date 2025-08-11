@@ -12,7 +12,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_single_histogram, process_two_histograms
-from .plotting_utils import downsample_img_to_size_of_axes
+from .plotting_utils import (
+    downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
+)
+from .processing_utils import clip_array
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -136,7 +140,7 @@ def add_corr_surface_peak_to_axes(
         ylim = None
         ylabel = None
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax,
         xlim=corr_surf_peak.x_axis_limits,
         ylim=ylim,
@@ -371,7 +375,7 @@ def plot_cross_offset_variances_and_corr_surface_peak_to_pdf(
     cross_off[~np.isfinite(cross_off) | (cross_off == cross_fill)] = np.nan
 
     if offset_cbar_min_max is None:
-        cross_off = nisarqa.rslc.clip_array(
+        cross_off = clip_array(
             arr=cross_off, percentile_range=percentile_for_clipping
         )
 
@@ -402,7 +406,7 @@ def plot_cross_offset_variances_and_corr_surface_peak_to_pdf(
             f"\nclipped to percentile range {percentile_for_clipping}"
         )
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         xlim=cross_offset_variance.x_axis_limits,
         ylim=cross_offset_variance.y_axis_limits,

@@ -8,7 +8,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_single_histogram
-from .plotting_utils import downsample_img_to_size_of_axes
+from .plotting_utils import (
+    downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
+)
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -101,7 +104,7 @@ def plot_unwrapped_coh_mag_to_pdf(
         vmax=1.0,
     )
 
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax,
         xlim=coh_raster.x_axis_limits,
         ylim=coh_raster.y_axis_limits,

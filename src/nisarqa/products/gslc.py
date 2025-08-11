@@ -146,7 +146,7 @@ def verify_gslc(
                 )
 
                 # Generate the GSLC Power Image and Browse Image
-                nisarqa.rslc.process_backscatter_imgs_and_browse(
+                nisarqa.process_backscatter_imgs_and_browse(
                     product=product,
                     params=root_params.backscatter_img,
                     stats_h5=stats_h5,
@@ -159,7 +159,7 @@ def verify_gslc(
                 log.info(f"Browse image PNG file saved to {browse_file_png}")
 
                 # Generate the GSLC Power and Phase Histograms
-                nisarqa.rslc.process_backscatter_and_phase_histograms(
+                nisarqa.process_backscatter_and_phase_histograms(
                     product=product,
                     params=root_params.histogram,
                     stats_h5=stats_h5,

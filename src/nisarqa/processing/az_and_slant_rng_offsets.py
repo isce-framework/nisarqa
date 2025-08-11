@@ -12,7 +12,10 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_two_histograms
-from .plotting_utils import downsample_img_to_size_of_axes
+from .plotting_utils import (
+    downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
+)
 from .quiver_plots import (
     plot_offsets_quiver_plot_to_pdf,
     plot_single_quiver_plot_to_png,
@@ -336,7 +339,7 @@ def plot_range_and_az_offsets_to_pdf(az_offset, rg_offset, report_pdf):
     #     "RUNW_L_A_pixelOffsets_HH_alongTrackOffset"
     raster_name = az_offset.name.split("_")[-1]
     axes_title = az_offset.name.replace(f"_{raster_name}", f"\n{raster_name}")
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         img_arr_shape=np.shape(az_img),
         xlim=az_offset.x_axis_limits,
@@ -362,7 +365,7 @@ def plot_range_and_az_offsets_to_pdf(az_offset, rg_offset, report_pdf):
     raster_name = rg_offset.name.split("_")[-1]
     axes_title = rg_offset.name.replace(f"_{raster_name}", f"\n{raster_name}")
     # No y-axis label nor ticks for the right side plot; y-axis is shared.
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax2,
         img_arr_shape=np.shape(rg_img),
         xlim=rg_offset.x_axis_limits,

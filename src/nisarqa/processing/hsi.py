@@ -15,7 +15,9 @@ import nisarqa
 
 from .plotting_utils import (
     downsample_img_to_size_of_axes,
+    format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
+    plot_to_rgb_png,
 )
 from .processing_utils import get_phase_array, image_histogram_equalization
 
@@ -60,7 +62,7 @@ def make_hsi_png_with_wrapped_phase(
             longest_side_max=params.longest_side_max,
         )
 
-    nisarqa.rslc.plot_to_rgb_png(
+    plot_to_rgb_png(
         red=rgb_img.data[:, :, 0],
         green=rgb_img.data[:, :, 1],
         blue=rgb_img.data[:, :, 2],
@@ -105,7 +107,7 @@ def make_hsi_png_with_unwrapped_phase(
             rewrap=params.rewrap,
             longest_side_max=params.longest_side_max,
         )
-    nisarqa.rslc.plot_to_rgb_png(
+    plot_to_rgb_png(
         red=rgb_img.data[:, :, 0],
         green=rgb_img.data[:, :, 1],
         blue=rgb_img.data[:, :, 2],
@@ -590,7 +592,7 @@ def img2pdf_hsi(
     # over both subplots (aka centered in the figure). So, do not supply
     # the title here, otherwise the main plot title will only be centered
     # over `ax1``. (The main plot title was set above, via `fig.suptitle()`.)
-    nisarqa.rslc.format_axes_ticks_and_labels(
+    format_axes_ticks_and_labels(
         ax=ax1,
         img_arr_shape=np.shape(img_to_plot),
         xlim=xlim,
