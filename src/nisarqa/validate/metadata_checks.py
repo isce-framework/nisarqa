@@ -278,7 +278,7 @@ def verify_calibration_metadata_luts(
             product.metadata_neb_luts(freq),
             product.metadata_elevation_antenna_pat_luts(freq),
         )
-        if isinstance(product, nisarqa.SLC):
+        if isinstance(product, nisarqa.SLCProduct):
             calib_luts = chain(calib_luts, product.metadata_geometry_luts())
         if isinstance(product, nisarqa.RSLC):
             calib_luts = chain(calib_luts, product.metadata_crosstalk_luts())

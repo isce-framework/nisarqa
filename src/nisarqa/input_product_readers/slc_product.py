@@ -15,7 +15,7 @@ objects_to_skip = nisarqa.get_all(name=__name__)
 
 
 @dataclass
-class SLC(NonInsarProduct):
+class SLCProduct(NonInsarProduct):
 
     def get_pols(self, freq: str) -> tuple[str, ...]:
         pols = super().get_pols(freq)

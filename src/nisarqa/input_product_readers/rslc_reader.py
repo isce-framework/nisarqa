@@ -10,13 +10,13 @@ import numpy as np
 import nisarqa
 
 from .radar_product import NisarRadarProduct
-from .slc_product import SLC
+from .slc_product import SLCProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
 @dataclass
-class RSLC(SLC, NisarRadarProduct):
+class RSLC(SLCProduct, NisarRadarProduct):
     @property
     def product_type(self) -> str:
         return "RSLC"

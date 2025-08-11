@@ -5,13 +5,13 @@ from dataclasses import dataclass
 import nisarqa
 
 from .non_insar_geo_product import NonInsarGeoProduct
-from .slc_product import SLC
+from .slc_product import SLCProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
 @dataclass
-class GSLC(SLC, NonInsarGeoProduct):
+class GSLC(SLCProduct, NonInsarGeoProduct):
     @property
     def product_type(self) -> str:
         return "GSLC"
