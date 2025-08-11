@@ -4,8 +4,8 @@ from dataclasses import dataclass
 
 import nisarqa
 
-from .non_insar_geo_base import NonInsarGeoProduct
-from .slc_base import SLC
+from .non_insar_geo_product import NonInsarGeoProduct
+from .slc_product import SLC
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

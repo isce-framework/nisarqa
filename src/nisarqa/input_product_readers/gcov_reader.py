@@ -9,7 +9,7 @@ import numpy as np
 
 import nisarqa
 
-from .non_insar_geo_base import NonInsarGeoProduct
+from .non_insar_geo_product import NonInsarGeoProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

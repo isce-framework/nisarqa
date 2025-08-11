@@ -9,7 +9,7 @@ import numpy as np
 
 import nisarqa
 
-from .non_insar_base import NonInsarProduct
+from .non_insar_product import NonInsarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

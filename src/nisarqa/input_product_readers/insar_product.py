@@ -8,7 +8,7 @@ import h5py
 
 import nisarqa
 
-from .nisar_base import NisarProduct
+from .nisar_product import NisarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

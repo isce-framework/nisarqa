@@ -16,7 +16,7 @@ from ._utils import (
     _get_units,
     _parse_dataset_stats_from_h5,
 )
-from .nisar_base import NisarProduct
+from .nisar_product import NisarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

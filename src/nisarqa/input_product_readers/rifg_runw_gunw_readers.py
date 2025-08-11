@@ -5,9 +5,9 @@ from functools import cached_property
 
 import nisarqa
 
-from .igram_base_groups import IgramOffsetsGroup, UnwrappedGroup, WrappedGroup
-from .l1_radar_base import NisarRadarProduct
-from .l2_geo_base import NisarGeoProduct
+from .geo_product import NisarGeoProduct
+from .igram_groups import IgramOffsetsGroup, UnwrappedGroup, WrappedGroup
+from .radar_product import NisarRadarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

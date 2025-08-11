@@ -9,8 +9,8 @@ import numpy as np
 
 import nisarqa
 
-from .l1_radar_base import NisarRadarProduct
-from .slc_base import SLC
+from .radar_product import NisarRadarProduct
+from .slc_product import SLC
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

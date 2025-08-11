@@ -5,9 +5,9 @@ from functools import cached_property
 
 import nisarqa
 
-from .l1_radar_base import NisarRadarProduct
-from .l2_geo_base import NisarGeoProduct
-from .offsets_base import OffsetProduct
+from .geo_product import NisarGeoProduct
+from .offset_product import OffsetProduct
+from .radar_product import NisarRadarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

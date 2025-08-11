@@ -18,35 +18,35 @@
 # Otherwise, importing these functions in the __init__.py would make them
 # public, which we don't want to do.
 
-# Abstract base class for all NISAR product readers
-from .nisar_base import *
+# Abstract base class for all NISAR products
+from .nisar_product import *
 
-# Abstract base class for L1 vs. L2
-from .l1_radar_base import *
-from .l2_geo_base import *
+# Abstract base class for L1 range-Doppler vs. L2 Geocoded products
+from .radar_product import *
+from .geo_product import *
 
-# Abstract base classes for Non-Insar (RSLC, GSLC, GCOV)
-from .non_insar_base import *
-from .slc_base import *  # for RSLC and GSLC
-from .non_insar_geo_base import *  # for GSLC and GCOV
+# Abstract base classes for Non-Insar products (RSLC, GSLC, GCOV)
+from .non_insar_product import *
+from .slc_product import *  # for RSLC and GSLC
+from .non_insar_geo_product import *  # for GSLC and GCOV
 
-# Instantiable Non-Insar (RSLC, GSLC, GCOV) classes
-from .rslc_product import *
-from .gslc_product import *
-from .gcov_product import *
+# Instantiable Non-Insar (RSLC, GSLC, GCOV) product readers
+from .rslc_reader import *
+from .gslc_reader import *
+from .gcov_reader import *
 
-# Abstract base classes for Interferometry (RIFG, RUNW, GUNW, ROFF, GOFF)
-from .insar_base import *
+# Abstract base class for Interferometry products (RIFG, RUNW, GUNW, ROFF, GOFF)
+from .insar_product import *
 
 # Abstract base classes for the groupings of related Datasets in Interferogram
-# (RIFG, RUNW, GUNW) products.
-from .igram_base_groups import *
+# products (RIFG, RUNW, GUNW).
+from .igram_groups import *
 
 # Instantiable RIFG, RUNW, GUNW product readers
-from .igram_products import *
+from .rifg_runw_gunw_readers import *
 
-# Abstract base class for Offsets (ROFF, GOFF)
-from .offsets_base import *
+# Abstract base class for Offset products (ROFF, GOFF)
+from .offset_product import *
 
 # Instantiable ROFF and GOFF product readers
-from .offsets_products import *
+from .roff_goff_readers import *

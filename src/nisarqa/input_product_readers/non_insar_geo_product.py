@@ -5,8 +5,8 @@ from functools import cached_property
 
 import nisarqa
 
-from .l2_geo_base import NisarGeoProduct
-from .non_insar_base import NonInsarProduct
+from .geo_product import NisarGeoProduct
+from .non_insar_product import NonInsarProduct
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
