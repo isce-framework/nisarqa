@@ -9,11 +9,7 @@ from matplotlib.ticker import FuncFormatter
 
 import nisarqa
 
-from .plotting_utils import (
-    apply_image_correction,
-    img2pdf_grayscale,
-    invert_gamma_correction,
-)
+from ..plotting_utils import apply_image_correction, invert_gamma_correction
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

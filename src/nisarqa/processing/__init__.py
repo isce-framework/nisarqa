@@ -16,7 +16,4 @@ from .unwrapped_phase_image import *
 from .wrapped_phase_image_and_coh_mag import *
 
 # Non-InSAR processing+plotting (RSLC, GSLC, GCOV)
-from .backscatter_images_and_browse import *
-from .backscatter_and_phase_histograms import *
-from .range_spectra import *
-from .azimuth_spectra import *
+from .non_insar import *
