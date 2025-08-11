@@ -13,11 +13,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .utils_for_plotting import (
+from .plotting_utils import (
     downsample_img_to_size_of_axes,
     format_cbar_ticks_for_multiples_of_pi,
 )
-from .utils_for_processing import get_phase_array, image_histogram_equalization
+from .processing_utils import get_phase_array, image_histogram_equalization
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

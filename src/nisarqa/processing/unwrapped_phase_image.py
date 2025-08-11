@@ -10,12 +10,12 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_single_histogram
-from .utils_for_plotting import (
+from .plotting_utils import (
     downsample_img_to_size_of_axes,
     format_cbar_ticks_for_multiples_of_pi,
     plot_2d_array_and_save_to_png,
 )
-from .utils_for_processing import get_phase_array
+from .processing_utils import get_phase_array
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

@@ -12,10 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .utils_for_plotting import (
-    downsample_img_to_size_of_axes,
-    save_mpl_plot_to_png,
-)
+from .plotting_utils import downsample_img_to_size_of_axes, save_mpl_plot_to_png
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

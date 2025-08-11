@@ -1,5 +1,5 @@
-from .utils_for_plotting import *
-from .utils_for_processing import *
+from .plotting_utils import *
+from .processing_utils import *
 from .az_and_slant_rng_offsets import *
 from .az_and_slant_rng_variances import *
 from .connected_components import *

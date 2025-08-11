@@ -12,11 +12,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 import nisarqa
 
 from .histograms import process_two_histograms
+from .plotting_utils import downsample_img_to_size_of_axes
 from .quiver_plots import (
     plot_offsets_quiver_plot_to_pdf,
     plot_single_quiver_plot_to_png,
 )
-from .utils_for_plotting import downsample_img_to_size_of_axes
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
