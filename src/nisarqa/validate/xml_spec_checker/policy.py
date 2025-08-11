@@ -280,14 +280,22 @@ def unique_cf17_polar_stereo_attributes() -> set[str]:
     Returns
     -------
     attrs : set of str
-        The set of required Attributes unique to polar stereographic
+        The set of required Attributes unique to ISCE3 polar stereographic
         "projection" Datasets.
+
+    Notes
+    -----
+    Per CF-1.7, `standard_parallel` is required for EPSG 9829 and
+    `scale_factor_at_projection_origin` is required for EPSG 9810.
+    ISCE3 uses EPSG 3413 for Polar Stereographic North and EPSG 3031
+    for Polar Stereographic South.
+    If you look at the WKT2 string for e.g. EPSG 3413, it references
+    EPSG 9829 ("Polar Stereographic (variant B)"), so the set returned by
+    this function will include `standard_parallel`.
+    https://epsg.io/3413.wkt2
     """
     return {
         "straight_vertical_longitude_from_pole",
-        # CF-1.7 requires either "scale_factor_at_projection_origin" or
-        # "standard_parallel".
-        # ISCE3's outputs use "standard_parallel", so for now simply use that.
         "standard_parallel",
     }
 
