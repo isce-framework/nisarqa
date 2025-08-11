@@ -7,11 +7,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .histograms import process_single_histogram
-from .plotting_utils import (
+from ..plotting_utils import (
     downsample_img_to_size_of_axes,
     format_axes_ticks_and_labels,
 )
+from .histograms import process_single_histogram
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

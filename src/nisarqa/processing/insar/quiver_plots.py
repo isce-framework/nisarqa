@@ -12,7 +12,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .plotting_utils import (
+from ..plotting_utils import (
     downsample_img_to_size_of_axes,
     format_axes_ticks_and_labels,
     save_mpl_plot_to_png,

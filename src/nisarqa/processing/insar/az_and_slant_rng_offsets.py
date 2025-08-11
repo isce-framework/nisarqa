@@ -11,11 +11,11 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .histograms import process_two_histograms
-from .plotting_utils import (
+from ..plotting_utils import (
     downsample_img_to_size_of_axes,
     format_axes_ticks_and_labels,
 )
+from .histograms import process_two_histograms
 from .quiver_plots import (
     plot_offsets_quiver_plot_to_pdf,
     plot_single_quiver_plot_to_png,

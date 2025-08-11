@@ -10,8 +10,8 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .plotting_utils import add_hist_to_axis
-from .processing_utils import clip_array
+from ..plotting_utils import add_hist_to_axis
+from ..processing_utils import clip_array
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

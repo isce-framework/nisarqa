@@ -10,14 +10,14 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .histograms import process_two_histograms
-from .plotting_utils import (
+from ..plotting_utils import (
     downsample_img_to_size_of_axes,
     format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
     plot_2d_array_and_save_to_png,
 )
-from .processing_utils import get_phase_array
+from ..processing_utils import get_phase_array
+from .histograms import process_two_histograms
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 

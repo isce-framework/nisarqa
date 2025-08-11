@@ -8,7 +8,7 @@ from matplotlib.backends.backend_pdf import PdfPages
 
 import nisarqa
 
-from .plotting_utils import format_axes_ticks_and_labels
+from ..plotting_utils import format_axes_ticks_and_labels
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
