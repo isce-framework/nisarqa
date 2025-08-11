@@ -201,7 +201,7 @@ def ignored_xml_annotation_attributes() -> set[str]:
 
     Returns
     -------
-    set[str]
+    attrs : set of str
         The set of ignored attributes.
     """
     return {"lang", "app"}
@@ -217,7 +217,7 @@ def common_nisar_projection_attributes() -> set[str]:
 
     Returns
     -------
-    set[str]
+    attrs : set of str
         The set of Attributes that are common to NISAR "projection" Datasets
         but not required by CF-1.7 for UTM nor polar-steregraphic projections.
     """
@@ -238,7 +238,7 @@ def common_cf17_projection_attributes() -> set[str]:
 
     Returns
     -------
-    set[str]
+    attrs : set of str
         The set of CF-1.7 required Attributes common to all "projection" Datasets.
     """
     return {
@@ -260,7 +260,7 @@ def unique_cf17_utm_attributes() -> set[str]:
 
     Returns
     -------
-    set[str]
+    attrs : set of str
         The set of required Attributes unique to UTM "projection" Datasets.
     """
     return {
@@ -279,7 +279,7 @@ def unique_cf17_polar_stereo_attributes() -> set[str]:
 
     Returns
     -------
-    set[str]
+    attrs : set of str
         The set of required Attributes unique to polar stereographic
         "projection" Datasets.
     """
