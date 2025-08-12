@@ -7,7 +7,7 @@ from scipy import constants
 
 import nisarqa
 
-from ..processing_utils import _get_units_hz_or_mhz
+from ._utils import _get_units_hz_or_mhz
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
