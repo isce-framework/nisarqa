@@ -1,13 +1,19 @@
 from __future__ import annotations
 
 import h5py
+import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from numpy.typing import ArrayLike
 from scipy import constants
 
 import nisarqa
 
-from ._utils import _get_units_hz_or_mhz
+from ._utils import (
+    _get_s_avg_for_tile,
+    _get_units_hz_or_mhz,
+    _post_process_s_avg,
+)
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -195,6 +201,106 @@ def generate_range_spectra_single_freq(
     plt.close()
 
     log.info(f"Range Power Spectra for Frequency {freq} complete.")
+
+
+def compute_range_spectra_by_tiling(
+    arr: ArrayLike,
+    sampling_rate: float,
+    az_decimation: int = 1,
+    tile_height: int = 512,
+    fft_shift: bool = True,
+) -> np.ndarray:
+    """
+    Compute the normalized range power spectral density in dB re 1/Hz by tiling.
+
+    Parameters
+    ----------
+    arr : array_like
+        The input array, representing a two-dimensional discrete-time signal.
+    sampling_rate : numeric
+        Range sample rate (inverse of the sample spacing) in Hz.
+    az_decimation : int, optional
+        The stride to decimate the input array along the azimuth axis.
+        For example, `4` means every 4th range line will
+        be used to compute the range spectra.
+        If `1`, no decimation will occur (but is slower to compute).
+        Must be greater than zero. Defaults to 1.
+    tile_height : int, optional
+        User-preferred tile height (number of range lines) for processing
+        images by batches. Actual tile shape may be modified by QA to be
+        an integer multiple of `az_decimation`. -1 to use all rows.
+        Note: full rows must be read in, so the number of columns for each tile
+        will be fixed to the number of columns in the input raster.
+        Defaults to 512.
+    fft_shift : bool, optional
+        True to shift `S_out` to correspond to frequency bins that are
+        continuous from negative (min) -> positive (max) values.
+
+        False to leave `S_out` unshifted, such that the values correspond to
+        `numpy.fft.fftfreq()`, where this discrete FFT operation orders values
+        from 0 -> max positive -> min negative -> 0- . (This creates
+        a discontinuity in the interval's values.)
+
+        Defaults to True.
+
+    Returns
+    -------
+    S_out : numpy.ndarray
+        Normalized range power spectral density in dB re 1/Hz of `arr`.
+    """
+    shape = np.shape(arr)
+    if len(shape) != 2:
+        raise ValueError(
+            f"Input array has {len(shape)} dimensions, but must be 2D."
+        )
+
+    nrows, ncols = shape
+
+    if az_decimation > nrows:
+        raise ValueError(
+            f"{az_decimation=}, must be <= the height of the input array"
+            f" ({nrows} pixels)."
+        )
+
+    if tile_height == -1:
+        tile_height = nrows
+
+    # Adjust the tile height to be an integer multiple of `az_decimation`.
+    # Otherwise, the decimation will get messy to book-keep.
+    if tile_height < az_decimation:
+        # Grow tile height
+        tile_height = az_decimation
+    else:
+        # Shrink tile height (less risk of memory issues)
+        tile_height = tile_height - (tile_height % az_decimation)
+
+    # Compute total number of range lines that will be used to generate
+    # the range power spectra. This will be used for averaging.
+    # The TileIterator will truncate the array azimuth direction to be
+    # an integer multiple of the stride, so use integer division here.
+    num_range_lines = nrows // az_decimation
+
+    # Create the Iterator over the input array
+    input_iter = nisarqa.TileIterator(
+        arr_shape=np.shape(arr),
+        axis_0_tile_dim=tile_height,
+        axis_0_stride=az_decimation,
+    )
+
+    # Initialize the accumulator array
+    S_avg = np.zeros(ncols)
+
+    for tile_slice in input_iter:
+        S_avg += _get_s_avg_for_tile(
+            arr_slice=arr[tile_slice],
+            fft_axis=1,  # Compute fft over range axis (axis 1)
+            num_fft_bins=ncols,
+            averaging_denominator=num_range_lines,
+        )
+
+    return _post_process_s_avg(
+        S_avg=S_avg, sampling_rate=sampling_rate, fft_shift=fft_shift
+    )
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

@@ -1,9 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from numpy.typing import ArrayLike
 
 import nisarqa
 
@@ -395,6 +398,169 @@ def generate_phase_histogram_single_freq(
             del stats_h5[path]
 
     log.info(f"Phase Histograms for Frequency {freq} complete.")
+
+
+def compute_histogram_by_tiling(
+    arr: ArrayLike,
+    bin_edges: np.ndarray,
+    arr_name: str = "",
+    data_prep_func: Callable | None = None,
+    density: bool = False,
+    decimation_ratio: tuple[int, int] = (1, 1),
+    tile_shape: tuple[int, int] = (512, -1),
+) -> np.ndarray:
+    """
+    Compute decimated histograms by tiling.
+
+    Parameters
+    ----------
+    arr : array_like
+        The input array
+    bin_edges : numpy.ndarray
+        The bin edges to use for the histogram
+    arr_name : str
+        Name for the array. (Will be used for log messages.)
+    data_prep_func : Callable or None, optional
+        Function to process each tile of data through before computing
+        the histogram counts. For example, this function can be used
+        to convert the values in each tile of raw data to backscatter,
+        dB scale, etc. before taking the histogram.
+        If `None`, then histogram will be computed on `arr` as-is,
+        and no pre-processing of the data will occur.
+        Defaults to None.
+    density : bool, optional
+        If True, return probability densities for histograms:
+        Each bin will display the bin's raw count divided by the
+        total number of counts and the bin width
+        (density = counts / (sum(counts) * np.diff(bins))),
+        so that the area under the histogram integrates to 1
+        (np.sum(density * np.diff(bins)) == 1).
+        Defaults to False.
+    decimation_ratio : pair of int, optional
+        The step size to decimate the input array for computations.
+        For example, (2,3) means every 2nd azimuth line and
+        every 3rd range line will be used to compute the histograms.
+        Defaults to (1,1), i.e. no decimation will occur.
+        Format: (<azimuth>, <range>)
+    tile_shape : tuple of ints, optional
+        Shape of each tile to be processed. If `tile_shape` is
+        larger than the shape of `arr`, or if the dimensions of `arr`
+        are not integer multiples of the dimensions of `tile_shape`,
+        then smaller tiles may be used.
+        -1 to use all rows / all columns (respectively).
+        Format: (num_rows, num_cols)
+        Defaults to (512,-1) to use all columns (i.e. full rows of data)
+        and leverage Python's row-major ordering.
+
+    Returns
+    -------
+    hist_counts : numpy.ndarray
+        The histogram counts.
+        If `density` is True, then the backscatter and phase histogram
+        densities (respectively) will be returned instead.
+
+    Notes
+    -----
+    If a cell in the input array is non-finite (invalid),
+    then it will not be included in the counts for either
+    backscatter nor phase.
+
+    If a cell in the input array is almost zero, then it will not
+    be included in the counts for phase.
+    """
+    arr_shape = np.shape(arr)
+
+    if (arr_shape[0] < decimation_ratio[0]) or (
+        arr_shape[1] < decimation_ratio[1]
+    ):
+        raise ValueError(
+            f"{decimation_ratio=} but the array has has dimensions {arr_shape}."
+            " For axis 0 and axis 1, `decimation_ratio` must be <= the length"
+            " of that dimension."
+        )
+
+    if tile_shape[0] == -1:
+        tile_shape = (arr_shape[0], tile_shape[1])
+    if tile_shape[1] == -1:
+        tile_shape = (tile_shape[0], arr_shape[1])
+
+    # Shrink the tile shape to be an even multiple of the decimation ratio.
+    # Otherwise, the decimation will get messy to book-keep.
+    in_tiling_shape = tuple(
+        [m - (m % n) for m, n in zip(tile_shape, decimation_ratio)]
+    )
+
+    # Create the Iterator over the input array
+    input_iter = nisarqa.TileIterator(
+        arr_shape=arr_shape,
+        axis_0_tile_dim=in_tiling_shape[0],
+        axis_1_tile_dim=in_tiling_shape[1],
+        axis_0_stride=decimation_ratio[0],
+        axis_1_stride=decimation_ratio[1],
+    )
+
+    # Initialize accumulator arrays
+    # Use dtype of int to avoid floating point errors
+    # (The '- 1' is because the final entry in the *_bin_edges array
+    # is the endpoint, which is not considered a bin itself.)
+    hist_counts = np.zeros((len(bin_edges) - 1,), dtype=int)
+
+    # Do calculation and accumulate the counts
+    for tile_slice in input_iter:
+        arr_slice = arr[tile_slice]
+
+        # Remove invalid entries
+        # Note: for generating histograms, we do not need to retain the
+        # original shape of the array.
+        arr_slice = arr_slice[np.isfinite(arr_slice)]
+
+        # Prep the data
+        if data_prep_func is not None:
+            arr_slice = data_prep_func(arr_slice)
+
+        # Clip the array so that it falls within the bounds of the histogram
+        arr_slice = np.clip(arr_slice, a_min=bin_edges[0], a_max=bin_edges[-1])
+
+        # Accumulate the counts
+        counts, _ = np.histogram(arr_slice, bins=bin_edges)
+        hist_counts += counts
+
+    # If the histogram counts are all zero, then the raster likely did not
+    # contain any valid imagery pixels. (Typically, this occurs when
+    # there was an issue with ISCE3 processing, and the raster is all NaNs.)
+    if np.any(hist_counts):
+        sum_check = "PASS"
+    else:
+        sum_check = "FAIL"
+        errmsg = (
+            f"{arr_name} histogram contains all zero values. This often occurs"
+            " if the source raster contains all NaN values."
+        )
+        nisarqa.get_logger().error(errmsg)
+
+    # Note result of the check in the summary file before raising an Exception.
+    nisarqa.get_summary().check_invalid_pixels_within_threshold(
+        result=sum_check,
+        threshold="",
+        actual="",
+        notes=(
+            f"{arr_name}: If a 'FAIL' then all histogram bin counts are zero."
+            " This likely indicates that the raster contained no valid data."
+            " Note: check performed on decimated raster not full raster."
+        ),
+    )
+
+    if sum_check == "FAIL":
+        raise nisarqa.InvalidRasterError(errmsg)
+
+    if density:
+        # Change dtype to float
+        hist_counts = hist_counts.astype(float)
+
+        # Compute density
+        hist_counts = nisarqa.counts2density(hist_counts, bin_edges)
+
+    return hist_counts
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

@@ -263,4 +263,147 @@ def get_multilooked_backscatter_img(
     return out_img
 
 
+def compute_multilooked_backscatter_by_tiling(
+    arr, nlooks, input_raster_represents_power=False, tile_shape=(512, -1)
+):
+    """
+    Compute the multilooked backscatter array (linear units) by tiling.
+
+    Parameters
+    ----------
+    arr : array_like
+        The input 2D array
+    nlooks : tuple of ints
+        Number of looks along each axis of the input array to be
+        averaged during multilooking.
+        Format: (num_rows, num_cols)
+    input_raster_represents_power : bool, optional
+        The input dataset rasters associated with these histogram parameters
+        should have their pixel values represent either power or root power.
+        If `True`, then QA SAS assumes the input data already represents
+        power and uses the pixels' magnitudes for computations.
+        If `False`, then QA SAS assumes the input data represents root power
+        aka magnitude and will handle the full computation to power using
+        the formula:  power = abs(<magnitude>)^2 .
+        Defaults to False (root power).
+    tile_shape : tuple of ints
+        Shape of each tile to be processed. If `tile_shape` is
+        larger than the shape of `arr`, or if the dimensions of `arr`
+        are not integer multiples of the dimensions of `tile_shape`,
+        then smaller tiles may be used.
+        -1 to use all rows / all columns (respectively).
+        Format: (num_rows, num_cols)
+        Defaults to (512, -1) to use all columns (i.e. full rows of data)
+        and leverage Python's row-major ordering.
+
+    Returns
+    -------
+    multilook_img : numpy.ndarray
+        The multilooked backscatter image in linear units
+
+    Notes
+    -----
+    If the length of the input array along a given axis is not evenly divisible by the
+    specified number of looks, any remainder samples from the end of the array will be
+    discarded in the output.
+
+    If a cell in the input array is nan (invalid), then the corresponding cell in the
+    output array will also be nan.
+
+    """
+    arr_shape = np.shape(arr)
+
+    if len(arr_shape) != 2:
+        raise ValueError(
+            f"Input array has shape {arr_shape} but can only have 2 dimensions."
+        )
+
+    if (arr_shape[0] < nlooks[0]) or (arr_shape[1] < nlooks[1]):
+        raise ValueError(
+            f"{nlooks=} but the array has has dimensions {arr_shape}. For each "
+            "dimension, `nlooks` must be <= the length of that dimension."
+        )
+
+    if tile_shape[0] == -1:
+        tile_shape = (arr_shape[0], tile_shape[1])
+    if tile_shape[1] == -1:
+        tile_shape = (tile_shape[0], arr_shape[1])
+
+    if len(nlooks) != 2:
+        raise ValueError(f"`nlooks` must be a tuple of length 2: {nlooks}")
+    if not all(isinstance(x, int) for x in nlooks):
+        raise ValueError(f"`nlooks` must contain only ints: {nlooks}")
+
+    # Compute the portion (shape) of the input array
+    # that is integer multiples of nlooks.
+    # This will be used to trim off (discard) the 'uneven edges' of the image,
+    # i.e. the pixels beyond the largest integer multiples of nlooks.
+    in_arr_valid_shape = tuple(
+        [(m // n) * n for m, n in zip(arr_shape, nlooks)]
+    )
+
+    # Compute the shape of the output multilooked array
+    final_out_arr_shape = tuple([m // n for m, n in zip(arr_shape, nlooks)])
+
+    # Adjust the tiling shape to be integer multiples of nlooks
+    # Otherwise, the tiling will get messy to book-keep.
+
+    # If a tile dimension is smaller than nlooks, grow it to be the same length
+    if tile_shape[0] < nlooks[0]:
+        tile_shape = (nlooks[0], tile_shape[1])
+    if tile_shape[1] < nlooks[1]:
+        tile_shape = (tile_shape[0], nlooks[1])
+
+    # Next, shrink the tile shape to be an integer multiple of nlooks
+    in_tiling_shape = tuple([(m // n) * n for m, n in zip(tile_shape, nlooks)])
+
+    out_tiling_shape = tuple([m // n for m, n in zip(tile_shape, nlooks)])
+
+    # Create the Iterators
+    input_iter = nisarqa.TileIterator(
+        arr_shape=in_arr_valid_shape,
+        axis_0_tile_dim=in_tiling_shape[0],
+        axis_1_tile_dim=in_tiling_shape[1],
+    )
+    out_iter = nisarqa.TileIterator(
+        arr_shape=final_out_arr_shape,
+        axis_0_tile_dim=out_tiling_shape[0],
+        axis_1_tile_dim=out_tiling_shape[1],
+    )
+
+    # Create an inner function for this use case.
+    def calc_backscatter_and_multilook(arr):
+        # square the pixel values (e.g to convert from magnitude to power),
+        # if requested.
+        # Otherwise, take the absolute value to ensure we're using the
+        # magnitude for either real or complex values
+        out = (
+            np.abs(arr)
+            if input_raster_represents_power
+            else nisarqa.arr2pow(arr)
+        )
+
+        # Multilook
+        out = nisarqa.multilook(out, nlooks)
+
+        return out
+
+    # Instantiate the output array
+    multilook_img = np.zeros(
+        final_out_arr_shape, dtype=np.float32
+    )  # 32 bit precision
+
+    # Ok to pass the full input array; the tiling iterators
+    # are constrained such that the 'uneven edges' will be ignored.
+    nisarqa.process_arr_by_tiles(
+        arr,
+        multilook_img,
+        calc_backscatter_and_multilook,
+        input_batches=input_iter,
+        output_batches=out_iter,
+    )
+
+    return multilook_img
+
+
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

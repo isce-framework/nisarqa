@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from typing import Optional
+
 import h5py
 import numpy as np
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
+from numpy.typing import ArrayLike
 
 import nisarqa
 
-from ._utils import _get_units_hz_or_mhz
+from ._utils import (
+    _get_s_avg_for_tile,
+    _get_units_hz_or_mhz,
+    _post_process_s_avg,
+)
 
 objects_to_skip = nisarqa.get_all(name=__name__)
 
@@ -255,6 +262,151 @@ def generate_az_spectra_single_freq(
     plt.close()
 
     log.info(f"Azimuth Power Spectra for Frequency {freq} complete.")
+
+
+def compute_az_spectra_by_tiling(
+    arr: ArrayLike,
+    sampling_rate: float,
+    subswath_slice: Optional[slice] = None,
+    tile_width: int = 256,
+    fft_shift: bool = True,
+) -> np.ndarray:
+    """
+    Compute normalized azimuth power spectral density in dB re 1/Hz by tiling.
+
+    Parameters
+    ----------
+    arr : array_like
+        Input array, representing a two-dimensional discrete-time signal.
+    sampling_rate : numeric
+        Azimuth sample rate (inverse of the sample spacing) in Hz.
+    subswath_slice : slice or None, optional
+        The slice for axes 1 that specifies the columns which define a subswath
+        of `arr`; the azimuth spectra will be computed by averaging the
+        range samples in this subswath.
+            Format: slice(start, stop)
+            Example: slice(2, 5)
+        If None, or if the number of columns in the subswath is greater than
+        the width of the input array, then the full input array will be used.
+        Note that all rows will be used to compute the azimuth spectra, so
+        there is no need to provide a slice for axes 0.
+        Defaults to None.
+    tile_width : int, optional
+        Tile width (number of columns) for processing each subswath by batches.
+        -1 to use the full width of the subswath.
+        Defaults to 256.
+    fft_shift : bool, optional
+        True to shift `S_out` to correspond to frequency bins that are
+        continuous from negative (min) -> positive (max) values.
+
+        False to leave `S_out` unshifted, such that the values correspond to
+        `numpy.fft.fftfreq()`, where this discrete FFT operation orders values
+        from 0 -> max positive -> min negative -> 0- . (This creates
+        a discontinuity in the interval's values.)
+
+        Defaults to True.
+
+    Returns
+    -------
+    S_out : numpy.ndarray
+        Normalized azimuth power spectral density in dB re 1/Hz of the
+        subswath of `arr` specified by `col_indices`. Azimuth spectra will
+        be computed by averaging across columns within the subswath.
+
+    Notes
+    -----
+    When computing the azimuth spectra, full columns must be read in to
+    perform the FFT; this means that the number of rows is always fixed to
+    the height of `arr`.
+
+    To reduce processing time, users can decrease the interval of `col_indices`.
+    """
+    arr_shape = np.shape(arr)
+    if len(arr_shape) != 2:
+        raise ValueError(
+            f"Input array has {len(arr_shape)} dimensions, but must be 2D."
+        )
+
+    arr_nrows, arr_ncols = arr_shape
+
+    # Validate column indices
+    if subswath_slice is None:
+        subswath_slice = np.s_[:]  # equivalent to slice(None, None, None)
+
+    if (subswath_slice.step != 1) and (subswath_slice.step is not None):
+        # In theory, having a step size >1 could be supported, but it seems
+        # unnecessary and overly complicated to bookkeep for current QA needs.
+        msg = (
+            "Subswath slice along axes 1 has step value of:"
+            f" `{subswath_slice.step}`, which is not supported. Please set"
+            " the step value to 1."
+        )
+        raise NotImplementedError(msg)
+
+    subswath_start, subswath_stop, _ = subswath_slice.indices(arr_ncols)
+    subswath_width = subswath_stop - subswath_start
+
+    if (tile_width == -1) or (tile_width > subswath_width):
+        tile_width = subswath_width
+
+    # Setup a 2D subblock view of the source array.
+    subswath = nisarqa.SubBlock2D(arr=arr, slices=(np.s_[:], subswath_slice))
+    assert arr_nrows == subswath.shape[0]
+    assert subswath_width == subswath.shape[1]
+
+    # From here on out, we'll treat the `subswath` as if it is our full array.
+    # That means are index values will be in `subswath`'s "index
+    # coordinate system". (They will no longer be in the "index coordinate
+    # system" of the input `arr`.)
+
+    # The TileIterator can only pull full tiles. In other functions, we simply
+    # truncate the full array to have each edge be an integer multiple of the
+    # tile shape. Here, the user specified an exact number of columns, so we
+    # should not truncate.
+    # To handle this, let's first iterate over the "truncated" array,
+    # and then add in the "leftover" columns.
+
+    # Truncate the column indices to be an integer multiple of `tile_width`.
+    leftover_width = subswath_width % tile_width
+    trunc_width = subswath_width - leftover_width
+
+    # Create the Iterator over the truncated subswath array
+    input_iter = nisarqa.TileIterator(
+        arr_shape=(arr_nrows, trunc_width),
+        axis_0_tile_dim=-1,  # use all rows
+        axis_1_tile_dim=tile_width,
+    )
+
+    # Initialize the accumulator array
+    S_avg = np.zeros(arr_nrows)
+
+    # Compute FFT over the truncated portion of the subswath
+    for tile_slice in input_iter:
+        S_avg += _get_s_avg_for_tile(
+            arr_slice=subswath[tile_slice],
+            fft_axis=0,  # Compute fft over along-track axis (axis 0)
+            num_fft_bins=arr_nrows,
+            averaging_denominator=subswath_width,  # full subswath (not truncated)
+        )
+
+    # Repeat process for the "leftover" portion of the subswath
+    if leftover_width > 0:
+        leftover_2D_slice = (
+            np.s_[:],
+            slice(subswath_width - leftover_width, subswath_width),
+        )
+
+        leftover_subswath = subswath[leftover_2D_slice]
+        S_avg += _get_s_avg_for_tile(
+            arr_slice=leftover_subswath,
+            fft_axis=0,  # Compute fft over along-track axis (axis 0)
+            num_fft_bins=arr_nrows,
+            averaging_denominator=subswath_width,
+        )
+
+    return _post_process_s_avg(
+        S_avg=S_avg, sampling_rate=sampling_rate, fft_shift=fft_shift
+    )
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
