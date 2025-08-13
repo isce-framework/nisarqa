@@ -94,6 +94,9 @@ def add_title_page_to_report_pdf(
 
         metadata["softwareVersion"] = product.software_version
 
+        if isinstance(product, nisarqa.NisarGeoProduct):
+            metadata["epsg"] = str(product.epsg)
+
         id_group = in_f[product.identification_path]
         for key, val in id_group.items():
             if key == "granuleId":
