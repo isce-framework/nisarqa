@@ -481,7 +481,7 @@ class GeoRaster(SARRaster):
 
     @property
     def y_axis_label(self) -> str:
-        return "Northing (km)"
+        return "Y Coordinate (km)"
 
     @property
     def x_axis_spacing(self):
@@ -493,7 +493,7 @@ class GeoRaster(SARRaster):
 
     @property
     def x_axis_label(self) -> str:
-        return "Easting (km)"
+        return "X Coordinate (km)"
 
 
 @overload
