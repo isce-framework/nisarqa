@@ -12,12 +12,6 @@
 # The diamond-pattern of the class inheritance hierarchy becomes more and more
 # specialized, until we finally get to the instantiable product readers.
 
-# Note: Private utility functions
-# Because all functions in ._utils.py are private (i.e. prefixed with an
-# underscore) then `from ._utils.py import *` does nothing.
-# Otherwise, importing these functions in the __init__.py would make them
-# public, which we don't want to do.
-
 # Abstract base class for all NISAR products
 from .nisar_product import *
 
