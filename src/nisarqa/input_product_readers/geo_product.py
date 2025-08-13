@@ -229,6 +229,8 @@ class NisarGeoProduct(NisarProduct):
         kwargs["band"] = self.band
         kwargs["freq"] = "A" if "frequencyA" in raster_path else "B"
 
+        kwargs["epsg"] = self.epsg
+
         if parse_stats:
             kwargs["stats"] = _parse_dataset_stats_from_h5(
                 ds=h5_file[raster_path]

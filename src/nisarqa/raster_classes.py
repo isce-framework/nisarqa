@@ -460,6 +460,8 @@ class GeoRaster(SARRaster):
     y_stop : float
         The stopping (South) Y position of the input array
         This corresponds to the lower side of the bottom pixels.
+    epsg : int
+        The EPSG code of the input raster.
     """
 
     # Attributes of the input array
@@ -471,6 +473,8 @@ class GeoRaster(SARRaster):
     y_start: float
     y_stop: float
 
+    epsg: int
+
     @property
     def y_axis_spacing(self):
         return self.y_spacing
@@ -481,7 +485,7 @@ class GeoRaster(SARRaster):
 
     @property
     def y_axis_label(self) -> str:
-        return "Y Coordinate (km)"
+        return f"Y Coordinate, EPSG:{self.epsg} (km)"
 
     @property
     def x_axis_spacing(self):
@@ -493,7 +497,7 @@ class GeoRaster(SARRaster):
 
     @property
     def x_axis_label(self) -> str:
-        return "X Coordinate (km)"
+        return f"X Coordinate, EPSG:{self.epsg} (km)"
 
 
 @overload
