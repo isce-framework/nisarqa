@@ -110,7 +110,11 @@ from .raster_classes import *
 from .lonlat import *
 from .parameters import *
 from .utils import *
-from .products import *
 from .input_product_readers import *
 from .validate import *
 from .processing import *
+from .verify_rslc import *
+from .verify_gslc import *
+from .verify_gcov import *
+from .verify_igram import *
+from .verify_offsets import *
