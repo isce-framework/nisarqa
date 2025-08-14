@@ -6,7 +6,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-def verify_gslc(
+def gslc_qa(
     root_params: nisarqa.GSLCRootParamGroup, verbose: bool = False
 ) -> None:
     """

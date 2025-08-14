@@ -12,7 +12,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-def verify_igram(
+def igram_qa(
     root_params: (
         nisarqa.RIFGRootParamGroup
         | nisarqa.RUNWRootParamGroup

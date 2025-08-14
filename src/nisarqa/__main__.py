@@ -196,15 +196,15 @@ def run():
         nisarqa.set_global_scratch_dir(scratch_dir)
 
         if subcommand == "rslc_qa":
-            nisarqa.verify_rslc(root_params=root_params, verbose=verbose)
+            nisarqa.rslc_qa(root_params=root_params, verbose=verbose)
         elif subcommand == "gslc_qa":
-            nisarqa.verify_gslc(root_params=root_params, verbose=verbose)
+            nisarqa.gslc_qa(root_params=root_params, verbose=verbose)
         elif subcommand == "gcov_qa":
-            nisarqa.verify_gcov(root_params=root_params, verbose=verbose)
+            nisarqa.gcov_qa(root_params=root_params, verbose=verbose)
         elif subcommand in ("rifg_qa", "runw_qa", "gunw_qa"):
-            nisarqa.verify_igram(root_params=root_params, verbose=verbose)
+            nisarqa.igram_qa(root_params=root_params, verbose=verbose)
         elif subcommand in ("roff_qa", "goff_qa"):
-            nisarqa.verify_offset(root_params=root_params, verbose=verbose)
+            nisarqa.offsets_qa(root_params=root_params, verbose=verbose)
         else:
             raise ValueError(f"Unknown subcommand: {subcommand}")
 

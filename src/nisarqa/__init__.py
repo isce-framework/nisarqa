@@ -113,8 +113,8 @@ from .utils import *
 from .input_product_readers import *
 from .validate import *
 from .processing import *
-from .verify_rslc import *
-from .verify_gslc import *
-from .verify_gcov import *
-from .verify_igram import *
-from .verify_offsets import *
+from .rslc_qa import *
+from .gslc_qa import *
+from .gcov_qa import *
+from .igram_qa import *
+from .offsets_qa import *

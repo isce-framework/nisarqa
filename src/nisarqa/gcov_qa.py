@@ -6,7 +6,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-def verify_gcov(
+def gcov_qa(
     root_params: nisarqa.GCOVRootParamGroup, verbose: bool = False
 ) -> None:
     """

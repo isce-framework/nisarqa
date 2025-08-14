@@ -8,7 +8,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-def verify_offset(
+def offsets_qa(
     root_params: nisarqa.ROFFRootParamGroup | nisarqa.GOFFRootParamGroup,
     verbose: bool = False,
 ) -> None:

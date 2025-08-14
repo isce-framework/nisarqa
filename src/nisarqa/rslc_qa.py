@@ -8,7 +8,7 @@ import nisarqa
 objects_to_skip = nisarqa.get_all(name=__name__)
 
 
-def verify_rslc(
+def rslc_qa(
     root_params: nisarqa.RSLCRootParamGroup, verbose: bool = False
 ) -> None:
     """
