@@ -113,8 +113,4 @@ from .utils import *
 from .input_product_readers import *
 from .validate import *
 from .processing import *
-from .rslc_qa import *
-from .gslc_qa import *
-from .gcov_qa import *
-from .igram_qa import *
-from .offsets_qa import *
+from .workflows import *
