@@ -277,16 +277,26 @@ def copy_rfi_metadata_to_stats_h5(
                 )
                 try:
                     in_file.copy(src_path, stats_h5, dest_path)
-                except RuntimeError:
-                    # h5py.File.copy() raises this error if `src_path`
-                    # does not exist:
-                    #       RuntimeError: Unable to synchronously copy object
-                    #       (component not found)
-                    nisarqa.get_logger().error(
-                        "Cannot copy `rfiLikelihood`. Input granule is"
-                        " missing `rfiLikelihood` for"
-                        f" frequency {freq}, polarization {pol} at {src_path}"
-                    )
+                except RuntimeError as e:
+                    # h5py.File.copy() raises a RuntimeError with known
+                    # messages if `src_path` does not exist
+                    prefix = "Unable to synchronously copy object"
+                    known_errors = [
+                        f"{prefix} (object '{basename}' doesn't exist)",
+                        f"{prefix} (component not found)",
+                    ]
+                    if any((error in str(e) for error in known_errors)):
+                        nisarqa.get_logger().error(
+                            "Cannot copy `rfiLikelihood`. Input granule is"
+                            " missing `rfiLikelihood` for"
+                            f" frequency {freq}, polarization {pol} at {src_path}"
+                        )
+                        1 / 0
+                    else:
+                        # re-raise other RuntimeErrors, such as:
+                        #       RuntimeError: Unable to synchronously copy
+                        #       object (destination object already exists)
+                        raise
 
 
 def save_nisar_freq_metadata_to_h5(

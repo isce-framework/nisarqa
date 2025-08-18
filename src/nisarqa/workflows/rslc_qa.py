@@ -130,11 +130,6 @@ def rslc_qa(
                     product=product, stats_h5=stats_h5, root_params=root_params
                 )
 
-                nisarqa.copy_rfi_metadata_to_stats_h5(
-                    product=product, stats_h5=stats_h5
-                )
-                log.info(f"Input file RFI metadata copied to {stats_file}")
-
         if (
             root_params.workflows.qa_reports
             or root_params.workflows.point_target
