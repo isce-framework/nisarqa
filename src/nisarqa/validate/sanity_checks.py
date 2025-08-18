@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Container
 
 import h5py
@@ -92,7 +93,7 @@ def identification_sanity_checks(
     ) -> bool:
         if (value is None) or (value not in valid_options):
             log.error(
-                f"Dataset value is {value!r}, must be one of "
+                f"Dataset value is {value!r}, must be one of"
                 f" {valid_options}. Dataset: {_full_path(ds_name)}"
             )
             return False
@@ -218,6 +219,100 @@ def identification_sanity_checks(
             ds_name=ds_name,
         )
 
+    ds_name = "compositeReleaseId"
+    ds_checked.add(ds_name)
+    if _dataset_exists(ds_name):
+        data = _get_string_dataset(ds_name=ds_name)
+        if data is not None:
+            passes &= _is_valid_crid(data, path_in_h5=_full_path(ds_name))
+        else:
+            passes = False
+
+    for ds_name in ("missionId", "platformName"):
+        ds_checked.add(ds_name)
+        if _dataset_exists(ds_name):
+            data = _get_string_dataset(ds_name=ds_name)
+            if data is not None:
+                if data != "NISAR":
+                    log.error(
+                        f"Dataset value is {data!r} but should be 'NISAR' for nominal"
+                        " NISAR mission operations. (Ignore if data"
+                        " is from a different mission, e.g. ALOS or UAVSAR.)"
+                        f" Dataset: {_full_path(ds_name)}"
+                    )
+                passes &= data == "NISAR"
+            else:
+                passes = False
+
+    ds_name = "processingCenter"
+    ds_checked.add(ds_name)
+    if _dataset_exists(ds_name):
+        data = _get_string_dataset(ds_name=ds_name)
+        passes &= _verify_data_is_in_list(
+            value=data,
+            valid_options=("JPL", "ISRO"),
+            ds_name=ds_name,
+        )
+
+    ds_name = "instrumentName"
+    ds_checked.add(ds_name)
+    if _dataset_exists(ds_name):
+        data = _get_string_dataset(ds_name=ds_name)
+        passes &= _verify_data_is_in_list(
+            value=data,
+            valid_options=("L-SAR", "S-SAR"),
+            ds_name=ds_name,
+        )
+
+    ds_name = "productDoi"
+    ds_checked.add(ds_name)
+    if _dataset_exists(ds_name):
+        data = _get_string_dataset(ds_name=ds_name)
+        if data is not None:
+            passes &= _is_valid_doi(doi=data, path_in_h5=_full_path(ds_name))
+        else:
+            passes = False
+
+    if not product_type.lower() in nisarqa.LIST_OF_INSAR_PRODUCTS:
+        ds_name = "listOfObservationModes"
+        ds_checked.add(ds_name)
+        if _dataset_exists(ds_name):
+            data = _get_string_dataset(ds_name=ds_name)
+            if data is not None:
+                if isinstance(data, str):
+                    log.error(
+                        f"Dataset is a scalar, but should be a list."
+                        f" Dataset: {_full_path(ds_name)}"
+                    )
+                    data = [data]
+                for obs_mode in data:
+                    passes &= _is_valid_observation_mode(
+                        obs_mode, path_in_h5=_full_path(ds_name)
+                    )
+            else:
+                passes = False
+
+    ds_name = "listOfFrequencies"
+    ds_checked.add(ds_name)
+    if _dataset_exists(ds_name):
+        data = _get_string_dataset(ds_name=ds_name)
+        if data is not None:
+            if isinstance(data, str):
+                log.error(
+                    f"`{ds_name}` is the scalar {data!r}, but should be a list."
+                    f" Dataset: {_full_path(ds_name)}"
+                )
+                passes &= False
+                data = [data]
+            if not set(data).issubset({"A", "B"}):
+                log.error(
+                    f"Dataset contains {{{data}}}, must be a subset of"
+                    f" {{'A', 'B'}}. Dataset: {_full_path(ds_name)}"
+                )
+                passes &= False
+        else:
+            passes = False
+
     # Verify Boolean Datasets
     bool_datasets = [
         "isDithered",
@@ -306,24 +401,37 @@ def identification_sanity_checks(
 
     # These are datasets which need more-robust pattern-matching checks.
     # For now, just check that they are being populated with a non-dummy value.
-    for ds_name in (
-        "compositeReleaseId",
+    misc_ds = [
         "granuleId",
-        "missionId",
-        "plannedObservationId",
-        "processingCenter",
-        "listOfFrequencies",
         "boundingPolygon",
-        "instrumentName",
-        "plannedDatatakeId",
-        "productDoi",
-    ):
+    ]
+    if product_type.lower() in nisarqa.LIST_OF_INSAR_PRODUCTS:
+        misc_ds += [
+            "referencePlannedDatatakeId",
+            "secondaryPlannedDatatakeId",
+            "referencePlannedObservationId",
+            "secondaryPlannedObservationId",
+        ]
+    else:
+        misc_ds += [
+            "plannedDatatakeId",
+            "plannedObservationId",
+        ]
+
+    for ds_name in misc_ds:
         ds_checked.add(ds_name)
         if _dataset_exists(ds_name):
             data = _get_string_dataset(ds_name=ds_name)
             if data is not None:
                 # TODO: Use a regex for more flexible pattern matching.
-                if data in ("", "0", "['0']", "['']", "['' '' '' '' '']"):
+                if data in (
+                    "",
+                    "0",
+                    "['0']",
+                    "['']",
+                    "['' '' '' '' '']",
+                    "None",
+                ):
                     log.error(
                         f"Dataset value is {data!r}, which is not a valid value."
                         f" Dataset: {_full_path(ds_name)}"
@@ -351,6 +459,173 @@ def identification_sanity_checks(
         summary.check_identification_group(result="PASS")
     else:
         summary.check_identification_group(result="FAIL")
+
+
+def _is_valid_crid(crid: str, path_in_h5: str) -> bool:
+    """
+    True if Composite Release ID (CRID) is in the correct format; False o/w.
+
+    Parameters
+    ----------
+    crid : str
+        The composite release ID, per specification in docstring Notes section.
+    path_in_h5 : str
+        Full path in the HDF5 for the composite release ID. (Used for logging.)
+
+    Returns
+    -------
+    passes : bool
+        True if `crid` is in the correct format.
+
+    Notes
+    -----
+    As of July 2025, CRID convention for R5 and later (corresponds to product
+    specification version 1.3.0 or later):
+
+        EMMmmp
+            Environment
+                A = ADT
+                D = Development
+                T = Test
+                P = Prod
+                S = Science Ondemand
+                E or Q = Engineering or Quick-turnaround (TBD)
+            Major has 2 numerical digits
+            minor has 2 numerical digits
+            patch has 1 numerical digit
+        Example: P05000 for R05.00.0
+
+        CRID convention for R4.0.8 or earlier
+        ESMMmp
+            Environment
+                A = ADT
+                D = Development
+                T = Test
+                P = Prod
+                S = Science Ondemand
+            Spare has 1 numerical digit (was previously used to denote
+                0 = prelaunch, 1 = launch, but decided that it was unnessary
+                and was changed to spare)
+            Major has 2 numerical digits
+            minor has 1 numerical digits
+            patch has 1 numerical digit
+        Example: P00408 for R4.0.8
+    """
+    pattern = r"^[ADTPSEQ]\d{5}$"
+    correct = bool(re.fullmatch(pattern, crid))
+    if not correct:
+        nisarqa.get_logger().error(
+            f"Dataset value is {crid}, which does not match a pattern like"
+            f" e.g. 'P05000' or 'P00408'. Dataset: {path_in_h5}"
+        )
+
+    return correct
+
+
+def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
+    """
+    True if `obs_mode` follows the expected pattern; False otherwise.
+
+    Parameters
+    ----------
+    obs_mode : str
+        A single observation mode string, per specification in docstring
+        Notes section.
+    path_in_h5 : str
+        Full path in the HDF5 to the dataset containing the observation mode.
+        (Used for logging.)
+
+    Returns
+    -------
+    passes : bool
+        True if `obs_mode` is in the correct format.
+
+    Notes
+    -----
+    As of May 2025, the observation mode mnemonics should all have the same
+    fixed length of 22 characters, e.g.
+
+    128	L:DH:20M+05N:FS:B4:F04	Background Land
+    129	L:QQ:20M+05N:FS:B4:F04	Background Land Soil Moisture
+    130	L:QP:20M+05N:FS:B4:F28	US Agriculture, India Agriculture Low Res
+    132	L:SH:40M+05N:FS:B4:F04	Land Ice Low Res
+    133	L:SH:20M+05N:FS:B4:F04	Low Data Rate Study Mode SinglePol
+    134	L:SV:05W+---:FS:B4:F04	Sea Ice Dynamics
+    135	L:QD:05W+---:FS:B4:F04	Open Ocean
+    136	L:DV:20M+05N:FS:B4:F04	India Land Characterization
+    137	L:DH:40M+05N:FS:B4:F04	Urban Areas, Himalayas
+    138	L:QP:40N+05N:FS:B4:F28	US Agriculture, India Agriculture
+    139	L:DH:20M+05N:FS:B4:D01	Low QNSR Land
+    140	L:QP:40N+05N:FS:B4:F05	US Agriculture, India Agriculture
+    141	L:QP:20M+05N:FS:B4:F05	US Agriculture, India Agriculture Low Res
+    """
+    # General regex breakdown:
+    #     ^L:                -> Must start with 'L:'
+    #     [A-Z]{2}           -> Two uppercase letters (mode code)
+    #     :                  -> Separator
+    #     (\d{2}[MNW])       -> Resolution, e.g. '20M', '05W', '40N'
+    #     \+                 -> Plus sign
+    #     (\d{2}[MNW]|---)   -> Second resolution or '---'
+    #     :FS:               -> Literal
+    #     B\d                -> e.g. 'B4'
+    #     :F\d{2}            -> e.g. 'F04'
+    #     $                  -> End of string
+    pattern = r"^L:[A-Z]{2}:(\d{2}[MNW])\+(\d{2}[MNW]|---):FS:B\d:F\d{2}$"
+
+    correct = len(obs_mode) == 22 and bool(re.fullmatch(pattern, obs_mode))
+
+    if not correct:
+        nisarqa.get_logger().error(
+            f"Dataset contains value {obs_mode}, which does not match"
+            " a pattern like e.g. `L:QP:20M+05N:FS:B4:F05`."
+            f" Dataset: {path_in_h5}"
+        )
+
+    return correct
+
+
+def _is_valid_doi(doi: str, path_in_h5: str) -> bool:
+    """
+    True if `doi` follows ISO 26324 for DOIs; False otherwise.
+
+    Leading 'doi:', 'DOI:', or 'https://doi.org/' is ignored.
+
+    Parameters
+    ----------
+    doi : str
+        A DOI string in ISO 26324 for DOIs.
+    path_in_h5 : str
+        Full path in the HDF5 to the DOI's Dataset. (Used for logging.)
+
+    Returns
+    -------
+    passes : bool
+        True if `doi` follows ISO 26324 for DOIs; False otherwise.
+    """
+
+    # Normalize input
+    doi = doi.strip()
+    # Remove leading 'doi:', 'DOI:', or 'https://doi.org/'
+    doi = re.sub(r"^(doi:|DOI:)", "", doi)
+    doi = re.sub(r"^(https?://(dx\.)?doi\.org/)", "", doi)
+
+    # DOI regex pattern
+    # Format rules (ISO 26324):
+    #     - Must start with "10."
+    #     - Registrant code: 4–9 digits
+    #     - Separator: "/"
+    #     - Suffix: one or more non-space characters
+
+    pattern = r"^10\.\d{4,9}/\S+$"
+    correct = bool(re.fullmatch(pattern, doi))
+
+    if not correct:
+        nisarqa.get_logger().error(
+            f"Dataset contains value {doi!r}, but must follow ISO 26324"
+            f" format for DOIs. Dataset: {path_in_h5}"
+        )
+
+    return correct
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
