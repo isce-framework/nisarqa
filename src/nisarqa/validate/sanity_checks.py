@@ -70,7 +70,7 @@ def identification_sanity_checks(
             )
             return None
 
-    def _get_string_dataset(ds_name: str) -> str | None:
+    def _get_string_dataset(ds_name: str) -> str | list[str] | None:
         data = _get_dataset(ds_name=ds_name)
         if nisarqa.verify_str_meets_isce3_conventions(ds=id_group[ds_name]):
             return nisarqa.byte_string_to_python_str(data)
