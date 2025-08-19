@@ -291,7 +291,6 @@ def copy_rfi_metadata_to_stats_h5(
                             " missing `rfiLikelihood` for"
                             f" frequency {freq}, polarization {pol} at {src_path}"
                         )
-                        1 / 0
                     else:
                         # re-raise other RuntimeErrors, such as:
                         #       RuntimeError: Unable to synchronously copy
