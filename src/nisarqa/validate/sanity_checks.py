@@ -498,7 +498,7 @@ def _is_valid_crid(crid: str, path_in_h5: str) -> bool:
         Example: P05000 for R05.00.0
 
     CRID convention for R4.0.8 or earlier:
-    
+
         ESMMmp
             Environment
                 A = ADT
@@ -575,7 +575,9 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
     #     $                  -> End of string
     pattern = r"^L:[A-Z]{2}:(\d{2}[MNW])\+(\d{2}[MNW]|---):FS:B\d:F\d{2}$"
 
-    correct = (len(obs_mode) == 22) and (re.fullmatch(pattern, obs_mode) is not None)
+    correct = (len(obs_mode) == 22) and (
+        re.fullmatch(pattern, obs_mode) is not None
+    )
 
     if not correct:
         nisarqa.get_logger().error(
