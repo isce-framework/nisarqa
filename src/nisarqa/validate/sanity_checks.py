@@ -513,12 +513,14 @@ def _is_valid_crid(crid: str, path_in_h5: str) -> bool:
                 P = Prod
                 S = Science Ondemand
             Spare has 1 numerical digit (was previously used to denote
-                0 = prelaunch, 1 = launch, but decided that it was unnessary
+                0 = prelaunch, 1 = launch, but decided that it was unnecessary
                 and was changed to spare)
             Major has 2 numerical digits
             minor has 1 numerical digits
             patch has 1 numerical digit
         Example: P00408 for R4.0.8
+
+    Source: https://wiki.jpl.nasa.gov/display/NISARSDS/CRID+release+notification+process
     """
     pattern = r"^[ADTPSEQ]\d{5}$"
     correct = re.fullmatch(pattern, crid) is not None
