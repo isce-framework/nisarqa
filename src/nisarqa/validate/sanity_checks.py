@@ -568,22 +568,18 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
     140	L:QP:40N+05N:FS:B4:F05	US Agriculture, India Agriculture
     141	L:QP:20M+05N:FS:B4:F05	US Agriculture, India Agriculture Low Res
     """
-    # General regex breakdown:
-    #     ^L:                -> Must start with 'L:'
-    #     [A-Z]{2}           -> Two uppercase letters (mode code)
-    #     :                  -> Separator
-    #     (\d{2}[MNW])       -> Resolution, e.g. '20M', '05W', '40N'
-    #     \+                 -> Plus sign
-    #     (\d{2}[MNW]|---)   -> Second resolution or '---'
-    #     :FS:               -> Literal
-    #     B\d                -> e.g. 'B4'
-    #     :F\d{2}            -> e.g. 'F04'
-    #     $                  -> End of string
-    pattern = r"^L:[A-Z]{2}:(\d{2}[MNW])\+(\d{2}[MNW]|---):FS:B\d:F\d{2}$"
-
-    correct = (len(obs_mode) == 22) and (
-        re.fullmatch(pattern, obs_mode) is not None
+    pattern = (
+        r"^L:"  # Must start with 'L:'
+        r"[A-Z]{2}:"  # Two uppercase letters (mode code) and separator
+        r"(\d{2}[MNW])\+"  # Acq. Range Bandwidth Freq A and separator
+        r"(\d{2}[MNW]|---):"  # Acq. Range Bandwidth Freq B and separator
+        r"FS:"  # Literal
+        r"B\d:"  # Band(?)
+        r"F\d{2}"  # ???
+        r"$"  # End of string
     )
+
+    correct = re.fullmatch(pattern, obs_mode) is not None
 
     if not correct:
         nisarqa.get_logger().error(
