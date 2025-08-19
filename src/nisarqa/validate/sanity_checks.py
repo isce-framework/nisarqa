@@ -273,8 +273,14 @@ def identification_sanity_checks(
         else:
             passes = False
 
-    if not product_type.lower() in nisarqa.LIST_OF_INSAR_PRODUCTS:
-        ds_name = "listOfObservationModes"
+    if product_type.lower() in nisarqa.LIST_OF_INSAR_PRODUCTS:
+        obs_modes = [
+            "referenceListOfObservationModes",
+            "secondaryListOfObservationModes",
+        ]
+    else:
+        obs_modes += ["listOfObservationModes"]
+    for ds_name in obs_modes:
         ds_checked.add(ds_name)
         if _dataset_exists(ds_name):
             data = _get_string_dataset(ds_name=ds_name)
