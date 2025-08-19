@@ -240,7 +240,7 @@ def identification_sanity_checks(
                         " is from a different mission, e.g. ALOS or UAVSAR.)"
                         f" Dataset: {_full_path(ds_name)}"
                     )
-                passes &= data == "NISAR"
+                    passes = False
             else:
                 passes = False
 
@@ -284,6 +284,7 @@ def identification_sanity_checks(
                         f"Dataset is a scalar, but should be a list."
                         f" Dataset: {_full_path(ds_name)}"
                     )
+                    passes = False
                     data = [data]
                 for obs_mode in data:
                     passes &= _is_valid_observation_mode(
@@ -302,11 +303,11 @@ def identification_sanity_checks(
                     f"`{ds_name}` is the scalar {data!r}, but should be a list."
                     f" Dataset: {_full_path(ds_name)}"
                 )
-                passes &= False
+                passes = False
                 data = [data]
             if not set(data).issubset({"A", "B"}):
                 log.error(
-                    f"Dataset contains {{{data}}}, must be a subset of"
+                    f"Dataset contains {data}, must be a subset of"
                     f" {{'A', 'B'}}. Dataset: {_full_path(ds_name)}"
                 )
                 passes &= False
@@ -431,6 +432,7 @@ def identification_sanity_checks(
                     "['']",
                     "['' '' '' '' '']",
                     "None",
+                    "(NOT SPECIFIED)",
                 ):
                     log.error(
                         f"Dataset value is {data!r}, which is not a valid value."
@@ -495,7 +497,8 @@ def _is_valid_crid(crid: str, path_in_h5: str) -> bool:
             patch has 1 numerical digit
         Example: P05000 for R05.00.0
 
-        CRID convention for R4.0.8 or earlier
+    CRID convention for R4.0.8 or earlier:
+    
         ESMMmp
             Environment
                 A = ADT
@@ -512,7 +515,7 @@ def _is_valid_crid(crid: str, path_in_h5: str) -> bool:
         Example: P00408 for R4.0.8
     """
     pattern = r"^[ADTPSEQ]\d{5}$"
-    correct = bool(re.fullmatch(pattern, crid))
+    correct = re.fullmatch(pattern, crid) is not None
     if not correct:
         nisarqa.get_logger().error(
             f"Dataset value is {crid}, which does not match a pattern like"
@@ -572,7 +575,7 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
     #     $                  -> End of string
     pattern = r"^L:[A-Z]{2}:(\d{2}[MNW])\+(\d{2}[MNW]|---):FS:B\d:F\d{2}$"
 
-    correct = len(obs_mode) == 22 and bool(re.fullmatch(pattern, obs_mode))
+    correct = (len(obs_mode) == 22) and (re.fullmatch(pattern, obs_mode) is not None)
 
     if not correct:
         nisarqa.get_logger().error(
@@ -617,7 +620,7 @@ def _is_valid_doi(doi: str, path_in_h5: str) -> bool:
     #     - Suffix: one or more non-space characters
 
     pattern = r"^10\.\d{4,9}/\S+$"
-    correct = bool(re.fullmatch(pattern, doi))
+    correct = re.fullmatch(pattern, doi) is not None
 
     if not correct:
         nisarqa.get_logger().error(
