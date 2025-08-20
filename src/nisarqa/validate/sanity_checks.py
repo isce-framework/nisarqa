@@ -269,7 +269,11 @@ def identification_sanity_checks(
     if _dataset_exists(ds_name):
         data = _get_string_dataset(ds_name=ds_name)
         if data is not None:
-            passes &= _is_valid_doi(doi=data, path_in_h5=_full_path(ds_name))
+            passes &= _is_valid_nisar_doi(
+                doi=data,
+                product_type=product_type,
+                path_in_h5=_full_path(ds_name),
+            )
         else:
             passes = False
 
@@ -279,7 +283,7 @@ def identification_sanity_checks(
             "secondaryListOfObservationModes",
         ]
     else:
-        obs_modes += ["listOfObservationModes"]
+        obs_modes = ["listOfObservationModes"]
     for ds_name in obs_modes:
         ds_checked.add(ds_name)
         if _dataset_exists(ds_name):
@@ -316,7 +320,13 @@ def identification_sanity_checks(
                     f"Dataset contains {data}, must be a subset of"
                     f" {{'A', 'B'}}. Dataset: {_full_path(ds_name)}"
                 )
-                passes &= False
+                passes = False
+            if nisarqa.contains_duplicates(data):
+                log.error(
+                    f"Dataset contains duplicate values: {data}."
+                    f" Dataset: {_full_path(ds_name)}"
+                )
+                passes = False
         else:
             passes = False
 
@@ -593,45 +603,71 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
     return correct
 
 
-def _is_valid_doi(doi: str, path_in_h5: str) -> bool:
+def _is_valid_nisar_doi(
+    *, doi: str, product_type: str, path_in_h5: str
+) -> bool:
     """
-    True if `doi` follows ISO 26324 for DOIs; False otherwise.
-
-    Leading 'doi:', 'DOI:', or 'https://doi.org/' is ignored.
+    True if `doi` follows NISAR DOI format for L1/L2 products; False otherwise.
 
     Parameters
     ----------
     doi : str
-        A DOI string in ISO 26324 for DOIs.
+        A DOI string in NISAR DOI format for L1/L2 products (see Notes).
+    product_type : str
+        One of: 'rslc', 'gslc', 'gcov', 'rifg', 'runw', 'gunw', 'roff', 'goff',
+        or their uppercase variants.
     path_in_h5 : str
         Full path in the HDF5 to the DOI's Dataset. (Used for logging.)
 
     Returns
     -------
     passes : bool
-        True if `doi` follows ISO 26324 for DOIs; False otherwise.
+        True if `doi` follows the NISAR conventions for L1/L2 DOIs;
+        False otherwise.
+
+    Notes
+    -----
+    Source: https://wiki.jpl.nasa.gov/display/NISARSDS/Digital+Object+Identifiers+DOIs
+    NISAR L1/L2 products follow the following conventions for DOI:
+
+        10.5067/NI<level><product>-<maturity><version>
+
+    where:
+        <level> is either "L1" (level-1 products) or "L2" (level-2 products)
+        <product> is the 4-character product type in all caps
+        <maturity> is either "B" (Beta), "P" (Provisional), or "V" (Version)
+        <version> is a single character, starting with 1
+
+    Example L1: RIFG
+    DOI                   CMR Short Name
+    10.5067/NIL1RIFG-B1   NISAR_L1_RIFG_BETA_V1
+    10.5067/NIL1RIFG-P1   NISAR_L1_RIFG_PROVISIONAL_V1
+    10.5067/NIL1RIFG-V1   NISAR_L1_RIFG_V1
+
+    Example L2: GCOV
+    DOI                   CMR Short Name
+    10.5067/NIL2GCOV-B1   NISAR_L2_GCOV_BETA_V1
+    10.5067/NIL2GCOV-P1   NISAR_L2_GCOV_PROVISIONAL_V1
+    10.5067/NIL2GCOV-V1   NISAR_L2_GCOV_V1
     """
 
-    # Normalize input
-    doi = doi.strip()
-    # Remove leading 'doi:', 'DOI:', or 'https://doi.org/'
-    doi = re.sub(r"^(doi:|DOI:)", "", doi)
-    doi = re.sub(r"^(https?://(dx\.)?doi\.org/)", "", doi)
+    # Build regex dynamically based on product types
+    pattern = (
+        rf"^10\.5067/NI"  # DOI prefix
+        rf"(L1|L2)"  # Level
+        rf"{product_type.upper()}"  # Product type
+        rf"-"
+        rf"(B|P|V)"  # Maturity
+        rf"([1-9])$"  # Version (1–9)
+    )
 
-    # DOI regex pattern
-    # Format rules (ISO 26324):
-    #     - Must start with "10."
-    #     - Registrant code: 4–9 digits
-    #     - Separator: "/"
-    #     - Suffix: one or more non-space characters
-
-    pattern = r"^10\.\d{4,9}/\S+$"
     correct = re.fullmatch(pattern, doi) is not None
 
     if not correct:
         nisarqa.get_logger().error(
-            f"Dataset contains value {doi!r}, but must follow ISO 26324"
-            f" format for DOIs. Dataset: {path_in_h5}"
+            f"Dataset contains value {doi!r}, but must follow NISAR"
+            " conventions for L1/L2 DOIs, e.g. '10.5067/NIL2GCOV-V1'."
+            f" Dataset: {path_in_h5}"
         )
 
     return correct
