@@ -563,36 +563,123 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
 
     Notes
     -----
-    As of May 2025, the observation mode mnemonics should all have the same
-    fixed length of 22 characters, e.g.
+    As of Aug 2025, there are different string format conventions for
+    L-band only, S-band only, and joint L- and S-band observations.
 
-    128	L:DH:20M+05N:FS:B4:F04	Background Land
-    129	L:QQ:20M+05N:FS:B4:F04	Background Land Soil Moisture
-    130	L:QP:20M+05N:FS:B4:F28	US Agriculture, India Agriculture Low Res
-    132	L:SH:40M+05N:FS:B4:F04	Land Ice Low Res
-    133	L:SH:20M+05N:FS:B4:F04	Low Data Rate Study Mode SinglePol
-    134	L:SV:05W+---:FS:B4:F04	Sea Ice Dynamics
-    135	L:QD:05W+---:FS:B4:F04	Open Ocean
-    136	L:DV:20M+05N:FS:B4:F04	India Land Characterization
-    137	L:DH:40M+05N:FS:B4:F04	Urban Areas, Himalayas
-    138	L:QP:40N+05N:FS:B4:F28	US Agriculture, India Agriculture
-    139	L:DH:20M+05N:FS:B4:D01	Low QNSR Land
-    140	L:QP:40N+05N:FS:B4:F05	US Agriculture, India Agriculture
-    141	L:QP:20M+05N:FS:B4:F05	US Agriculture, India Agriculture Low Res
+    L-band only:
+        Examples:
+            L:SCI:DH:40M+05N:FS:B4:D02
+            L:ENG:NO:77M+---:HS:B16:F10
+
+        Format:
+            <band>:<phase>:<mode>:<main><pulse>+<side><pulse>:<swath>:<bits>:<prf>
+
+        <band> : L for L-band
+        <phase> : SCI (Science)
+                  ENG (Engineering)
+                  PST (Post Take)
+                  PRE (PRE take)
+                  DM1 (Diagnostic Mode 1)
+                  DM2 (Diagnostic Mode 2)
+                  CAN (Super Canned)
+                  TST (Test mode)
+        <mode> : SH (Single Pol HH)
+                 SV (Single Pol VV)
+                 DH (Dual Pol H-transmit)
+                 DV (Dual Pol HH/HV)
+                 QP (Quad Pol)
+                 CP (Compact Pol)
+                 QQ (Quasi Quad)
+                 QD (Quasi Dual HH/VV)
+                 NO (Rx Only H, Rx Only V, or Qx Only HV)
+        <main> : Main Band's Range bandwidth. One of: 05, 40, 20, 77
+        <pulse> : Pulse width of main band.
+                  One of: N (Narrow), M (Medium), or W (Wide), or F (???)
+                  Example: L:CAN:DH:77F+---:FS:B4:D01
+        <side> : Side Band's Range bandwidth.
+                 One of: 05, 20, or -- (not acquired)
+        <pulse> : Pulse width of side band
+                  One of: N (Narrow), M (Medium), W (Wide), - (not acquired)
+        <swath> : FS (Full Swath) or HS (Half Swath)
+        <bits> : Bits per sample. One of: B3, B4, B8, B12, B16
+        <prf> : PRF with version
+                First character is one of: F (Fixed) or D (Dithered)
+                Second two characters XX denote the version of Fixed or
+                Dithered PRF. (Both Fixed and Dithered have different versions
+                such as PRF and Dithered sequence.)
+                Example: D02 denotes "Dithered PRF Sequence number 2"
+
+    S-band only:
+        Examples:
+            S:DB:DH:10W:B4:F04
+            S:--:DX:75W:B8:F06
+            S:NR:DH:10N:B4:F05
+
+        Format:
+            <band>:<tbd>:<mode>:<bandwidth><pulse>:<bits>:<prf>
+
+        <band> : S for S-band
+        <tbd> : One of: DB, NR, DR, --,
+        <mode> : SH, SV, DH, DV, DX, QQ, CP, FP
+        <main> : Range bandwidth. One of: 10, 25, 37, 75
+        <pulse> : Pulse width. One of: N (Narrow) or W (Wide)
+        <bits> : Bits per sample. One of: B4, B3, B8
+        <prf> : PRF with version
+                First character is one of: F (Fixed) or D (Dithered)
+                Second two characters XX denote the version of Fixed or
+                Dithered PRF. (Both Fixed and Dithered have different versions
+                such as PRF and Dithered sequence.)
+                Example: D02 denotes "Dithered PRF Sequence number 2"
+
+    Joint L- and S-band:
+        Examples:
+            L:SCI:DV:05W+---:FS:B4:F04  S:DB:CP:25W:B4
+            L:PST:CP:77M+---:FS:B4:F04  S:--:DX:75W:B8
+
+        Format:
+            <L-band observation mode>  <S-band observation mode>
+
+        Where <L-band observation mode> is formatted per the conventions above.
+        and <S-band observation mode> is formatted per the conventions above
+        but without the <prf> ending.
     """
-    pattern = (
-        r"^L:"  # Must start with 'L:'
-        r"[A-Z]{2}:"  # Two uppercase letters (mode code) and separator
-        r"(\d{2}[MNW])\+"  # Acq. Range Bandwidth Freq A and separator
-        r"(\d{2}[MNW]|---):"  # Acq. Range Bandwidth Freq B and separator
-        r"FS:"  # Literal
-        r"B\d:"  # Band(?)
-        r"F\d{2}"  # ???
-        r"$"  # End of string
+    # ----- L-band only -----
+    l_band_pattern = re.compile(
+        r"^L:"  # startswith L:
+        r"(SCI|ENG|PST|PRE|DM1|DM2|CAN|TST):"  # phase
+        r"(SH|SV|DH|DV|QP|CP|QQ|QD|NO):"  # mode
+        r"(05|20|40|77)(N|M|W|F)\+"  # main bandwidth + pulse
+        r"(05|20|--)(N|M|W|-):"  # side bandwidth + pulse
+        r"(FS|HS):"  # swath
+        r"(B3|B4|B8|B12|B16):"  # bits
+        r"(F|D)\d{2}$"  # endswith PRF
     )
 
-    correct = re.fullmatch(pattern, obs_mode) is not None
+    # ----- S-band only -----
+    s_band_pattern = re.compile(
+        r"^S:"  # startswith S:
+        r"(DB|NR|DR|--):"  # ???
+        r"(SH|SV|DH|DV|DX|QQ|FP|CP):"  # mode
+        r"(10|25|37|75)(N|W):"  # bandwidth + pulse
+        r"(B3|B4|B8):"  # bits
+        r"(F|D)\d{2}$"  # endswith PRF
+    )
 
+    # ----- Joint L- and S-band -----
+    # (L-band regex + whitespace + S-band regex without PRF)
+    joint_pattern = re.compile(
+        l_band_pattern.pattern[:-1]  # L-band without endswith "$"
+        + r"\s+"  # whitespace
+        + s_band_pattern.pattern[1:-12]  # S-band regex without "^" and "<prf>$"
+        + r"$"  # re-append the endswith "$"
+    )
+
+    # check against all three
+    correct = (
+        l_band_pattern.match(obs_mode)
+        or s_band_pattern.match(obs_mode)
+        or joint_pattern.match(obs_mode)
+    )
     if not correct:
         nisarqa.get_logger().error(
             f"Dataset contains value {obs_mode}, which does not match"
