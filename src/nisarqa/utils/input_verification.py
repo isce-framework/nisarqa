@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Collection
 from typing import Any
 
 import h5py
@@ -826,6 +827,11 @@ def is_iterable(obj: Any) -> bool:
         return False
     else:
         return True
+
+
+def contains_duplicates(c: Collection) -> bool:
+    """True if input contains duplicate items. False o/w."""
+    return len(c) != len(set(c))
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
