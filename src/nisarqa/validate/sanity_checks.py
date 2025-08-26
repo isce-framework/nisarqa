@@ -592,11 +592,11 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
                  QQ (Quasi Quad)
                  QD (Quasi Dual HH/VV)
                  NO (Rx Only H, Rx Only V, or Qx Only HV)
-        <main> : Main Band's Range bandwidth. One of: 05, 40, 20, 77
+        <main> : Main band's range bandwidth. One of: 05, 40, 20, 77
         <pulse> : Pulse width of main band.
                   One of: N (Narrow), M (Medium), or W (Wide), or F (???)
                   Example: L:CAN:DH:77F+---:FS:B4:D01
-        <side> : Side Band's Range bandwidth.
+        <side> : Side band's range bandwidth.
                  One of: 05, 20, or -- (not acquired)
         <pulse> : Pulse width of side band
                   One of: N (Narrow), M (Medium), W (Wide), - (not acquired)
@@ -676,9 +676,9 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
 
     # check against all three
     correct = (
-        l_band_pattern.match(obs_mode)
-        or s_band_pattern.match(obs_mode)
-        or joint_pattern.match(obs_mode)
+        l_band_pattern.match(obs_mode) is not None
+        or s_band_pattern.match(obs_mode) is not None
+        or joint_pattern.match(obs_mode) is not None
     )
     if not correct:
         nisarqa.get_logger().error(
@@ -745,7 +745,7 @@ def _is_valid_nisar_doi(
         rf"{product_type.upper()}"  # Product type
         rf"-"
         rf"(B|P|V)"  # Maturity
-        rf"([1-9])$"  # Version (1–9)
+        rf"[1-9]$"  # Version (1–9)
     )
 
     correct = re.fullmatch(pattern, doi) is not None
