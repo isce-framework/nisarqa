@@ -316,13 +316,13 @@ class GCOV(NonInsarGeoProduct):
             )
 
             for gray_img in pol_imgs.values():
-                nisarqa.products.rslc.plot_to_grayscale_png(
+                nisarqa.plot_to_grayscale_png(
                     img_arr=gray_img, filepath=filepath
                 )
 
         else:
             # Output the RGB Browse Image
-            nisarqa.products.rslc.plot_to_rgb_png(
+            nisarqa.plot_to_rgb_png(
                 red=red, green=green, blue=blue, filepath=filepath
             )
 
