@@ -714,7 +714,6 @@ def _is_valid_nisar_doi(
 
     Notes
     -----
-    Source: https://wiki.jpl.nasa.gov/display/NISARSDS/Digital+Object+Identifiers+DOIs
     NISAR L1/L2 products follow the following conventions for DOI:
 
         10.5067/NI<level><product>-<maturity><version>
@@ -736,6 +735,7 @@ def _is_valid_nisar_doi(
     10.5067/NIL2GCOV-B1   NISAR_L2_GCOV_BETA_V1
     10.5067/NIL2GCOV-P1   NISAR_L2_GCOV_PROVISIONAL_V1
     10.5067/NIL2GCOV-V1   NISAR_L2_GCOV_V1
+    Source: https://wiki.jpl.nasa.gov/display/NISARSDS/Digital+Object+Identifiers+DOIs
     """
 
     # Build regex dynamically based on product types
