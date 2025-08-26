@@ -683,7 +683,7 @@ def _is_valid_observation_mode(obs_mode: list[str], path_in_h5: str) -> bool:
     if not correct:
         nisarqa.get_logger().error(
             f"Dataset contains value {obs_mode}, which does not match"
-            " a pattern like e.g. `L:QP:20M+05N:FS:B4:F05`."
+            " a pattern like e.g. `L:SCI:DH:40M+05N:FS:B4:D02`."
             f" Dataset: {path_in_h5}"
         )
 
