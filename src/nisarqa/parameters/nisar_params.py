@@ -1103,7 +1103,8 @@ class SoftwareConfigParamGroup(YamlParamGroup):
     Parameters
     ----------
     use_cache : bool, optional
-        True to use memory map(s) to cache select Dataset(s).
+        True to cache selected dataset(s) into intermediate
+        memory-mapped flat file(s), which speeds up repeat access.
         False to always read data directly from the input file.
         Generally, enabling caching should reduce runtime.
         Defaults to True.
@@ -1118,7 +1119,8 @@ class SoftwareConfigParamGroup(YamlParamGroup):
         metadata={
             "yaml_attrs": YamlAttrs(
                 name="use_cache",
-                descr="""True to use memory map(s) to cache select Dataset(s).
+                descr="""True to cache selected dataset(s) into intermediate
+                memory-mapped flat file(s), which speeds up repeat access.
                 False to always read data directly from the input file.
                 Generally, enabling caching should reduce runtime.""",
             )
@@ -1162,7 +1164,8 @@ class ValidationGroupParamGroup(YamlParamGroup):
     metadata_luts_fail_if_all_nan : str
         True to raise an exception if one or more metadata LUTs contain
         all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-        z-dimension height layers in a 3D LUT has all non-finite values.
+        z-dimension height layers in a 3D LUT ("metadata cube") has
+        all non-finite values.
         False to quiet the exception (although it will still be logged).
         Defaults to True.
     """
@@ -1174,8 +1177,9 @@ class ValidationGroupParamGroup(YamlParamGroup):
                 name="metadata_luts_fail_if_all_nan",
                 descr="""True to raise an exception if one or more metadata LUTs
                 contain all non-finite (e.g. Nan, +/- Inf) values, or if one or more
-                z-dimension height layers in a 3D LUT has all non-finite values.
-                False to quiet the exception (although it will still be logged).""",
+                z-dimension height layers in a 3D LUT ("metadata cube") has
+                all non-finite values. False to quiet the exception (although
+                it will still be logged).""",
             )
         },
     )
