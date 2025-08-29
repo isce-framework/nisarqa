@@ -435,6 +435,9 @@ def identification_sanity_checks(
             "plannedObservationId",
         ]
 
+    if product_type.upper().startswith("G"):
+        misc_ds += ["staticLayersDataAccess"]
+
     for ds_name in misc_ds:
         ds_checked.add(ds_name)
         if _dataset_exists(ds_name):
