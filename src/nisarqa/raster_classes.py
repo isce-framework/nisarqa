@@ -462,18 +462,24 @@ class GeoRaster(SARRaster):
         This corresponds to the lower side of the bottom pixels.
     epsg : int
         The EPSG code of the input raster.
+    x_coordinates : numpy.ndarray
+        1D vector of the coordinate values in the X direction for the
+        input array, starting from the left side of the left-most pixel
+        to the left side of the right-most pixel.
+    y_coordinates : numpy.ndarray
+        1D vector of the coordinate values in the Y direction for the
+        input array, starting from the upper edge of the top-most pixel
+        to the upper edge of the bottom-most pixel.
     """
 
     # Attributes of the input array
     x_spacing: float
-    x_start: float
-    x_stop: float
-
     y_spacing: float
-    y_start: float
-    y_stop: float
 
     epsg: int
+
+    x_coordinates: np.ndarray
+    y_coordinates: np.ndarray
 
     @property
     def y_axis_spacing(self):
@@ -498,6 +504,30 @@ class GeoRaster(SARRaster):
     @property
     def x_axis_label(self) -> str:
         return f"X Coordinate, EPSG:{self.epsg} (km)"
+
+    @property
+    def x_start(self) -> float:
+        return float(self.x_coordinates[0])
+
+    @property
+    def x_stop(self) -> float:
+        # X in meters (units are specified as meters in the product spec)
+        # For NISAR, geocoded grids are referenced by the upper-left corner
+        # of the pixel to match GDAL conventions. So add the distance of
+        # the pixel's side to far right side to get the actual stop value.
+        return float(self.x_coordinates[-1] + self.x_axis_spacing)
+
+    @property
+    def y_start(self) -> float:
+        return float(self.y_coordinates[0])
+
+    @property
+    def y_stop(self) -> float:
+        # Y in meters (units are specified as meters in the product spec)
+        # For NISAR, geocoded grids are referenced by the upper-left corner
+        # of the pixel to match GDAL conventions. So add the distance of
+        # the pixel's side to bottom to get the actual stop value.
+        return float(self.y_coordinates[-1] + self.y_axis_spacing)
 
 
 @overload
@@ -615,7 +645,7 @@ def compare_raster_metadata(raster1, raster2, almost_identical=True):
                     f" has value {r1_val}, but `raster2` has value {r2_val}."
                 )
         else:
-            if np.abs(r1_val - r2_val) > 1e-6:
+            if np.any(np.abs(r1_val - r2_val) > 1e-6):
                 raise ValueError(
                     f"Values do not match for `{field_name}` field. `raster1`"
                     f" has value {r1_val}, but `raster2` has value {r2_val}."
@@ -626,34 +656,126 @@ def decimate_raster_array_to_square_pixels(
     raster_obj: RadarRaster | GeoRaster,
 ) -> np.ndarray:
     """
-    Get *Raster's data array, decimated to square pixels in X and Y direction.
+    Decimate *Raster's data array to approx. square pixels in X and Y direction.
 
     Parameters
     ----------
     raster_obj : RadarRaster or GeoRaster
         *Raster object whose .data attribute will be read into memory
-        and decimated along the first two dimensions to square pixels.
+        and decimated along the first two dimensions to approx. square pixels.
 
     Returns
     -------
     out : numpy.ndarray
         Copy of raster_obj.data array that has been decimated along the
-        first two dimensions to have square pixels.
+        first two dimensions to have approx. square pixels.
     """
-    arr = raster_obj.data[...]
+    # Decimate to square pixels.
+    return decimate_array_to_square_pixels(
+        arr=np.asarray(raster_obj.data, copy=True),
+        y_axis_spacing=raster_obj.y_axis_spacing,
+        x_axis_spacing=raster_obj.x_axis_spacing,
+    )
+
+
+def decimate_raster_array_to_square_pixels_with_strides(
+    raster_obj: RadarRaster | GeoRaster,
+) -> tuple[np.ndarray, int, int]:
+    """
+    Decimate *Raster's data array to square pixels and also return strides.
+
+    Pixels will be approx. square in the X and Y direction.
+
+    Parameters
+    ----------
+    raster_obj : RadarRaster or GeoRaster
+        *Raster object whose .data attribute will be read into memory
+        and decimated along the first two dimensions to approx. square pixels.
+
+    Returns
+    -------
+    out : numpy.ndarray
+        Copy of raster_obj.data array that has been decimated along the
+        first two dimensions to have approx. square pixels.
+    ky, kx : int
+        The stride used for performing decimation in the X and Y directions,
+        respectively.
+    """
+    # Decimate to square pixels.
+    return decimate_array_to_square_pixels_with_strides(
+        arr=np.asarray(raster_obj.data, copy=True),
+        y_axis_spacing=raster_obj.y_axis_spacing,
+        x_axis_spacing=raster_obj.x_axis_spacing,
+    )
+
+
+def decimate_array_to_square_pixels(
+    arr: np.ndarray, y_axis_spacing: float, x_axis_spacing: float
+) -> np.ndarray:
+    """
+    Decimate array to approx. square pixels in X and Y direction.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array to be decimated along the first two dimensions to
+        approx. square pixels.
+    y_axis_spacing : float
+        Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+    x_axis_spacing : float
+        Pixel Spacing in X direction (range for range-Doppler rasters).
+
+    Returns
+    -------
+    out : numpy.ndarray
+        View of `arr` that has been decimated along the first two
+        dimensions to have approx. square pixels.
+    """
+    out, _, _ = decimate_array_to_square_pixels_with_strides(
+        arr=arr, y_axis_spacing=y_axis_spacing, x_axis_spacing=x_axis_spacing
+    )
+
+    return out
+
+
+def decimate_array_to_square_pixels_with_strides(
+    arr: np.ndarray, y_axis_spacing: float, x_axis_spacing: float
+) -> tuple[np.ndarray, int, int]:
+    """
+    Decimate array to approx. square pixels in X and Y direction.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array to be decimated along the first two dimensions to
+        approx. square pixels.
+    y_axis_spacing : float
+        Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+    x_axis_spacing : float
+        Pixel Spacing in X direction (range for range-Doppler rasters).
+
+    Returns
+    -------
+    out : numpy.ndarray
+        View of `arr` that has been decimated along the first two
+        dimensions to have approx. square pixels.
+    ky, kx : int
+        The stride used for performing decimation in the Y and X directions,
+        respectively.
+    """
 
     ky, kx = nisarqa.compute_square_pixel_nlooks(
         img_shape=arr.shape[:2],
         sample_spacing=[
-            raster_obj.y_axis_spacing,
-            raster_obj.x_axis_spacing,
+            y_axis_spacing,
+            x_axis_spacing,
         ],
         # Only make square pixels. Use `max()` to not "shrink" the rasters.
         longest_side_max=max(arr.shape[:2]),
     )
 
     # Decimate to square pixels.
-    return arr[::ky, ::kx]
+    return arr[::ky, ::kx], ky, kx
 
 
 @dataclass

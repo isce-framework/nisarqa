@@ -23,6 +23,7 @@ import h5py
 import numpy as np
 from numpy.typing import ArrayLike
 from ruamel.yaml import YAML
+from scipy.interpolate import RegularGridInterpolator
 
 import nisarqa
 from nisarqa.utils.typing import RunConfigDict, T
@@ -873,6 +874,104 @@ def get_global_scratch_dir() -> Path:
         )
 
     return set_global_scratch_dir._scratch_dir
+
+
+def interpolate_points_in_metadata_cube(
+    data: np.ndarray,
+    height_coordinates: np.ndarray,
+    y_coordinates: np.ndarray,
+    x_coordinates: np.ndarray,
+    h_vals_of_points: np.ndarray,
+    y_vals_of_points: np.ndarray,
+    x_vals_of_points: np.ndarray,
+    method: str = "cubic",
+) -> np.ndarray:
+    """
+    Interpolate value of each point (h, y, x) from a 3D data cube.
+
+    Parameters
+    ----------
+    data : np.ndarray with shape (m,n,p)
+        3D NumPy array representing the metadata cube.
+        Note that for ease of use with GIS, metadata cubes are
+        oriented in HDF5 with:
+            axes 0 = height
+            axes 1 = y coordinates
+            axes 2 = x coordinates
+    height_coordinates : np.ndarray with shape (m,)
+        1D array of height values corresponding to the first axis of `data`.
+    y_coordinates : np.ndarray with shape (n,)
+        1D array of y-coordinates corresponding to the second axis of `data`.
+    x_coordinates : np.ndarray with shape (p,)
+        1D array of x-coordinates corresponding to the third axis of `data`.
+    h_vals_of_points : np.ndarray with shape (n,p)
+        Target height of each point to interpolate.
+    y_vals_of_points : np.ndarray with shape (n,p)
+        Target y-coordinate of each point to interpolate.
+    x_vals_of_points : np.ndarray with shape (n,p)
+        Target x-coordinate of each point to interpolate.
+    method : str, optional
+        Interpolation method. One of: "linear", "nearest", "slinear",
+        "cubic", "quintic", or "pchip". Default is "cubic", which is the
+        recommended interpolation method for NISAR metadata cubes per
+        the NISAR L2 product specification documents.
+
+    Returns
+    -------
+    interp_points : np.ndarray with shape (m,p)
+        Array containing the interpolated value of `data` at each point
+        (h, y, x).
+    """
+    log = nisarqa.get_logger()
+
+    # The dimensions of `data` must match `height_coordinates`,
+    # `y_coordinates`, and `x_coordinates`.
+    if data.ndim != 3:
+        log.error(f"{data.shape=}, must be a 3D array")
+    if len(height_coordinates) != data.shape[0]:
+        log.error(f"{len(height_coordinates)=}, must match {data.shape[0]=}")
+    if len(y_coordinates) != data.shape[0]:
+        log.error(f"{len(height_coordinates)=}, must match {data.shape[1]=}")
+    if len(x_coordinates) != data.shape[0]:
+        log.error(f"{len(height_coordinates)=}, must match {data.shape[2]=}")
+
+    # There must be an h, y, and x value for each point to be interpolated.
+    if not (
+        h_vals_of_points.shape
+        == y_vals_of_points.shape
+        == x_vals_of_points.shape
+    ):
+        log.error(
+            f"{h_vals_of_points.shape=}, {y_vals_of_points.shape=}, and"
+            f" {x_vals_of_points.shape=}. They must all have the same shape."
+        )
+
+    # Note: during testing, it took ~1.2 sec to construct the interpolator,
+    # vs. ~0.0001 sec to interpolate each point. So, it is preferred to pass in
+    # entire arrays to be interpolated
+
+    # Create an interpolator function
+    interpolator = RegularGridInterpolator(
+        (height_coordinates, y_coordinates, x_coordinates),
+        data,
+        method=method,
+        bounds_error=False,
+        fill_value=np.nan,
+    )
+
+    points = np.column_stack(
+        (
+            h_vals_of_points.ravel(),
+            y_vals_of_points.ravel(),
+            x_vals_of_points.ravel(),
+        )
+    )
+
+    # Perform interpolation
+    interpolated_values = interpolator(points)
+
+    # Reshape the x the scalar values of the interpolated points
+    return interpolated_values.reshape(x_vals_of_points.shape)
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

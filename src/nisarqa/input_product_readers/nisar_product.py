@@ -596,6 +596,22 @@ class NisarProduct(ABC):
         """
         return "A" if "A" in self.freqs else "B"
 
+    def ground_track_velocity(self) -> nisarqa.MetadataLUT3D:
+        """
+        Get the ground track velocity metadata cube.
+
+        Returns
+        -------
+        grd_trk_vel : nisarqa.MetadataLUT3D
+            The ground track velocity metadata cube.
+        """
+        grd_trk_path = "/".join(
+            [self._coordinate_grid_metadata_group_path, "groundTrackVelocity"]
+        )
+
+        with h5py.File(self.filepath, "r") as f:
+            return self._build_metadata_lut(f=f, ds_arr=f[grd_trk_path])
+
     def _check_product_type(self) -> None:
         """
         Sanity check for `self.product_type`.

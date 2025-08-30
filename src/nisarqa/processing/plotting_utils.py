@@ -214,9 +214,73 @@ def downsample_img_to_size_of_axes(
 
     See Also
     --------
+    nisarqa.compute_square_pixel_nlooks :
+        Function to compute the downsampling strides for an image array;
+        this function also accounts for making the pixels "square".
+    nisarqa.downsample_img_to_size_of_axes_with_stride :
+        Same as this function, but also returns the stride used for
+        decimation or multilooking.
+    """
+    arr, _ = downsample_img_to_size_of_axes_with_stride(
+        ax=ax, arr=arr, mode=mode
+    )
+    return arr
+
+
+def downsample_img_to_size_of_axes_with_stride(
+    ax: mpl.axes.Axes, arr: np.ndarray, mode: str = "decimate"
+) -> tuple[np.ndarray, int]:
+    """
+    Downsample array to size of axes and also return the stride.
+
+    This is helpful for use with `interpolation='none'`.
+
+    In Matplotlib, setting `interpolation='none'` is useful for creating crisp
+    images in e.g. output PDFs. However, when an image array is very large,
+    this setting causes the generated plots (and the PDFs they're saved to)
+    to be very large in size (potentially several hundred MB).
+
+    This function is designed to downsample a large image array to have X and Y
+    dimensions appropriate for the size of the given axes object.
+    It maintains the same aspect ratio as the source image array.
+
+    Parameters
+    ----------
+    ax : matplotlib.axes.Axes
+        Axes object. The window extent and other properties of this axes
+        will be used to compute the downsampling factor for the image array.
+    arr : numpy.ndarray
+        The (image) array to be downsampled.
+    mode : str, optional
+        Downsampling algorithm. One of:
+            "decimate" : (default) Pure decimation. For example, if the
+                downsampling stride is determined to be `3`, then every 3rd row
+                and 3rd column will be extracted to form the downsampled image.
+            "multilook" : Naive, unweighted multilooking. For example,
+                if the downsampling stride is determined to be `3`,
+                then every 3-by-3 window (9 pixels total) will be averaged
+                to form the output pixel.
+                Note that if any of those 9 input pixels is NaN, then the
+                output pixel will be NaN.
+
+    Returns
+    -------
+    out_arr : numpy.ndarry
+        Copy of `arr` that has been downsampled along the first two dimensions
+        so that the number of pixels in the X and Y dimensions
+        approximately fits "nicely" in the window extent of the given axes.
+        If the image is smaller than the axes, no downsampling will occur.
+    stride : int
+        The stride used for performing decimation or multilooking (per `mode`)
+        in both the X and Y directions.
+
+    See Also
+    --------
     nisarqa.compute_square_pixel_nlooks : Function to compute the downsampling
         strides for an image array;
         this function also accounts for making the pixels "square".
+    nisarqa.downsample_img_to_size_of_axes :
+        Wrapper around this function, but does not return the stride.
     """
     fig = ax.get_figure()
 
@@ -253,9 +317,9 @@ def downsample_img_to_size_of_axes(
 
     # Downsample to the correct size along the X and Y directions.
     if mode == "decimate":
-        return arr[::stride, ::stride]
+        return arr[::stride, ::stride], stride
     elif mode == "multilook":
-        return nisarqa.multilook(arr=arr, nlooks=(stride, stride))
+        return nisarqa.multilook(arr=arr, nlooks=(stride, stride)), stride
     else:
         raise ValueError(
             f"`{mode=}`, only 'decimate' and 'multilook' supported."
