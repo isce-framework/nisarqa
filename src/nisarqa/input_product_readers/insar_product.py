@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 
 import h5py
+import isce3
 
 import nisarqa
 
@@ -202,6 +203,95 @@ class InsarProduct(NisarProduct):
                 ds_data=list_of_pols,
                 ds_description=f"Polarizations for Frequency {freq}.",
             )
+
+    def get_orbit(self, ref_or_sec: str) -> isce3.core.Orbit:
+        """
+        Get the orbit of the specified input RSLC for the input granule.
+
+        Parameters
+        ----------
+        ref_or_sec : {"reference", "secondary"}
+            InSAR granules are generated from two input RSLC granules,
+            referred to as the "reference RSLC" and the "secondary RSLC".
+            Specifiying "reference" will return the Orbit for the
+            reference RSLC, and  specifying "secondary" will
+            return the Orbit for the secondary RSLC.
+
+        Returns
+        -------
+        orbit : isce3.core.Orbit
+            The Orbit for the requested reference or secondary RSLC.
+        """
+
+        if ref_or_sec not in ("reference", "secondary"):
+            raise ValueError(
+                f"{ref_or_sec=}, must be either 'reference' or 'secondary'."
+            )
+
+        orbit_path = "/".join([self._metadata_group_path, "orbit", ref_or_sec])
+        with h5py.File(self.filepath, "r") as f:
+            try:
+                orbit_grp = f[orbit_path]
+            except KeyError as e:
+                if nisarqa.Version.from_string(
+                    self.product_spec_version
+                ) < nisarqa.Version.from_string("1.1.1"):
+                    # Prior to product specs 1.1.1, InSAR products contained
+                    # only one orbit group (the orbit for the reference RSLC).
+                    if ref_or_sec == "secondary":
+                        raise ValueError(
+                            "Input granule only contains one orbit group which"
+                            " corresponds to the reference RSLC, but the orbit"
+                            " for the secondary RSLC was requested."
+                        )
+                    orbit_path = "/".join([self._metadata_group_path, "orbit"])
+                    orbit_grp = f[orbit_path]
+                else:
+                    raise
+            orbit = isce3.core.load_orbit_from_h5_group(orbit_grp)
+
+        return orbit
+
+    def center_freq(self, freq: str) -> float:
+        """
+        The center frequency for input product's Frequency `freq`.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        center_freq : float
+            The center frequency for input product's Frequency `freq`, in hertz.
+        """
+        center_freq_path = f"{self.get_freq_path(freq=freq)}/centerFrequency"
+        with h5py.File(self.filepath, "r") as f:
+            center_freq = f[center_freq_path][...]
+
+        return center_freq
+
+    def wavelength(self, freq: str) -> float:
+        """
+        The wavelength for input product's Frequency `freq`.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        wavelength : float
+            The wavelength for input product's Frequency `freq`, in meters.
+        """
+        # Wavelength can be inferred from the centerFrequency dataset
+        # centerFrequency is in units of hertz
+        center_freq = self.center_freq(freq=freq)
+
+        # wavelength = <speed of light> / centerFrequency
+        return isce3.core.speed_of_light / center_freq
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

@@ -875,4 +875,62 @@ def get_global_scratch_dir() -> Path:
     return set_global_scratch_dir._scratch_dir
 
 
+def get_ground_track_velocity(
+    target_pos_ecef: tuple[float, float, float],
+    platform_pos_ecef: tuple[float, float, float],
+    platform_vel_ecef: tuple[float, float, float],
+) -> float:
+    """
+    Get the beam footprint velocity at the target location.
+
+    Parameters
+    ----------
+    target_pos_ecef : (float, float, float)
+        The position of the target on the ground, in ECEF coordinates,
+        with distances in meters.
+    platform_pos_ecef : (float, float, float)
+        The position of the radar platform, in ECEF coordinates, with
+        distances in meters.
+    platform_vel_ecef : (float, float, float)
+        The velocity of the radar platform, in meters per second, in
+        the same coordinate system as `platform_pos_ecef`.
+
+    Returns
+    -------
+    float
+        The effective velocity of the radar beam footprint on the
+        ground at the target location, in meters per second.
+
+    Notes
+    -----
+    This algorithm is based upon the computation of ground track velocity
+    metadata cubes in ISCE3.
+    See:
+      * https://github.com/isce-framework/isce3/blob/89f94c90b2b5e5df4c10c84835aba9f397898150/cxx/isce3/geometry/metadataCubes.cpp#L125-L136
+      * https://github-fn.jpl.nasa.gov/isce-3/isce/pull/1369#issue-11641
+      * https://github-fn.jpl.nasa.gov/isce-3/isce/pull/1369#issuecomment-18911
+    """
+    # Geocentric radius of target and platform.
+    r_target = np.linalg.norm(target_pos_ecef)
+    r_platform = np.linalg.norm(platform_pos_ecef)
+
+    # Target-to-platform distance.
+    slant_range = np.linalg.norm(target_pos_ecef - platform_pos_ecef)
+
+    # Compute the cosine of an angle in a triangle whose adjacent
+    # side lengths are `a` and `b`, and whose opposite side length
+    # is `c`, using the Law of Cosines.
+    def law_of_cosines(a: float, b: float, c: float) -> float:
+        return (a**2 + b**2 - c**2) / (2.0 * a * b)
+
+    # Scale the ground track velocity computation by cosine of the
+    # off-nadir angle of the target (see
+    # https://github-fn.jpl.nasa.gov/isce-3/isce/pull/1369#issuecomment-18911).
+    cos_alpha = law_of_cosines(r_target, r_platform, slant_range)
+
+    platform_speed = np.linalg.norm(platform_vel_ecef)
+
+    return cos_alpha * platform_speed * r_target / r_platform
+
+
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, field, fields
 from functools import cached_property
 from typing import Any, Optional, Sequence, overload
 
@@ -320,7 +320,168 @@ class SARRaster(Raster, ABC):
 
 
 @dataclass
-class RadarRaster(SARRaster):
+class CoordinateGrid:
+    """Abstract Base Class for raster grid dataclasses."""
+
+    @property
+    @abstractmethod
+    def x_posting(self):
+        """Posting in X direction of raster grid."""
+        pass
+
+    @property
+    @abstractmethod
+    def x_pixel_centers(self):
+        """
+        1D vector of the raster grid's pixel center locations in X direction.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def y_posting(self):
+        """
+        Posting in Y direction of raster grid.
+
+        Note: For NISAR L2 products, the y-coordinate posting of the
+        coordinate grid is negative (the positive y-axis points up in QA plots).
+        For NISAR L1 products (i.e. radar grids), the y-coordinate posting
+        is positive (the positive y-axis points down in QA plots).
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def y_pixel_centers(self):
+        """
+        1D vector of the raster grid's pixel center locations in Y direction.
+        """
+        pass
+
+
+@dataclass
+class RadarGrid(CoordinateGrid):
+    """
+    Uniformly-spaced 2D grid in radar (azimuth time, slant range) coordinates.
+
+    The attributes specified here are based on the needs of the QA code
+    for generating and labeling plots, etc.
+
+    Parameters
+    ----------
+    zero_doppler_time : numpy.ndarray
+        1D vector of zero Doppler azimuth times (in seconds) measured relative
+        to a UTC epoch. These correspond to the center of each pixel
+        of the raster grid in the Y direction.
+    zero_doppler_time_spacing : float
+        Time interval in the along-track direction of the raster, in seconds.
+        This is same as the spacing between consecutive entries in the
+        `zero_doppler_time` array.
+    slant_range : numpy.ndarray
+        1D vector of the slant range values (in meters), corresponding to
+        the center of each pixel of the raster grid in the X direction.
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
+        consecutive samples in `slant_range` array.
+    ground_az_spacing : float
+        Scene center azimuth spacing of pixels of the grid, in meters.
+    ground_range_spacing : float
+        Scene center ground range spacing of pixels of the grid, in meters.
+    epoch : str
+        The reference epoch for time coordinates in the grid,
+        in the format 'YYYY-MM-DDTHH:MM:SS'
+
+    Attributes
+    ----------
+    az_start : float
+        The start time of the radar grid.
+        This corresponds to the upper edge of the top pixels.
+        Units: seconds since epoch
+    az_stop : float
+        The stopping time of the radar grid.
+        This corresponds to the lower side of the bottom pixels.
+        Units: seconds since epoch
+    rng_start : float
+        Start (near) range of the radar grid.
+        This corresponds to the left side of the left-most pixels.
+        Units: meters
+    rng_stop : float
+        End (far) range of the radar grid.
+        This corresponds to the right side of the right-most pixels.
+        Units: meters
+
+    Notes
+    -----
+    Provided initialization parameters will also be stored as attributes.
+    """
+
+    # Attributes of the input array
+    zero_doppler_time: np.ndarray
+    zero_doppler_time_spacing: float
+
+    slant_range: np.ndarray
+    slant_range_spacing: float
+
+    ground_az_spacing: float
+    ground_range_spacing: float
+
+    epoch: str
+
+    az_start: float = field(init=False)
+    az_stop: float = field(init=False)
+    rng_start: float = field(init=False)
+    rng_stop: float = field(init=False)
+
+    def __post_init__(self):
+
+        self.zero_doppler_time_spacing = float(self.zero_doppler_time_spacing)
+        self.slant_range_spacing = float(self.slant_range_spacing)
+        self.ground_az_spacing = float(self.ground_az_spacing)
+        self.ground_range_spacing = float(self.ground_range_spacing)
+
+        # Infer start and stop values
+
+        # For NISAR, radar-domain grids are referenced by the center of the
+        # pixel, so +/- half the distance of the pixel's side to capture
+        # the entire range.
+        self.az_start = (
+            float(self.zero_doppler_time[0])
+            - 0.5 * self.zero_doppler_time_spacing
+        )
+        self.az_stop = (
+            float(self.zero_doppler_time[-1])
+            + 0.5 * self.zero_doppler_time_spacing
+        )
+
+        # For NISAR, radar-domain grids are referenced by the center of the
+        # pixel, so +/- half the distance of the pixel's side to capture
+        # the entire range.
+        self.rng_start = (
+            float(self.slant_range[0]) - 0.5 * self.slant_range_spacing
+        )
+        self.rng_stop = (
+            float(self.slant_range[-1]) + 0.5 * self.slant_range_spacing
+        )
+
+    @property
+    def x_posting(self):
+        return self.slant_range_spacing
+
+    @property
+    def x_pixel_centers(self):
+        return self.slant_range
+
+    @property
+    def y_posting(self):
+        return self.zero_doppler_time_spacing
+
+    @property
+    def y_pixel_centers(self):
+        return self.zero_doppler_time
+
+
+@dataclass
+class RadarRaster(SARRaster, RadarGrid):
     """
     A Raster with attributes specific to Radar products.
 
@@ -350,43 +511,58 @@ class RadarRaster(SARRaster):
         name of the band for `img`, e.g. 'LSAR'
     freq : str
         name of the frequency for `img`, e.g. 'A' or 'B'
+    zero_doppler_time : numpy.ndarray
+        1D vector of zero Doppler azimuth times (in seconds) measured relative
+        to a UTC epoch. These correspond to the center of each pixel
+        of the raster grid in the X direction.
+    zero_doppler_time_spacing : float
+        Time interval in the along-track direction of the raster, in seconds.
+        This is same as the spacing between consecutive entries in the
+        `zero_doppler_time` array.
+    slant_range : numpy.ndarray
+        1D vector of the slant range values (in meters), corresponding to
+        the center of each pixel of the raster grid in the Y direction.
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
+        consecutive samples in slant_range array.
     ground_az_spacing : float
-        Azimuth spacing of pixels of input array
-        Units: meters
+        Scene center azimuth spacing of pixels of the grid, in meters.
+    ground_range_spacing : float
+        Scene center ground range spacing of pixels of the grid, in meters.
+    epoch : str
+        The reference epoch for time coordinates in the grid,
+        in the format 'YYYY-MM-DDTHH:MM:SS'.
+
+    Attributes
+    ----------
     az_start : float
-        The start time of the observation for this RSLC Raster.
+        The start time of the radar grid.
         This corresponds to the upper edge of the top pixels.
         Units: seconds since epoch
     az_stop : float
-        The stopping time of the observation for this RSLC Raster.
+        The stopping time of the radar grid.
         This corresponds to the lower side of the bottom pixels.
         Units: seconds since epoch
-    ground_range_spacing : float
-        Range spacing of pixels of input array.
-        Units: meters
     rng_start : float
-        Start (near) distance of the range of input array
+        Start (near) range of the radar grid.
         This corresponds to the left side of the left-most pixels.
         Units: meters
     rng_stop : float
-        End (far) distance of the range of input array
+        End (far) range of the radar grid.
         This corresponds to the right side of the right-most pixels.
         Units: meters
-    epoch : str
-        The start of the epoch for this observation,
-        in the format 'YYYY-MM-DD HH:MM:SS'
+
+    Notes
+    -----
+    Provided initialization parameters will also be stored as attributes.
     """
 
-    # Attributes of the input array
-    ground_az_spacing: float
-    az_start: float
-    az_stop: float
+    def __post_init__(self):
+        # Make sure to initialize the start and stop attributes
+        RadarGrid.__post_init__(self)
 
-    ground_range_spacing: float
-    rng_start: float
-    rng_stop: float
-
-    epoch: str
+        # Now, follow MRO for standard __post_init__
+        super().__post_init__()
 
     @property
     def y_axis_spacing(self):
@@ -414,7 +590,112 @@ class RadarRaster(SARRaster):
 
 
 @dataclass
-class GeoRaster(SARRaster):
+class GeoGrid(CoordinateGrid):
+    """
+    Uniformly-spaced 2D grid in geocoded (e.g. projected) coordinates.
+
+    The attributes specified here are based on the needs of the QA code
+    for generating and labeling plots, etc.
+
+    Parameters
+    ----------
+    epsg : int
+        The EPSG code of the coordinate system.
+    x_spacing : float
+        X posting of pixels of the grid, in units matching `x_coordinates`.
+    x_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the X direction, in the units of `epsg`.
+    y_spacing : float
+        Y posting of pixels of the grid, in units matching `y_coordinates`.
+        Note: For NISAR L2 products, the y-coordinate posting of the
+        coordinate grid is negative (the positive y-axis points up in QA plots).
+    y_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the Y direction, in the units of `epsg`.
+
+    Attributes
+    ----------
+    x_start : float
+        The starting (typically West) X position of the grid.
+        This corresponds to the left side of the left-most pixels.
+    x_stop : float
+        The stopping (typically East) X position of the grid.
+        This corresponds to the right side of the right-most pixels.
+    y_start : float
+        The starting (typically North) Y position of the grid.
+        This corresponds to the upper edge of the top pixels.
+    y_stop : float
+        The stopping (typically South) Y position of the grid.
+        This corresponds to the lower side of the bottom pixels.
+
+    Notes
+    -----
+    Provided initialization parameters will also be stored as attributes.
+    """
+
+    epsg: int
+
+    x_spacing: float
+    x_coordinates: np.ndarray
+
+    y_spacing: float
+    y_coordinates: np.ndarray
+
+    x_start: float = field(init=False)
+    x_stop: float = field(init=False)
+    y_start: float = field(init=False)
+    y_stop: float = field(init=False)
+
+    def __post_init__(self):
+        self.epsg = int(self.epsg)
+        self.x_spacing = float(self.x_spacing)
+        self.y_spacing = float(self.y_spacing)
+
+        # Infer start and stop values
+
+        # For NISAR, geocoded grids are referenced by the center
+        # of the pixel (different from GDAL conventions!). So add half
+        # of the pixels' spacing to get the grid's far edges.
+        # Note: `isce3.product.GeoGridParameters` adopts the GDAL convention
+        # of referencing by the upper-left corner of the pixel, but the
+        # NISAR L2 product writers construct `xCoordinates` and `yCoordinates`
+        # to refer to the location of the center of the pixels.
+        self.x_start = float(self.x_coordinates[0] - 0.5 * self.x_spacing)
+
+        self.x_stop = float(self.x_coordinates[-1] + 0.5 * self.x_spacing)
+
+        # TODO: There is an open an issue in QA to rename x_spacing and
+        # y_spacing to x_posting and y_posting, so that QA can consistently
+        # use "spacing" when referring to the (positive-valued) width of
+        # a pixel and "posting" when referring to the (positive- or
+        # negative-valued) stride between points in a grid.
+        # (The spacing is the absolute value of the posting.)
+        # That has not happened yet, so ensure that we have the absolute value.
+        y_spacing = abs(self.y_spacing)
+
+        self.y_start = float(self.y_coordinates[0] - 0.5 * y_spacing)
+        self.y_stop = float(self.y_coordinates[-1] + 0.5 * y_spacing)
+
+    @property
+    def x_posting(self):
+        return self.x_spacing
+
+    @property
+    def x_pixel_centers(self):
+        return self.x_coordinates
+
+    @property
+    def y_posting(self):
+        return self.y_spacing
+
+    @property
+    def y_pixel_centers(self):
+        return self.y_coordinates
+
+
+@dataclass
+class GeoRaster(SARRaster, GeoGrid):
     """
     A Raster with attributes specific to Geocoded products.
 
@@ -424,7 +705,7 @@ class GeoRaster(SARRaster):
     Parameters
     ----------
     data : array_like
-        Raster data to be stored.
+        Raster data to be stored, aka the input array.
     units : str
         The units of the data. If `data` is numeric but unitless (e.g ratios),
         by NISAR convention please use the string "1".
@@ -444,36 +725,47 @@ class GeoRaster(SARRaster):
         name of the band for `data`, e.g. 'LSAR'
     freq : str
         name of the frequency for `data`, e.g. 'A' or 'B'
+    epsg : int
+        The EPSG code of the coordinate system.
     x_spacing : float
-        X spacing of pixels (in meters) of input array.
+        X posting of pixels of the grid, in units matching `x_coordinates`.
+    x_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the X direction, in the units of `epsg`.
+    y_spacing : float
+        Y posting of pixels of the grid, in units matching `y_coordinates`.
+        Note: For NISAR L2 products, the y-coordinate posting of the
+        coordinate grid is negative (the positive y-axis points up in QA plots).
+    y_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the Y direction, in the units of `epsg`.
+
+    Attributes
+    ----------
     x_start : float
-        The starting (West) X position of the input array
+        The starting (typically West) X position of the grid.
         This corresponds to the left side of the left-most pixels.
     x_stop : float
-        The stopping (East) X position of the input array
+        The stopping (typically East) X position of the grid.
         This corresponds to the right side of the right-most pixels.
-    y_spacing : float
-        Y spacing of pixels (in meters) of input array
     y_start : float
-        The starting (North) Y position of the input array
+        The starting (typically North) Y position of the grid.
         This corresponds to the upper edge of the top pixels.
     y_stop : float
-        The stopping (South) Y position of the input array
+        The stopping (typically South) Y position of the grid.
         This corresponds to the lower side of the bottom pixels.
-    epsg : int
-        The EPSG code of the input raster.
+
+    Notes
+    -----
+    All initialization parameters will also be stored as attributes.
     """
 
-    # Attributes of the input array
-    x_spacing: float
-    x_start: float
-    x_stop: float
+    def __post_init__(self):
+        # Make sure to initialize the start and stop attributes
+        GeoGrid.__post_init__(self)
 
-    y_spacing: float
-    y_start: float
-    y_stop: float
-
-    epsg: int
+        # Now, follow MRO for standard __post_init__
+        super().__post_init__()
 
     @property
     def y_axis_spacing(self):
@@ -615,7 +907,7 @@ def compare_raster_metadata(raster1, raster2, almost_identical=True):
                     f" has value {r1_val}, but `raster2` has value {r2_val}."
                 )
         else:
-            if np.abs(r1_val - r2_val) > 1e-6:
+            if np.any(np.abs(r1_val - r2_val) > 1e-6):
                 raise ValueError(
                     f"Values do not match for `{field_name}` field. `raster1`"
                     f" has value {r1_val}, but `raster2` has value {r2_val}."
@@ -626,34 +918,126 @@ def decimate_raster_array_to_square_pixels(
     raster_obj: RadarRaster | GeoRaster,
 ) -> np.ndarray:
     """
-    Get *Raster's data array, decimated to square pixels in X and Y direction.
+    Decimate *Raster's data array to approx. square pixels in X and Y direction.
 
     Parameters
     ----------
     raster_obj : RadarRaster or GeoRaster
         *Raster object whose .data attribute will be read into memory
-        and decimated along the first two dimensions to square pixels.
+        and decimated along the first two dimensions to approx. square pixels.
 
     Returns
     -------
     out : numpy.ndarray
         Copy of raster_obj.data array that has been decimated along the
-        first two dimensions to have square pixels.
+        first two dimensions to have approx. square pixels.
     """
-    arr = raster_obj.data[...]
+    # Decimate to square pixels.
+    return decimate_array_to_square_pixels(
+        arr=np.asarray(raster_obj.data, copy=True),
+        y_axis_spacing=raster_obj.y_axis_spacing,
+        x_axis_spacing=raster_obj.x_axis_spacing,
+    )
+
+
+def decimate_raster_array_to_square_pixels_with_strides(
+    raster_obj: RadarRaster | GeoRaster,
+) -> tuple[np.ndarray, int, int]:
+    """
+    Decimate *Raster's data array to square pixels and also return strides.
+
+    Pixels will be approx. square in the X and Y direction.
+
+    Parameters
+    ----------
+    raster_obj : RadarRaster or GeoRaster
+        *Raster object whose .data attribute will be read into memory
+        and decimated along the first two dimensions to approx. square pixels.
+
+    Returns
+    -------
+    out : numpy.ndarray
+        Copy of raster_obj.data array that has been decimated along the
+        first two dimensions to have approx. square pixels.
+    ky, kx : int
+        The stride used for performing decimation in the Y and X directions,
+        respectively.
+    """
+    # Decimate to square pixels.
+    return decimate_array_to_square_pixels_with_strides(
+        arr=np.asarray(raster_obj.data, copy=True),
+        y_axis_spacing=raster_obj.y_axis_spacing,
+        x_axis_spacing=raster_obj.x_axis_spacing,
+    )
+
+
+def decimate_array_to_square_pixels(
+    arr: np.ndarray, y_axis_spacing: float, x_axis_spacing: float
+) -> np.ndarray:
+    """
+    Decimate array to approx. square pixels in X and Y direction.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array to be decimated along the first two dimensions to
+        approx. square pixels.
+    y_axis_spacing : float
+        Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+    x_axis_spacing : float
+        Pixel Spacing in X direction (range for range-Doppler rasters).
+
+    Returns
+    -------
+    out : numpy.ndarray
+        View of `arr` that has been decimated along the first two
+        dimensions to have approx. square pixels.
+    """
+    out, _, _ = decimate_array_to_square_pixels_with_strides(
+        arr=arr, y_axis_spacing=y_axis_spacing, x_axis_spacing=x_axis_spacing
+    )
+
+    return out
+
+
+def decimate_array_to_square_pixels_with_strides(
+    arr: np.ndarray, y_axis_spacing: float, x_axis_spacing: float
+) -> tuple[np.ndarray, int, int]:
+    """
+    Decimate array to approx. square pixels in X and Y direction.
+
+    Parameters
+    ----------
+    arr : np.ndarray
+        Input array to be decimated along the first two dimensions to
+        approx. square pixels.
+    y_axis_spacing : float
+        Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+    x_axis_spacing : float
+        Pixel Spacing in X direction (range for range-Doppler rasters).
+
+    Returns
+    -------
+    out : numpy.ndarray
+        View of `arr` that has been decimated along the first two
+        dimensions to have approx. square pixels.
+    ky, kx : int
+        The stride used for performing decimation in the Y and X directions,
+        respectively.
+    """
 
     ky, kx = nisarqa.compute_square_pixel_nlooks(
         img_shape=arr.shape[:2],
         sample_spacing=[
-            raster_obj.y_axis_spacing,
-            raster_obj.x_axis_spacing,
+            y_axis_spacing,
+            x_axis_spacing,
         ],
         # Only make square pixels. Use `max()` to not "shrink" the rasters.
         longest_side_max=max(arr.shape[:2]),
     )
 
     # Decimate to square pixels.
-    return arr[::ky, ::kx]
+    return arr[::ky, ::kx], ky, kx
 
 
 @dataclass
@@ -788,36 +1172,58 @@ class RadarRasterWithStats(RadarRaster, StatsMixin):
         Name of the band for `img`, e.g. 'LSAR'
     freq : str
         Name of the frequency for `img`, e.g. 'A' or 'B'
+    zero_doppler_time : numpy.ndarray
+        1D vector of zero Doppler azimuth times (in seconds) measured relative
+        to a UTC epoch. These correspond to the center of each pixel
+        of the raster grid in the X direction.
+    zero_doppler_time_spacing : float
+        Time interval in the along-track direction of the raster, in seconds.
+        This is same as the spacing between consecutive entries in the
+        `zero_doppler_time` array.
+    slant_range : numpy.ndarray
+        1D vector of the slant range values (in meters), corresponding to
+        the center of each pixel of the raster grid in the Y direction.
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
+        consecutive samples in slant_range array.
     ground_az_spacing : float
-        Azimuth spacing of pixels of input array
+        Scene center azimuth spacing of pixels of input array.
         Units: meters
+    ground_range_spacing : float
+        Scene center ground range spacing of pixels of input array.
+        Units: meters
+    epoch : str
+        The reference epoch for time coordinates in the grid,
+        in the format 'YYYY-MM-DDTHH:MM:SS'.
+    stats : nisarqa.RasterStats or nisarqa.ComplexRasterStats
+        Statistics of the `data` array.
+
+    Attributes
+    ----------
     az_start : float
-        The start time of the observation for this RSLC Raster.
+        The start time of the radar grid.
         This corresponds to the upper edge of the top pixels.
         Units: seconds since epoch
     az_stop : float
-        The stopping time of the observation for this RSLC Raster.
+        The stopping time of the radar grid.
         This corresponds to the lower side of the bottom pixels.
         Units: seconds since epoch
-    ground_range_spacing : float
-        Range spacing of pixels of input array.
-        Units: meters
     rng_start : float
-        Start (near) distance of the range of input array
+        Start (near) range of the radar grid.
         This corresponds to the left side of the left-most pixels.
         Units: meters
     rng_stop : float
-        End (far) distance of the range of input array
+        End (far) range of the radar grid.
         This corresponds to the right side of the right-most pixels.
         Units: meters
-    epoch : str
-        The start of the epoch for this observation,
-        in the format 'YYYY-MM-DD HH:MM:SS'
-    stats : nisarqa.RasterStats or nisarqa.ComplexRasterStats
-        Statistics of the `data` array.
     """
 
-    ...
+    def __post_init__(self):
+        # Initialize the start and stop attributes
+        RadarRaster.__post_init__(self)
+
+        # Now, follow MRO for standard __post_init__
+        super().__post_init__()
 
 
 @dataclass
@@ -848,27 +1254,45 @@ class GeoRasterWithStats(GeoRaster, StatsMixin):
         Name of the band for `img`, e.g. 'LSAR'
     freq : str
         Name of the frequency for `img`, e.g. 'A' or 'B'
+    epsg : int
+        The EPSG code of the coordinate system.
     x_spacing : float
-        X spacing of pixels (in meters) of input array.
-    x_start : float
-        The starting (West) X position of the input array
-        This corresponds to the left side of the left-most pixels.
-    x_stop : float
-        The stopping (East) X position of the input array
-        This corresponds to the right side of the right-most pixels.
+        X posting of pixels of the grid, in units matching `x_coordinates`.
+    x_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the X direction, in the units of `epsg`.
     y_spacing : float
-        Y spacing of pixels (in meters) of input array
-    y_start : float
-        The starting (North) Y position of the input array
-        This corresponds to the upper edge of the top pixels.
-    y_stop : float
-        The stopping (South) Y position of the input array
-        This corresponds to the lower side of the bottom pixels.
+        Y posting of pixels of the grid, in units matching `y_coordinates`.
+        Note: For NISAR L2 products, the y-coordinate posting of the
+        coordinate grid is negative (the positive y-axis points up in QA plots).
+    y_coordinates : numpy.ndarray
+        1D vector of the coordinate values of the center of each pixel
+        of the raster grid in the Y direction, in the units of `epsg`.
     stats : nisarqa.RasterStats or nisarqa.ComplexRasterStats
         Statistics of the `data` array.
+
+    Attributes
+    ----------
+    x_start : float
+        The starting (typically West) X position of the grid.
+        This corresponds to the left side of the left-most pixels.
+    x_stop : float
+        The stopping (typically East) X position of the grid.
+        This corresponds to the right side of the right-most pixels.
+    y_start : float
+        The starting (typically North) Y position of the grid.
+        This corresponds to the upper edge of the top pixels.
+    y_stop : float
+        The stopping (typically South) Y position of the grid.
+        This corresponds to the lower side of the bottom pixels.
     """
 
-    ...
+    def __post_init__(self):
+        # Initialize the start and stop attributes
+        GeoRaster.__post_init__(self)
+
+        # Now, follow MRO for standard __post_init__
+        super().__post_init__()
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

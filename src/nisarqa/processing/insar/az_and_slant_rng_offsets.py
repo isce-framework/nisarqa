@@ -115,11 +115,26 @@ def process_az_and_slant_rg_offsets_from_offset_product(
             freq=freq, pol=pol, layer_num=layer_num
         ) as rg_off,
     ):
+
+        proj_params = {}
+        if isinstance(az_off, nisarqa.GeoRaster):
+            # Construct the `proj_params` object. This will trigger
+            # downstream functions to modify the quiver arrows for the
+            # input product's projected coordinates.
+            proj_params["quiver_projection_params"] = (
+                nisarqa.ParamsForAzRgOffsetsToProjected(
+                    orbit=product.get_orbit(ref_or_sec="reference"),
+                    wavelength=product.wavelength(freq=freq),
+                    look_side=product.look_direction,
+                )
+            )
+
         y_dec, x_dec = plot_single_quiver_plot_to_png(
             az_offset=az_off,
             rg_offset=rg_off,
             params=params_quiver,
             png_filepath=browse_png,
+            **proj_params,
         )
 
         nisarqa.create_dataset_in_h5group(
@@ -162,6 +177,7 @@ def process_az_and_slant_rg_offsets_from_offset_product(
                         rg_offset=rg_off,
                         params=params_quiver,
                         report_pdf=report_pdf,
+                        **proj_params,
                     )
 
                 # Add final colorbar range processing parameter for this
@@ -321,7 +337,10 @@ def plot_range_and_az_offsets_to_pdf(az_offset, rg_offset, report_pdf):
         figsize=nisarqa.FIG_SIZE_TWO_PLOTS_PER_PAGE,
         sharey=True,
     )
-    fig.suptitle("Along Track Offsets and Slant Range Offsets (meters)")
+    title = "Along Track Offsets and Slant Range Offsets (meters)"
+    if isinstance(az_offset, nisarqa.GeoRaster):
+        title = "Geocoded " + title
+    fig.suptitle(title)
 
     # Decimate Along Track Offset raster and plot on left (ax1)
     az_img = downsample_img_to_size_of_axes(ax=ax1, arr=az_img, mode="decimate")

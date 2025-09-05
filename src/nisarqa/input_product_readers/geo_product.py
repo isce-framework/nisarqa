@@ -185,17 +185,12 @@ class NisarGeoProduct(NisarProduct):
         x_spacing = float(h5_file[path][...])
         kwargs["x_spacing"] = x_spacing
 
-        # X in meters (units are specified as meters in the product spec)
-        # For NISAR, geocoded grids are referenced by the upper-left corner
-        # of the pixel to match GDAL conventions. So add the distance of
-        # the pixel's side to far right side to get the actual stop value.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="xCoordinates",
         )
-        kwargs["x_start"] = float(h5_file[path][0])
-        kwargs["x_stop"] = float(h5_file[path][-1]) + x_spacing
+        kwargs["x_coordinates"] = h5_file[path][...]
 
         # From the xml Product Spec, yCoordinateSpacing is the
         # 'Nominal spacing in meters between consecutive lines'
@@ -207,17 +202,12 @@ class NisarGeoProduct(NisarProduct):
         y_spacing = float(h5_file[path][...])
         kwargs["y_spacing"] = y_spacing
 
-        # Y in meters (units are specified as meters in the product spec)
-        # For NISAR, geocoded grids are referenced by the upper-left corner
-        # of the pixel to match GDAL conventions. So add the distance of
-        # the pixel's side to bottom to get the actual stop value.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="yCoordinates",
         )
-        kwargs["y_start"] = float(h5_file[path][0])
-        kwargs["y_stop"] = float(h5_file[path][-1]) + y_spacing
+        kwargs["y_coordinates"] = h5_file[path][...]
 
         # Construct Name
         kwargs["name"] = self._get_raster_name(raster_path)

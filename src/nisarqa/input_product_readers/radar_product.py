@@ -199,18 +199,19 @@ class NisarRadarProduct(NisarProduct):
         ground_az_spacing = h5_file[path][...]
         kwargs["ground_az_spacing"] = ground_az_spacing
 
-        # Get Azimuth (y-axis) tick range + label
-        # path in HDF5 file: /science/LSAR/RSLC/swaths/zeroDopplerTime
-        # For NISAR, radar-domain grids are referenced by the center of the
-        # pixel, so +/- half the distance of the pixel's side to capture
-        # the entire range.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="zeroDopplerTime",
         )
-        kwargs["az_start"] = float(h5_file[path][0]) - 0.5 * ground_az_spacing
-        kwargs["az_stop"] = float(h5_file[path][-1]) + 0.5 * ground_az_spacing
+        kwargs["zero_doppler_time"] = h5_file[path][...]
+
+        path = _get_path_to_nearest_dataset(
+            h5_file=h5_file,
+            starting_path=raster_path,
+            dataset_to_find="zeroDopplerTimeSpacing",
+        )
+        kwargs["zero_doppler_time_spacing"] = h5_file[path][...]
 
         # Use zeroDopplerTime's units attribute to get the epoch.
         kwargs["epoch"] = self._get_epoch(ds=h5_file[path])
@@ -227,20 +228,19 @@ class NisarRadarProduct(NisarProduct):
         kwargs["ground_range_spacing"] = ground_range_spacing
 
         # Range in meters (units are specified as meters in the product spec)
-        # For NISAR, radar-domain grids are referenced by the center of the
-        # pixel, so +/- half the distance of the pixel's side to capture
-        # the entire range.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="slantRange",
         )
-        kwargs["rng_start"] = (
-            float(h5_file[path][0]) - 0.5 * ground_range_spacing
+        kwargs["slant_range"] = h5_file[path][...]
+
+        path = _get_path_to_nearest_dataset(
+            h5_file=h5_file,
+            starting_path=raster_path,
+            dataset_to_find="slantRangeSpacing",
         )
-        kwargs["rng_stop"] = (
-            float(h5_file[path][-1]) + 0.5 * ground_range_spacing
-        )
+        kwargs["slant_range_spacing"] = h5_file[path][...]
 
         # Construct Name
         kwargs["name"] = self._get_raster_name(raster_path)
