@@ -771,7 +771,54 @@ class GUNWCohMagLayerParamGroup(Threshold99ParamGroup):
 
 
 @dataclass(frozen=True)
-class RUNWIonoPhaseScreenParamGroup(ZeroIsValidThresholdParamGroup):
+class IonoPhaseScreenParamGroup(ZeroIsValidThresholdParamGroup):
+    """
+    Parameters to ionosphere phase screen image in the report PDF.
+
+    Parameters
+    ----------
+    nan_threshold, inf_threshold, fill_threshold, near_zero_threshold,
+        total_invalid_threshold : float, optional
+        Threshold values for alerting users to possible malformed datasets.
+        See `ThresholdParamGroup` docstring for complete description.
+        Default for Inf threshold:
+            `nisarqa.STATISTICS_THRESHOLD_PERCENTAGE`.
+        Default for NaN, fill, near-zero, and total invalid thresholds: -1.
+    epsilon : float, optional
+        Absolute tolerance for determining if a raster pixel is 'almost zero'.
+        Defaults to 1e-6.
+    zero_is_invalid: bool, optional
+        True if near-zero pixels should be counted towards the
+        total number of invalid pixels. False to exclude them.
+        If False, consider setting `near_zero_threshold` to -1.
+        Note: Fill values are always considered invalid. So, if a raster's
+        fill value is zero, then zeros will still be included in the total.
+        Defaults to False.
+    """
+
+    # The InSAR team decided that when the coherence is very low, then the
+    # InSAR workflow would set all pixels in the ionosphere phase screen layer
+    # to NaN. (Per the science team request, they did not set to zero
+    # because zero is a valid value.)
+    # So, default the relevant thresholds to -1 so that QA does not raise a
+    # fatal exception for that case.
+    nan_threshold: float = ThresholdParamGroup.get_field_with_updated_default(
+        param_name="nan_threshold", default=-1
+    )
+
+    fill_threshold: float = ThresholdParamGroup.get_field_with_updated_default(
+        param_name="fill_threshold", default=-1
+    )
+
+    total_invalid_threshold: float = (
+        ThresholdParamGroup.get_field_with_updated_default(
+            param_name="total_invalid_threshold", default=-1
+        )
+    )
+
+
+@dataclass(frozen=True)
+class RUNWIonoPhaseScreenParamGroup(IonoPhaseScreenParamGroup):
     @staticmethod
     def get_path_to_group_in_runconfig():
         return [
@@ -785,7 +832,7 @@ class RUNWIonoPhaseScreenParamGroup(ZeroIsValidThresholdParamGroup):
 
 
 @dataclass(frozen=True)
-class GUNWIonoPhaseScreenParamGroup(ZeroIsValidThreshold99ParamGroup):
+class GUNWIonoPhaseScreenParamGroup(IonoPhaseScreenParamGroup):
     @staticmethod
     def get_path_to_group_in_runconfig():
         return [
