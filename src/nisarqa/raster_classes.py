@@ -924,7 +924,7 @@ def decimate_raster_array_to_square_pixels(
     """
     # Decimate to square pixels.
     return decimate_array_to_square_pixels(
-        arr=np.asarray(raster_obj.data, copy=True),
+        arr=np.array(raster_obj.data, copy=True),
         y_axis_spacing=raster_obj.y_axis_spacing,
         x_axis_spacing=raster_obj.x_axis_spacing,
     )
@@ -955,7 +955,7 @@ def decimate_raster_array_to_square_pixels_with_strides(
     """
     # Decimate to square pixels.
     return decimate_array_to_square_pixels_with_strides(
-        arr=np.asarray(raster_obj.data, copy=True),
+        arr=np.array(raster_obj.data, copy=True),
         y_axis_spacing=raster_obj.y_axis_spacing,
         x_axis_spacing=raster_obj.x_axis_spacing,
     )
