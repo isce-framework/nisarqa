@@ -771,29 +771,16 @@ class GUNWCohMagLayerParamGroup(Threshold99ParamGroup):
 
 
 @dataclass(frozen=True)
-class IonoPhaseScreenParamGroup(ZeroIsValidThresholdParamGroup):
+class IonoPhaseScreenParamGroupMixin:
     """
-    Parameters to ionosphere phase screen image in the report PDF.
+    Mixin for the ionosphere phase screen image in the report PDF.
 
     Parameters
     ----------
-    nan_threshold, inf_threshold, fill_threshold, near_zero_threshold,
-        total_invalid_threshold : float, optional
+    nan_threshold, fill_threshold, total_invalid_threshold : float, optional
         Threshold values for alerting users to possible malformed datasets.
         See `ThresholdParamGroup` docstring for complete description.
-        Default for Inf threshold:
-            `nisarqa.STATISTICS_THRESHOLD_PERCENTAGE`.
-        Default for NaN, fill, near-zero, and total invalid thresholds: -1.
-    epsilon : float, optional
-        Absolute tolerance for determining if a raster pixel is 'almost zero'.
-        Defaults to 1e-6.
-    zero_is_invalid: bool, optional
-        True if near-zero pixels should be counted towards the
-        total number of invalid pixels. False to exclude them.
-        If False, consider setting `near_zero_threshold` to -1.
-        Note: Fill values are always considered invalid. So, if a raster's
-        fill value is zero, then zeros will still be included in the total.
-        Defaults to False.
+        Default for NaN, fill, and total invalid thresholds: -1.
     """
 
     # The InSAR team decided that when the coherence is very low, then the
@@ -817,8 +804,14 @@ class IonoPhaseScreenParamGroup(ZeroIsValidThresholdParamGroup):
     )
 
 
+# The dataclass decorator adds fields in reverse MRO order.
+# So, inherit from the mixin first, in order to override the fields
+# from the second parent class.
+# Source: https://peps.python.org/pep-0557/#inheritance
 @dataclass(frozen=True)
-class RUNWIonoPhaseScreenParamGroup(IonoPhaseScreenParamGroup):
+class RUNWIonoPhaseScreenParamGroup(
+    IonoPhaseScreenParamGroupMixin, ZeroIsValidThresholdParamGroup
+):
     @staticmethod
     def get_path_to_group_in_runconfig():
         return [
@@ -831,8 +824,14 @@ class RUNWIonoPhaseScreenParamGroup(IonoPhaseScreenParamGroup):
         ]
 
 
+# The dataclass decorator adds fields in reverse MRO order.
+# So, inherit from the mixin first, in order to override the fields
+# from the second parent class.
+# Source: https://peps.python.org/pep-0557/#inheritance
 @dataclass(frozen=True)
-class GUNWIonoPhaseScreenParamGroup(IonoPhaseScreenParamGroup):
+class GUNWIonoPhaseScreenParamGroup(
+    IonoPhaseScreenParamGroupMixin, ZeroIsValidThreshold99ParamGroup
+):
     @staticmethod
     def get_path_to_group_in_runconfig():
         return [
