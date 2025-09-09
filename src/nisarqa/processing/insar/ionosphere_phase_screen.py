@@ -68,19 +68,10 @@ def process_ionosphere_phase_screen(
                     params=params_iono_phs_uncert,
                 )
 
-                # -1 : user does not want to fail if raster is all-NaN
-                # 100 : user does not want to fail if raster is 100% NaN
-                iono_phs_thresh = params_iono_phs_screen.nan_threshold
-                fail_if_all_nan = not (
-                    np.isclose(iono_phs_thresh, 100.0, atol=1e-6, rtol=0.0)
-                    or np.isclose(iono_phs_thresh, -1, atol=1e-6, rtol=0.0)
-                )
-
                 plot_ionosphere_phase_screen_to_pdf(
                     iono_raster=iono_phs,
                     iono_uncertainty_raster=iono_uncertainty,
                     report_pdf=report_pdf,
-                    fail_if_all_nan=fail_if_all_nan,
                 )
 
                 # Plot Histograms
@@ -101,7 +92,6 @@ def plot_ionosphere_phase_screen_to_pdf(
     iono_raster: nisarqa.RadarRaster,
     iono_uncertainty_raster: nisarqa.RadarRaster,
     report_pdf: PdfPages,
-    fail_if_all_nan: bool,
 ) -> None: ...
 
 
@@ -110,7 +100,6 @@ def plot_ionosphere_phase_screen_to_pdf(
     iono_raster: nisarqa.GeoRaster,
     iono_uncertainty_raster: nisarqa.GeoRaster,
     report_pdf: PdfPages,
-    fail_if_all_nan: bool,
 ) -> None: ...
 
 
@@ -118,7 +107,6 @@ def plot_ionosphere_phase_screen_to_pdf(
     iono_raster,
     iono_uncertainty_raster,
     report_pdf,
-    fail_if_all_nan=True,
 ):
     """
     Create and append plots of ionosphere phase screen and uncertainty to PDF.
@@ -137,14 +125,6 @@ def plot_ionosphere_phase_screen_to_pdf(
         correspond to `iono_raster`.
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output PDF file to append the offsets plots to.
-    fail_if_all_nan : bool, optional
-        True if the ionosphere phase screen layer is not expected to
-        contain all NaN values. If True, and if that layer is all NaN,
-        then a ValueError will be raised.
-        False if it is expected that the ionosphere phase screen layer
-        may contain all NaN values, and it should still be plotted.
-        Note: this does not affect the handling of the ionosphere phase
-        screen uncertainty layer.
 
     Notes
     -----
@@ -190,8 +170,9 @@ def plot_ionosphere_phase_screen_to_pdf(
     iono_arr_min = np.nanmin(iono_arr)
     iono_arr_max = np.nanmax(iono_arr)
     if np.isnan(iono_arr_min) and np.isnan(iono_arr_max):
-        if fail_if_all_nan:
-            raise ValueError("`iono_raster.data` contains all NaN values.")
+        nisarqa.get_logger().warning(
+            "The ionosphere phase screen layer contains all NaN values."
+        )
     else:
         assert iono_arr_min >= (-np.pi - epsilon)
         assert iono_arr_max <= (np.pi + epsilon)
