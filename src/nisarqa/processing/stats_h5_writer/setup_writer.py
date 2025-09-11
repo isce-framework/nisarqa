@@ -236,7 +236,7 @@ def copy_src_runconfig_to_stats_h5(
         ds_data=contents,
         ds_description=(
             "Contents of the run configuration file associated with the"
-            "processing of the source data"
+            " processing of the source data"
         ),
     )
 

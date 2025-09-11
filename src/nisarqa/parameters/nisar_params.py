@@ -1477,7 +1477,7 @@ class RootParamGroup(ABC):
             ds_data=self.get_final_user_runconfig(),
             ds_description=(
                 "Contents of the run configuration file with parameters used"
-                " for processing"
+                " for QA processing"
             ),
             ds_units=None,
         )
