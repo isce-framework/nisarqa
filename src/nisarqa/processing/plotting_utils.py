@@ -296,7 +296,7 @@ def downsample_img_to_size_of_axes_with_stride(
 
         if src_arr_height <= desired_longest:
             # input array is smaller than window extent. No downsampling needed.
-            return arr
+            return arr, 1
 
         # Use floor division. (Better to have resolution that is *slightly*
         # better than the axes size, rather than the image being too small
@@ -310,7 +310,7 @@ def downsample_img_to_size_of_axes_with_stride(
 
         if src_arr_width <= desired_longest:
             # input array is smaller than window extent. No downsampling needed.
-            return arr
+            return arr, 1
 
         # Use floor division. See explanation above.)
         stride = int(src_arr_width / desired_longest)
