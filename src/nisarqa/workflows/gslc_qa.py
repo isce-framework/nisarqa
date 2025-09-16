@@ -40,8 +40,6 @@ def gslc_qa(
     # variables will be used.
     input_file = root_params.input_f.qa_input_file
     out_dir = root_params.get_output_dir()
-    browse_file_png = out_dir / root_params.get_browse_png_filename()
-    browse_file_kml = out_dir / root_params.get_kml_browse_filename()
     report_file = out_dir / root_params.get_report_pdf_filename()
     stats_file = out_dir / root_params.get_stats_h5_filename()
     summary_file = out_dir / root_params.get_summary_csv_filename()
@@ -59,7 +57,6 @@ def gslc_qa(
         product = nisarqa.GSLC(
             filepath=input_file,
             use_cache=root_params.software_config.use_cache,
-            # prime_the_cache=True,  # we analyze all images, so prime the cache
         )
     except:
         # Input product could not be opened via the product reader.
@@ -129,15 +126,6 @@ def gslc_qa(
         if root_params.workflows.qa_reports:
             log.info(f"Beginning `qa_reports` processing...")
 
-            log.info(f"Beginning processing of browse KML...")
-            nisarqa.write_latlonquad_to_kml(
-                llq=product.get_browse_latlonquad(),
-                output_dir=root_params.get_output_dir(),
-                kml_filename=root_params.get_kml_browse_filename(),
-                png_filename=root_params.get_browse_png_filename(),
-            )
-            log.info(f"Browse image kml file saved to {browse_file_kml}")
-
             with h5py.File(stats_file, mode="r+") as stats_h5:
 
                 input_raster_represents_power = False
@@ -145,7 +133,7 @@ def gslc_qa(
                     r"GSLC Backscatter Coefficient ($\beta^0$)"
                 )
 
-                # Generate the GSLC Power Image and Browse Image
+                # Generate the GSLC Power Image and Browse Image PNG + KML
                 nisarqa.process_backscatter_imgs_and_browse(
                     product=product,
                     params=root_params.backscatter_img,
@@ -153,10 +141,11 @@ def gslc_qa(
                     report_pdf=report_pdf,
                     plot_title_prefix=name_of_backscatter_content,
                     input_raster_represents_power=input_raster_represents_power,
-                    browse_filename=browse_file_png,
+                    out_dir=out_dir,
+                    browse_filename=root_params.get_browse_png_filename(),
+                    kml_filename=root_params.get_kml_browse_filename(),
                 )
                 log.info("Processing of Backscatter images complete.")
-                log.info(f"Browse image PNG file saved to {browse_file_png}")
 
                 # Generate the GSLC Power and Phase Histograms
                 nisarqa.process_backscatter_and_phase_histograms(
