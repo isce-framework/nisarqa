@@ -177,13 +177,21 @@ class NisarGeoProduct(NisarProduct):
 
         # From the xml Product Spec, xCoordinateSpacing is the
         # 'Nominal spacing in meters between consecutive pixels'
+
+        # However, this is a slight misnomer. "Spacing" refers to the
+        # (positive-valued) width of a pixel while "posting" refers to
+        # the (positive- or negative-valued) stride between points in a grid.
+        # (The spacing is the absolute value of the posting.)
+
+        # For NISAR L2 products, `xCoordinateSpacing` is actually the
+        # x-coordinate posting.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="xCoordinateSpacing",
         )
-        x_spacing = float(h5_file[path][...])
-        kwargs["x_spacing"] = x_spacing
+        x_posting = float(h5_file[path][...])
+        kwargs["x_axis_posting"] = x_posting
 
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
@@ -193,14 +201,19 @@ class NisarGeoProduct(NisarProduct):
         kwargs["x_coordinates"] = h5_file[path][...]
 
         # From the xml Product Spec, yCoordinateSpacing is the
-        # 'Nominal spacing in meters between consecutive lines'
+        # 'Nominal spacing in meters between consecutive lines'.
+
+        # For NISAR L2 products, `yCoordinateSpacing` is actually the
+        # y-coordinate posting; the y-coordinate posting of the coordinate
+        # grid is negative (the positive y-axis points up in QA plots).
+
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="yCoordinateSpacing",
         )
-        y_spacing = float(h5_file[path][...])
-        kwargs["y_spacing"] = y_spacing
+        y_posting = float(h5_file[path][...])
+        kwargs["y_axis_posting"] = y_posting
 
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,

@@ -101,7 +101,7 @@ def run_rslc_pta_tool(
                             h5_file=stats_h5,
                             grp_path=freq_group_path,
                             ds_name="slantRangeSpacing",
-                            ds_data=rslc.get_slant_range_spacing(freq),
+                            ds_data=rslc.get_slant_range_posting(freq),
                             ds_description="Slant range spacing of grid",
                             ds_units="meters",
                         )
@@ -208,7 +208,7 @@ def run_gslc_pta_tool(
                             h5_file=stats_h5,
                             grp_path=freq_group_path,
                             ds_name="xCoordinateSpacing",
-                            ds_data=raster.x_spacing,
+                            ds_data=raster.x_posting,
                             ds_description=descr,
                             ds_units="meters",
                         )
@@ -217,7 +217,7 @@ def run_gslc_pta_tool(
                             h5_file=stats_h5,
                             grp_path=freq_group_path,
                             ds_name="yCoordinateSpacing",
-                            ds_data=raster.y_spacing,
+                            ds_data=raster.y_posting,
                             ds_description=descr,
                             ds_units="meters",
                         )

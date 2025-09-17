@@ -170,9 +170,9 @@ def plot_offsets_quiver_plot_to_pdf(
 
         kwargs["coord_grid"] = nisarqa.GeoGrid(
             epsg=az_offset.epsg,
-            x_spacing=x_posting,
+            x_axis_posting=x_posting,
             x_coordinates=x_coords,
-            y_spacing=y_posting,
+            y_axis_posting=y_posting,
             y_coordinates=y_coords,
         )
 
@@ -181,13 +181,13 @@ def plot_offsets_quiver_plot_to_pdf(
     else:
         assert isinstance(az_offset, nisarqa.RadarRaster)
 
-        zero_dop_spacing = az_offset.zero_doppler_time_spacing * ky1 * stride1
+        zero_dop_posting = az_offset.zero_doppler_time_posting * ky1 * stride1
 
         kwargs["coord_grid"] = nisarqa.RadarGrid(
             zero_doppler_time=az_offset.zero_doppler_time[::ky1][::stride1],
-            zero_doppler_time_spacing=zero_dop_spacing,
+            zero_doppler_time_posting=zero_dop_posting,
             slant_range=az_offset.slant_range[::kx1][::stride1],
-            slant_range_spacing=az_offset.slant_range_spacing * kx1 * stride1,
+            slant_range_posting=az_offset.slant_range_posting * kx1 * stride1,
             ground_az_spacing=az_offset.ground_az_spacing * ky1 * stride1,
             ground_range_spacing=az_offset.ground_range_spacing * kx1 * stride1,
             epoch=az_offset.epoch,
@@ -317,7 +317,10 @@ def plot_single_quiver_plot_to_png(
 
         y_decimation, x_decimation = nisarqa.compute_square_pixel_nlooks(
             img_shape=np.shape(az_offset.data),
-            sample_spacing=[az_offset.y_axis_spacing, az_offset.x_axis_spacing],
+            sample_spacing=[
+                az_offset.y_ground_spacing,
+                az_offset.x_ground_spacing,
+            ],
             longest_side_max=longest_side_max,
         )
 
@@ -347,26 +350,26 @@ def plot_single_quiver_plot_to_png(
         assert az_off.shape[1] == len(x_coords)
         assert az_off.shape[0] == len(y_coords)
 
-        x_posting = az_offset.x_posting * x_decimation
-        y_posting = az_offset.y_posting * y_decimation
+        x_posting = az_offset.x_axis_posting * x_decimation
+        y_posting = az_offset.y_axis_posting * y_decimation
 
         kwargs["coord_grid"] = nisarqa.GeoGrid(
             epsg=az_offset.epsg,
-            x_spacing=x_posting,
+            x_axis_posting=x_posting,
             x_coordinates=x_coords,
-            y_spacing=y_posting,
+            y_axis_posting=y_posting,
             y_coordinates=y_coords,
         )
     else:
         assert isinstance(az_offset, nisarqa.RadarRaster)
 
-        zero_dop_spacing = az_offset.zero_doppler_time_spacing * y_decimation
+        zero_dop_posting = az_offset.zero_doppler_time_posting * y_decimation
 
         kwargs["coord_grid"] = nisarqa.RadarGrid(
             zero_doppler_time=az_offset.zero_doppler_time[::y_decimation],
-            zero_doppler_time_spacing=zero_dop_spacing,
+            zero_doppler_time_posting=zero_dop_posting,
             slant_range=az_offset.slant_range[::x_decimation],
-            slant_range_spacing=az_offset.slant_range_spacing * x_decimation,
+            slant_range_posting=az_offset.slant_range_posting * x_decimation,
             ground_az_spacing=az_offset.ground_az_spacing * y_decimation,
             ground_range_spacing=az_offset.ground_range_spacing * x_decimation,
             epoch=az_offset.epoch,
@@ -597,9 +600,9 @@ def add_magnitude_image_and_quiver_plot_to_axes(
                 geo_grid=nisarqa.GeoGrid(
                     epsg=coord_grid.epsg,
                     x_coordinates=coord_grid.x_coordinates[::arrow_stride],
-                    x_spacing=coord_grid.x_spacing * arrow_stride,
+                    x_axis_posting=coord_grid.x_axis_posting * arrow_stride,
                     y_coordinates=coord_grid.y_coordinates[::arrow_stride],
-                    y_spacing=coord_grid.y_spacing * arrow_stride,
+                    y_axis_posting=coord_grid.y_axis_posting * arrow_stride,
                 ),
                 projection_params=quiver_projection_params,
             )
@@ -612,11 +615,11 @@ def add_magnitude_image_and_quiver_plot_to_axes(
     # products is negative (the positive y-axis points up in the plot).
     # That is, a postive-valued offset in meters will be a negative-valued
     # offset in pixels. So, when you divide the offsets by the pixel
-    # spacing, it should flip the sign of the y component of the offsets.
+    # posting, it should flip the sign of the y component of the offsets.
 
     # Conversely, the y-coordinate posting of NISAR L1 products is
     # positive (the positive y-axis points down in the plot).
-    # So dividing by the pixel spacing should not flip the sign of the
+    # So dividing by the pixel posting should not flip the sign of the
     # y component of the offsets when making quiver plots for L1 products.
 
     if isinstance(coord_grid, nisarqa.RadarGrid):

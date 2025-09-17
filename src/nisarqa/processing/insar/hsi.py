@@ -471,8 +471,6 @@ def make_hsi_raster(
     )
 
     # Square the pixels. Decimate if requested.
-    y_axis_spacing = phs_or_complex_raster.y_axis_spacing
-    x_axis_spacing = phs_or_complex_raster.x_axis_spacing
 
     if longest_side_max is None:
         # Update to be the longest side of the array. This way no downsizing
@@ -481,15 +479,13 @@ def make_hsi_raster(
 
     ky, kx = nisarqa.compute_square_pixel_nlooks(
         img_shape=np.shape(rgb)[:2],  # only need the x and y dimensions
-        sample_spacing=[y_axis_spacing, x_axis_spacing],
+        sample_spacing=[
+            phs_or_complex_raster.y_ground_spacing,
+            phs_or_complex_raster.x_ground_spacing,
+        ],
         longest_side_max=longest_side_max,
     )
     rgb = rgb[::ky, ::kx]
-
-    # Update the ground spacing so that the new *Raster we are building will
-    # have correct metadata.
-    y_axis_spacing = y_axis_spacing * ky
-    x_axis_spacing = x_axis_spacing * kx
 
     # Construct the name for the new raster. (`*raster.name` has a format
     # like "RUNW_L_A_interferogram_HH_unwrappedPhase". The HSI image combines
@@ -504,16 +500,24 @@ def make_hsi_raster(
             phs_or_complex_raster,
             data=rgb,
             name=name,
-            ground_az_spacing=y_axis_spacing,
-            ground_range_spacing=x_axis_spacing,
+            zero_doppler_time=phs_or_complex_raster.zero_doppler_time[::ky],
+            zero_doppler_time_posting=phs_or_complex_raster.zero_doppler_time_posting
+            * ky,
+            slant_range=phs_or_complex_raster.slant_range[::kx],
+            slant_range_posting=phs_or_complex_raster.slant_range_posting * kx,
+            ground_az_spacing=phs_or_complex_raster.ground_az_spacing * ky,
+            ground_range_spacing=phs_or_complex_raster.ground_range_spacing
+            * kx,
         )
     elif isinstance(phs_or_complex_raster, nisarqa.GeoRaster):
         hsi_raster = replace(
             phs_or_complex_raster,
             data=rgb,
             name=name,
-            y_spacing=y_axis_spacing,
-            x_spacing=x_axis_spacing,
+            x_coordinates=phs_or_complex_raster.x_coordinates[::kx],
+            x_axis_posting=phs_or_complex_raster.x_axis_posting * kx,
+            y_coordinates=phs_or_complex_raster.x_coordinates[::ky],
+            y_axis_posting=phs_or_complex_raster.x_axis_posting * ky,
         )
     else:
         raise TypeError(

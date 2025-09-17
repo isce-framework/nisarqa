@@ -259,7 +259,7 @@ def make_wrapped_phase_png(
     plot_2d_array_and_save_to_png(
         arr=phase,
         cmap="twilight_shifted",
-        sample_spacing=(igram_r.y_axis_spacing, igram_r.x_axis_spacing),
+        sample_spacing=(igram_r.y_ground_spacing, igram_r.x_ground_spacing),
         longest_side_max=longest_side_max,
         png_filepath=png_filepath,
         vmin=cbar_min_max[0],
