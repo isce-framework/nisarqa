@@ -239,8 +239,8 @@ def get_multilooked_backscatter_img(
         nlooks = nisarqa.compute_square_pixel_nlooks(
             img.data.shape,
             sample_spacing=(
-                np.abs(img.y_axis_spacing),
-                np.abs(img.x_axis_spacing),
+                np.abs(img.y_ground_spacing),
+                np.abs(img.x_ground_spacing),
             ),
             longest_side_max=params.longest_side_max,
         )
@@ -287,8 +287,8 @@ def get_multilooked_backscatter_img(
     log.debug(
         f"Multilooking Image {img.name} with original shape: {img.data.shape}"
     )
-    log.debug(f"Y direction (azimuth) ground spacing: {img.y_axis_spacing}")
-    log.debug(f"X direction (range) ground spacing: {img.x_axis_spacing}")
+    log.debug(f"Y direction (azimuth) ground spacing: {img.y_ground_spacing}")
+    log.debug(f"X direction (range) ground spacing: {img.x_ground_spacing}")
     log.debug(f"Beginning Multilooking with nlooks window shape: {nlooks}")
 
     # Multilook

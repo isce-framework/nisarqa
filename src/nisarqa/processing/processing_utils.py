@@ -91,8 +91,8 @@ def get_phase_array(
         ky, kx = nisarqa.compute_square_pixel_nlooks(
             img_shape=raster_shape,
             sample_spacing=[
-                phs_or_complex_raster.y_axis_spacing,
-                phs_or_complex_raster.x_axis_spacing,
+                phs_or_complex_raster.y_ground_spacing,
+                phs_or_complex_raster.x_ground_spacing,
             ],
             # Only make square pixels. Use `max()` to not "shrink" the rasters.
             longest_side_max=max(raster_shape),

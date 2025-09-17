@@ -145,6 +145,7 @@ def compute_square_pixel_nlooks(
     sample_spacing : pair of float
         The Y direction sample spacing and X direction sample spacing
         of the source array.
+        These sample spacings must be in the same units (e.g. meters).
         For radar-domain products, Y direction corresponds to azimuth,
         and X direction corresponds to range.
         Only the magnitude (absolute value) of the sample spacing is used.

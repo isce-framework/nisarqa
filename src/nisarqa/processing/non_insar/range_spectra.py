@@ -111,7 +111,8 @@ def generate_range_spectra_single_freq(
     with product.get_raster(freq, first_pol) as img:
         # Compute the sample rate
         # c/2 for radar energy round-trip; units for `sample_rate` will be Hz
-        dr = product.get_slant_range_spacing(freq)
+        dr = product.get_slant_range_posting(freq)
+        dr = abs(dr)
         sample_rate = (constants.c / 2.0) / dr
 
         fft_freqs = nisarqa.generate_fft_freqs(
