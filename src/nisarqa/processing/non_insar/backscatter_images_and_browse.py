@@ -49,11 +49,11 @@ def process_backscatter_imgs_and_browse(
         The directory to write the output PNG and KML file(s) to. This
         directory must already exist.
     browse_filename : str
-        The output filename of the browse image PNG file, specified relative to
-        `output_dir`. Example: "BROWSE.png".
+        The basename of the output browse image PNG file. The file will be
+        created in `out_dir`. Example: "BROWSE.png".
     kml_filename : str
-        The output filename of the KML file, specified relative to
-        `output_dir`. Example: "BROWSE.kml".
+        The basename of the output browse image KML file. The file will be
+        created in `out_dir`. Example: "BROWSE.kml".
     input_raster_represents_power : bool, optional
         The input dataset rasters associated with these histogram parameters
         should have their pixel values represent either power or root power.
