@@ -105,26 +105,24 @@ def process_backscatter_imgs_and_browse(
                 )
 
                 if params.output_individual_pngs:
-                    png_basename = Path(browse_filename)
-                    indiv_png_basename = (
-                        f"{png_basename.stem}_{freq}_{pol}{png_basename.suffix}"
-                    )
+
+                    def _indiv_path(
+                        basename: str | os.PathLike,
+                    ) -> Path:
+                        base = Path(basename)
+                        return Path(f"{base.stem}_{freq}_{pol}{base.suffix}")
+
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
-                        filepath=Path(out_dir, indiv_png_basename),
-                    )
-
-                    kml_basename = Path(kml_filename)
-                    indiv_kml_basename = (
-                        f"{kml_basename.stem}_{freq}_{pol}{kml_basename.suffix}"
+                        filepath=Path(out_dir, _indiv_path(browse_filename)),
                     )
 
                     # Generate the KML that corresponds to the individual PNG
                     nisarqa.write_latlonquad_to_kml(
                         llq=product.get_browse_latlonquad(),
                         output_dir=out_dir,
-                        kml_filename=indiv_kml_basename,
-                        png_filename=indiv_png_basename,
+                        kml_filename=_indiv_path(kml_filename).name,
+                        png_filename=_indiv_path(browse_filename).name,
                     )
 
                 if params.gamma is not None:
