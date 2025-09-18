@@ -508,12 +508,12 @@ def get_cr_plot_axis_attrs(
     if isinstance(slc, nisarqa.RSLC):
         x_attrs = CRPlotAxisAttrs(
             name="Slant Range",
-            posting=slc.get_slant_range_posting(freq),
+            posting=slc.get_slant_range_spacing(freq),
             units="meters",
         )
         y_attrs = CRPlotAxisAttrs(
             name="Azimuth",
-            posting=1e6 * slc.get_zero_doppler_time_posting(),
+            posting=1e6 * slc.get_zero_doppler_time_spacing(),
             units="microsec.",
         )
     elif isinstance(slc, nisarqa.GSLC):

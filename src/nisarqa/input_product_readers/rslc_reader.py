@@ -97,7 +97,7 @@ class RSLC(SLCProduct, NisarRadarProduct):
         # `freq` as an input; RIFG/RUNW/ROFF also need to know the layer group.
         # For simplicity, let's hard-code this path in two places,
         # and update later if/when a better design pattern is needed.
-        # See: RSLC.get_slant_range_posting() for a related issue.
+        # See: RSLC.get_slant_range_spacing() for a related issue.
 
         @lru_cache
         def _get_scene_center_along_track_spacing(freq: str) -> float:
@@ -110,11 +110,11 @@ class RSLC(SLCProduct, NisarRadarProduct):
 
         return _get_scene_center_along_track_spacing(freq)
 
-    def get_slant_range_posting(self, freq: str) -> float:
+    def get_slant_range_spacing(self, freq: str) -> float:
         """
-        Get slant range posting.
+        Get slant range spacing.
 
-        Get the slant range posting, in meters, of the radar grid corresponding
+        Get the slant range spacing, in meters, of the radar grid corresponding
         to the specified frequency sub-band.
 
         Parameters
@@ -124,22 +124,22 @@ class RSLC(SLCProduct, NisarRadarProduct):
 
         Returns
         -------
-        rg_posting : float
-            The slant range sample posting, in meters.
+        rg_spacing : float
+            The slant range sample spacing, in meters.
         """
 
         # Future Alert!
         # It makes sense for this dataset to be an attribute in RadarRaster.
         # However, for now, only RSLC() products need access to this dataset,
         # and we should not clutter RIFG/RUNW/ROFF RadarRasters.
-        # Additionally, like RSLC.get_scene_center_along_track_posting(),
+        # Additionally, like RSLC.get_scene_center_along_track_spacing(),
         # it is not ideal to need to fully initialize an entire
         # RadarRaster just to access a single dataset.
         # For simplicity, let's use this design pattern for now,
         # and update later if/when a better design pattern is needed.
 
         @lru_cache
-        def _get_slant_range_posting(freq: str) -> float:
+        def _get_slant_range_spacing(freq: str) -> float:
             path = f"{self.get_freq_path(freq)}/slantRangeSpacing"
             with h5py.File(self.filepath) as f:
                 try:
@@ -147,33 +147,33 @@ class RSLC(SLCProduct, NisarRadarProduct):
                 except KeyError as e:
                     raise nisarqa.DatasetNotFoundError from e
 
-        return _get_slant_range_posting(freq)
+        return _get_slant_range_spacing(freq)
 
-    def get_zero_doppler_time_posting(self) -> float:
+    def get_zero_doppler_time_spacing(self) -> float:
         """
-        Get zero doppler time posting.
+        Get zero doppler time spacing.
 
-        Get the zero doppler time posting, in seconds, of the radar grid.
+        Get the zero doppler time spacing, in seconds, of the radar grid.
         This should be the same for both Frequency A and Frequency B.
 
         Returns
         -------
-        zero_doppler_time_posting : float
-            The zero_doppler_time sample posting, in seconds.
+        zero_doppler_time_spacing : float
+            The zero_doppler_time sample spacing, in seconds.
         """
 
         # Future Alert!
         # It makes sense for this dataset to be an attribute in RadarRaster.
         # However, for now, only RSLC() products need access to this dataset,
         # and we should not clutter RIFG/RUNW/ROFF RadarRasters.
-        # Additionally, like RSLC.get_slant_range_posting(),
+        # Additionally, like RSLC.get_slant_range_spacing(),
         # it is not ideal to need to fully initialize an entire
         # RadarRaster just to access a single dataset.
         # For simplicity, let's use this design pattern for now,
         # and update later if/when a better design pattern is needed.
 
         @lru_cache
-        def _get_zero_doppler_time_posting() -> float:
+        def _get_zero_doppler_time_spacing() -> float:
             path = f"{self._data_group_path}/zeroDopplerTimeSpacing"
             with h5py.File(self.filepath) as f:
                 try:
@@ -181,7 +181,7 @@ class RSLC(SLCProduct, NisarRadarProduct):
                 except KeyError as e:
                     raise nisarqa.DatasetNotFoundError from e
 
-        return _get_zero_doppler_time_posting()
+        return _get_zero_doppler_time_spacing()
 
     def get_processed_center_frequency(self, freq: str) -> float:
         """

@@ -115,7 +115,7 @@ def generate_az_spectra_single_freq(
 
     # Compute the sample rate
     # zero doppler time is in seconds; units for `sample_rate` will be Hz
-    da = product.get_zero_doppler_time_posting()
+    da = product.get_zero_doppler_time_spacing()
     sample_rate = 1 / da
 
     # Get the number of range lines
