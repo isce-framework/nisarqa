@@ -350,8 +350,8 @@ def plot_single_quiver_plot_to_png(
         assert az_off.shape[1] == len(x_coords)
         assert az_off.shape[0] == len(y_coords)
 
-        x_posting = az_offset.x_axis_posting * x_decimation
-        y_posting = az_offset.y_axis_posting * y_decimation
+        x_posting = az_offset.x_posting * x_decimation
+        y_posting = az_offset.y_posting * y_decimation
 
         kwargs["coord_grid"] = nisarqa.GeoGrid(
             epsg=az_offset.epsg,

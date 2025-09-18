@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 from collections.abc import Mapping
-from dataclasses import InitVar, dataclass, field, fields
+from dataclasses import dataclass, field, fields
 from functools import cached_property
 from typing import Any, Optional, Sequence, overload
 
