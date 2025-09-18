@@ -496,18 +496,18 @@ def make_hsi_raster(
 
     # Construct the HSI *Raster object
     if isinstance(phs_or_complex_raster, nisarqa.RadarRaster):
+        r = phs_or_complex_raster
+
         hsi_raster = replace(
-            phs_or_complex_raster,
+            r,
             data=rgb,
             name=name,
-            zero_doppler_time=phs_or_complex_raster.zero_doppler_time[::ky],
-            zero_doppler_time_spacing=phs_or_complex_raster.zero_doppler_time_spacing
-            * ky,
-            slant_range=phs_or_complex_raster.slant_range[::kx],
-            slant_range_spacing=phs_or_complex_raster.slant_range_spacing * kx,
-            ground_az_spacing=phs_or_complex_raster.ground_az_spacing * ky,
-            ground_range_spacing=phs_or_complex_raster.ground_range_spacing
-            * kx,
+            zero_doppler_time=r.zero_doppler_time[::ky],
+            zero_doppler_time_spacing=r.zero_doppler_time_spacing * ky,
+            slant_range=r.slant_range[::kx],
+            slant_range_spacing=r.slant_range_spacing * kx,
+            ground_az_spacing=r.ground_az_spacing * ky,
+            ground_range_spacing=r.ground_range_spacing * kx,
         )
     elif isinstance(phs_or_complex_raster, nisarqa.GeoRaster):
         hsi_raster = replace(
