@@ -108,9 +108,9 @@ def process_backscatter_imgs_and_browse(
 
                     def _indiv_path(
                         basename: str | os.PathLike,
-                    ) -> Path:
+                    ) -> str:
                         base = Path(basename)
-                        return Path(f"{base.stem}_{freq}_{pol}{base.suffix}")
+                        return f"{base.stem}_{freq}_{pol}{base.suffix}"
 
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
@@ -121,8 +121,8 @@ def process_backscatter_imgs_and_browse(
                     nisarqa.write_latlonquad_to_kml(
                         llq=product.get_browse_latlonquad(),
                         output_dir=out_dir,
-                        kml_filename=_indiv_path(kml_filename).name,
-                        png_filename=_indiv_path(browse_filename).name,
+                        kml_filename=_indiv_path(kml_filename),
+                        png_filename=_indiv_path(browse_filename),
                     )
 
                 if params.gamma is not None:
