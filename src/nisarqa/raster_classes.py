@@ -423,15 +423,15 @@ class RadarGrid(CoordinateGrid):
         1D vector of zero Doppler azimuth times (in seconds) measured relative
         to a UTC epoch. These correspond to the center of each pixel
         of the raster grid in the Y direction.
-    zero_doppler_time_posting : float
+    zero_doppler_time_spacing : float
         Time interval in the along-track direction of the raster, in seconds.
-        This is same as the posting between consecutive entries in the
+        This is same as the spacing between consecutive entries in the
         `zero_doppler_time` array.
     slant_range : numpy.ndarray
         1D vector of the slant range values (in meters), corresponding to
         the center of each pixel of the raster grid in the X direction.
-    slant_range_posting : float
-        Slant range posting of grid, in meters. Same as difference between
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
         consecutive samples in `slant_range` array.
     ground_az_spacing : float
         Scene center azimuth spacing of pixels of the grid, in meters.
@@ -467,10 +467,10 @@ class RadarGrid(CoordinateGrid):
 
     # Attributes of the input array
     zero_doppler_time: np.ndarray
-    zero_doppler_time_posting: float
+    zero_doppler_time_spacing: float
 
     slant_range: np.ndarray
-    slant_range_posting: float
+    slant_range_spacing: float
 
     ground_az_spacing: float
     ground_range_spacing: float
@@ -484,8 +484,8 @@ class RadarGrid(CoordinateGrid):
 
     def __post_init__(self):
 
-        self.zero_doppler_time_posting = float(self.zero_doppler_time_posting)
-        self.slant_range_posting = float(self.slant_range_posting)
+        self.zero_doppler_time_spacing = float(self.zero_doppler_time_spacing)
+        self.slant_range_spacing = float(self.slant_range_spacing)
         self.ground_az_spacing = float(self.ground_az_spacing)
         self.ground_range_spacing = float(self.ground_range_spacing)
 
@@ -496,26 +496,26 @@ class RadarGrid(CoordinateGrid):
         # the entire range.
         self.az_start = (
             float(self.zero_doppler_time[0])
-            - 0.5 * self.zero_doppler_time_posting
+            - 0.5 * self.zero_doppler_time_spacing
         )
         self.az_stop = (
             float(self.zero_doppler_time[-1])
-            + 0.5 * self.zero_doppler_time_posting
+            + 0.5 * self.zero_doppler_time_spacing
         )
 
         # For NISAR, radar-domain grids are referenced by the center of the
         # pixel, so +/- half the distance of the pixel's side to capture
         # the entire range.
         self.rng_start = (
-            float(self.slant_range[0]) - 0.5 * self.slant_range_posting
+            float(self.slant_range[0]) - 0.5 * self.slant_range_spacing
         )
         self.rng_stop = (
-            float(self.slant_range[-1]) + 0.5 * self.slant_range_posting
+            float(self.slant_range[-1]) + 0.5 * self.slant_range_spacing
         )
 
     @property
     def x_posting(self):
-        return self.slant_range_posting
+        return self.slant_range_spacing
 
     @property
     def x_pixel_centers(self):
@@ -523,7 +523,7 @@ class RadarGrid(CoordinateGrid):
 
     @property
     def y_posting(self):
-        return self.zero_doppler_time_posting
+        return self.zero_doppler_time_spacing
 
     @property
     def y_pixel_centers(self):
@@ -565,15 +565,15 @@ class RadarRaster(SARRaster, RadarGrid):
         1D vector of zero Doppler azimuth times (in seconds) measured relative
         to a UTC epoch. These correspond to the center of each pixel
         of the raster grid in the Y direction.
-    zero_doppler_time_posting : float
+    zero_doppler_time_spacing : float
         Time interval in the along-track direction of the raster, in seconds.
-        This is same as the posting between consecutive entries in the
+        This is same as the spacing between consecutive entries in the
         `zero_doppler_time` array.
     slant_range : numpy.ndarray
         1D vector of the slant range values (in meters), corresponding to
         the center of each pixel of the raster grid in the X direction.
-    slant_range_posting : float
-        Slant range posting of grid, in meters. Same as difference between
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
         consecutive samples in `slant_range` array.
     ground_az_spacing : float
         Scene center azimuth spacing of pixels of the grid, in meters.
@@ -711,7 +711,6 @@ class GeoGrid(CoordinateGrid):
         # NISAR L2 product writers construct `xCoordinates` and `yCoordinates`
         # to refer to the location of the center of the pixels.
         self.x_start = float(self.x_coordinates[0] - 0.5 * self.x_posting)
-
         self.x_stop = float(self.x_coordinates[-1] + 0.5 * self.x_posting)
 
         # Use the posting (not the spacing) to capture the
@@ -1219,15 +1218,15 @@ class RadarRasterWithStats(RadarRaster, StatsMixin):
         1D vector of zero Doppler azimuth times (in seconds) measured relative
         to a UTC epoch. These correspond to the center of each pixel
         of the raster grid in the Y direction.
-    zero_doppler_time_posting : float
+    zero_doppler_time_spacing : float
         Time interval in the along-track direction of the raster, in seconds.
-        This is same as the posting between consecutive entries in the
+        This is same as the spacing between consecutive entries in the
         `zero_doppler_time` array.
     slant_range : numpy.ndarray
         1D vector of the slant range values (in meters), corresponding to
         the center of each pixel of the raster grid in the X direction.
-    slant_range_posting : float
-        Slant range posting of grid, in meters. Same as difference between
+    slant_range_spacing : float
+        Slant range spacing of grid, in meters. Same as difference between
         consecutive samples in `slant_range` array.
     ground_az_spacing : float
         Scene center azimuth spacing of pixels of the grid, in meters.

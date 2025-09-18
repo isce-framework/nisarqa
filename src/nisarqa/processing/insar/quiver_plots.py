@@ -181,13 +181,13 @@ def plot_offsets_quiver_plot_to_pdf(
     else:
         assert isinstance(az_offset, nisarqa.RadarRaster)
 
-        zero_dop_posting = az_offset.zero_doppler_time_posting * ky1 * stride1
+        zero_dop_spacing = az_offset.zero_doppler_time_spacing * ky1 * stride1
 
         kwargs["coord_grid"] = nisarqa.RadarGrid(
             zero_doppler_time=az_offset.zero_doppler_time[::ky1][::stride1],
-            zero_doppler_time_posting=zero_dop_posting,
+            zero_doppler_time_spacing=zero_dop_spacing,
             slant_range=az_offset.slant_range[::kx1][::stride1],
-            slant_range_posting=az_offset.slant_range_posting * kx1 * stride1,
+            slant_range_spacing=az_offset.slant_range_spacing * kx1 * stride1,
             ground_az_spacing=az_offset.ground_az_spacing * ky1 * stride1,
             ground_range_spacing=az_offset.ground_range_spacing * kx1 * stride1,
             epoch=az_offset.epoch,
@@ -363,13 +363,13 @@ def plot_single_quiver_plot_to_png(
     else:
         assert isinstance(az_offset, nisarqa.RadarRaster)
 
-        zero_dop_posting = az_offset.zero_doppler_time_posting * y_decimation
+        zero_dop_spacing = az_offset.zero_doppler_time_spacing * y_decimation
 
         kwargs["coord_grid"] = nisarqa.RadarGrid(
             zero_doppler_time=az_offset.zero_doppler_time[::y_decimation],
-            zero_doppler_time_posting=zero_dop_posting,
+            zero_doppler_time_spacing=zero_dop_spacing,
             slant_range=az_offset.slant_range[::x_decimation],
-            slant_range_posting=az_offset.slant_range_posting * x_decimation,
+            slant_range_spacing=az_offset.slant_range_spacing * x_decimation,
             ground_az_spacing=az_offset.ground_az_spacing * y_decimation,
             ground_range_spacing=az_offset.ground_range_spacing * x_decimation,
             epoch=az_offset.epoch,

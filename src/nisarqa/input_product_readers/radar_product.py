@@ -211,22 +211,12 @@ class NisarRadarProduct(NisarProduct):
 
         # From the xml Product Spec, zeroDopplerTimeSpacing is the
         # '...spacing between consecutive entries in the zeroDopplerTime array'.
-
-        # However, this is a slight misnomer. "Spacing" refers to the
-        # (positive-valued) width of a pixel while "posting" refers to
-        # the (positive- or negative-valued) stride between points in a grid.
-        # (The spacing is the absolute value of the posting.)
-
-        # For NISAR L1 products, `zeroDopplerTimeSpacing` is actually the
-        # y-coordinate posting. Note that for NISAR L1 products (i.e.
-        # radar grids), the y-coordinate posting is positive
-        # (the positive y-axis points down in QA plots).
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="zeroDopplerTimeSpacing",
         )
-        kwargs["zero_doppler_time_posting"] = h5_file[path][...]
+        kwargs["zero_doppler_time_spacing"] = h5_file[path][...]
 
         # From the xml Product Spec, sceneCenterGroundRangeSpacing is the
         # 'Nominal ground range spacing in meters between consecutive pixels
@@ -252,7 +242,7 @@ class NisarRadarProduct(NisarProduct):
             starting_path=raster_path,
             dataset_to_find="slantRangeSpacing",
         )
-        kwargs["slant_range_posting"] = h5_file[path][...]
+        kwargs["slant_range_spacing"] = h5_file[path][...]
 
         # Construct Name
         kwargs["name"] = self._get_raster_name(raster_path)

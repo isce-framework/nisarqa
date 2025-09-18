@@ -501,10 +501,10 @@ def make_hsi_raster(
             data=rgb,
             name=name,
             zero_doppler_time=phs_or_complex_raster.zero_doppler_time[::ky],
-            zero_doppler_time_posting=phs_or_complex_raster.zero_doppler_time_posting
+            zero_doppler_time_spacing=phs_or_complex_raster.zero_doppler_time_spacing
             * ky,
             slant_range=phs_or_complex_raster.slant_range[::kx],
-            slant_range_posting=phs_or_complex_raster.slant_range_posting * kx,
+            slant_range_spacing=phs_or_complex_raster.slant_range_spacing * kx,
             ground_az_spacing=phs_or_complex_raster.ground_az_spacing * ky,
             ground_range_spacing=phs_or_complex_raster.ground_range_spacing
             * kx,
