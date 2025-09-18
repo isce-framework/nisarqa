@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import functools
+import os
+from pathlib import Path
 
 import h5py
 import numpy as np
@@ -19,13 +21,18 @@ def process_backscatter_imgs_and_browse(
     params: nisarqa.BackscatterImageParamGroup,
     stats_h5: h5py.File,
     report_pdf: PdfPages,
+    *,
+    out_dir: str | os.Pathlike,
     browse_filename: str,
+    kml_filename: str,
     input_raster_represents_power: bool = False,
     plot_title_prefix: str = "Backscatter Coefficient",
 ) -> None:
     """
-    Generate Backscatter Image plots for the `report_pdf` and
-    corresponding browse image product.
+    Generate Backscatter Image plots for the Report PDF and browse product.
+
+    This function generates both the PNG and KML components of the
+    browse product.
 
     Parameters
     ----------
@@ -38,8 +45,15 @@ def process_backscatter_imgs_and_browse(
         The output file to save QA metrics, etc. to
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output PDF file to append the backscatter image plot to
+    out_dir : path-like
+        The directory to write the output PNG and KML file(s) to. This
+        directory must already exist.
     browse_filename : str
-        Filename (with path) for the browse image PNG.
+        The basename of the output browse image PNG file. The file will be
+        created in `out_dir`. Example: "BROWSE.png".
+    kml_filename : str
+        The basename of the output browse image KML file. The file will be
+        created in `out_dir`. Example: "BROWSE.kml".
     input_raster_represents_power : bool, optional
         The input dataset rasters associated with these histogram parameters
         should have their pixel values represent either power or root power.
@@ -49,7 +63,7 @@ def process_backscatter_imgs_and_browse(
         aka magnitude and will handle the full computation to power using
         the formula:  power = abs(<magnitude>)^2 .
         Defaults to False (root power).
-    plot_title_prefix : str
+    plot_title_prefix : str, optional
         Prefix for the title of the backscatter plots.
         Suggestions: "RSLC Backscatter Coefficient (beta-0)" or
         "GCOV Backscatter Coefficient (gamma-0)".
@@ -89,6 +103,27 @@ def process_backscatter_imgs_and_browse(
                 corrected_img, orig_vmin, orig_vmax = apply_image_correction(
                     img_arr=multilooked_img, params=params
                 )
+
+                if params.output_individual_pngs:
+
+                    def _indiv_path(
+                        basename: str | os.PathLike,
+                    ) -> str:
+                        base = Path(basename)
+                        return f"{base.stem}_{freq}_{pol}{base.suffix}"
+
+                    nisarqa.plot_to_grayscale_png(
+                        img_arr=corrected_img,
+                        filepath=Path(out_dir, _indiv_path(browse_filename)),
+                    )
+
+                    # Generate the KML that corresponds to the individual PNG
+                    nisarqa.write_latlonquad_to_kml(
+                        llq=product.get_browse_latlonquad(),
+                        output_dir=out_dir,
+                        kml_filename=_indiv_path(kml_filename),
+                        png_filename=_indiv_path(browse_filename),
+                    )
 
                 if params.gamma is not None:
                     inverse_func = functools.partial(
@@ -145,7 +180,19 @@ def process_backscatter_imgs_and_browse(
                     pol_imgs_for_browse[pol] = corrected_img
 
     # Construct the browse image
-    product.save_browse(pol_imgs=pol_imgs_for_browse, filepath=browse_filename)
+    browse_path = Path(out_dir, browse_filename)
+    product.save_browse(pol_imgs=pol_imgs_for_browse, filepath=browse_path)
+
+    # Generate the KML that corresponds to the browse image
+    nisarqa.write_latlonquad_to_kml(
+        llq=product.get_browse_latlonquad(),
+        output_dir=out_dir,
+        kml_filename=kml_filename,
+        png_filename=browse_filename,
+    )
+    log = nisarqa.get_logger()
+    log.info(f"Browse image PNG file saved to {browse_path}")
+    log.info(f"Browse image KML file saved to {Path(out_dir, kml_filename)}")
 
 
 def get_multilooked_backscatter_img(

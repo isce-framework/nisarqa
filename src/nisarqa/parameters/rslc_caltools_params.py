@@ -216,6 +216,16 @@ class BackscatterImageParamGroup(YamlParamGroup, HDF5ParamGroup):
         Format: (num_rows, num_cols)
         -1 to indicate all rows / all columns (respectively).
         Defaults to (1024, 1024).
+    output_individual_pngs : bool, optional
+        True to output one grayscale PNG+KML pair per raster image layer; these
+        will be generated in addition to the standard browse image PNG+KML.
+        The filename of each additional file will include a suffix noting
+        that image's frequency and polarization.
+        False to have the primary browse image be the only PNG+KML generated.
+        Note: If True, and if the input granule contains only one image,
+        then the additional individual PNG will be a duplicate image to the
+        primary browse image PNG, but with more descriptive filename.
+        Defaults to False.
 
     Attributes
     ----------
@@ -349,6 +359,23 @@ class BackscatterImageParamGroup(YamlParamGroup, HDF5ParamGroup):
                 decimation ratio, etc.
                 Format: [<num_rows>, <num_cols>]
                 -1 to indicate all rows / all columns (respectively).""",
+            )
+        },
+    )
+
+    output_individual_pngs: bool = field(
+        default=False,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="output_individual_pngs",
+                descr="""True to output one grayscale PNG+KML pair per raster image layer; these
+                will be generated in addition to the standard browse image PNG+KML.
+                The filename of each additional file will include a suffix noting
+                that image's frequency and polarization.
+                False to have the primary browse image be the only PNG+KML generated.
+                Note: If True, and if the input granule contains only one image,
+                then the additional individual PNG will be a duplicate image to the
+                primary browse image PNG, but with more descriptive filename.""",
             )
         },
     )
