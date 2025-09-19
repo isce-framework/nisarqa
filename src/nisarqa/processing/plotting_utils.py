@@ -48,7 +48,7 @@ def plot_2d_array_and_save_to_png(
     sample_spacing : pair of float or None, optional
         The Y direction sample spacing and X direction sample spacing
         of the source array. These values are used to decimate the raster
-        to have square pixels.
+        to have square pixels. These values have the same units (e.g. meters).
         For radar-domain products, Y direction corresponds to azimuth,
         and X direction corresponds to range.
         Only the magnitude (absolute value) of the sample spacing is used.

@@ -458,10 +458,10 @@ class CRPlotAxisAttrs:
     name : str
         The name of the axis (e.g. 'Easting', 'Northing', for geocoded images or
         'Slant Range', 'Azimuth' for range-Doppler images).
-    spacing : float
-        The signed pixel spacing of the image axis, in units described by the
+    posting : float
+        The signed pixel posting of the image axis, in units described by the
         `units` attribute. (Note that North-up raster images in geodetic or
-        projected coordinates typically have negative-valued y-spacing.)
+        projected coordinates typically have negative-valued y-posting.)
     units : str
         The units of the image axis coordinate space (e.g. 'meters',
         'seconds').
@@ -472,13 +472,13 @@ class CRPlotAxisAttrs:
     """
 
     name: str
-    spacing: float
+    posting: float
     units: str
 
     def __post_init__(self) -> None:
-        if self.spacing == 0.0:
+        if self.posting == 0.0:
             raise ValueError(
-                f"pixel spacing must be nonzero; got {self.spacing}"
+                f"pixel posting must be nonzero; got {self.posting}"
             )
 
 
@@ -508,24 +508,24 @@ def get_cr_plot_axis_attrs(
     if isinstance(slc, nisarqa.RSLC):
         x_attrs = CRPlotAxisAttrs(
             name="Slant Range",
-            spacing=slc.get_slant_range_spacing(freq),
+            posting=slc.get_slant_range_spacing(freq),
             units="meters",
         )
         y_attrs = CRPlotAxisAttrs(
             name="Azimuth",
-            spacing=1e6 * slc.get_zero_doppler_time_spacing(),
+            posting=1e6 * slc.get_zero_doppler_time_spacing(),
             units="microsec.",
         )
     elif isinstance(slc, nisarqa.GSLC):
         with slc.get_raster(freq, pol) as raster:
             x_attrs = CRPlotAxisAttrs(
                 name="Easting",
-                spacing=raster.x_spacing,
+                posting=raster.x_posting,
                 units="meters",
             )
             y_attrs = CRPlotAxisAttrs(
                 name="Northing",
-                spacing=raster.y_spacing,
+                posting=raster.y_posting,
                 units="meters",
             )
     else:
@@ -627,16 +627,16 @@ def make_cr_offsets_scatterplot(
         ax.add_patch(circle)
 
     # Add axis labels.
-    # Depending on the orientation of the image, x-spacing or y-spacing
-    # may be negative (e.g. y-spacing is negative in a North-up image)
-    # so take the absolute value to get the magnitude of the spacing.
+    # Depending on the orientation of the image, x-posting or y-posting
+    # may be negative (e.g. y-posting is negative in a North-up image)
+    # so take the absolute value to get the magnitude of the posting.
     xlabel = (
         f"{x_attrs.name}, pixels\n"
-        f"1 pixel = {abs(x_attrs.spacing):.4g} {x_attrs.units}"
+        f"1 pixel = {abs(x_attrs.posting):.4g} {x_attrs.units}"
     )
     ylabel = (
         f"{y_attrs.name}, pixels\n"
-        f"1 pixel = {abs(y_attrs.spacing):.4g} {y_attrs.units}"
+        f"1 pixel = {abs(y_attrs.posting):.4g} {y_attrs.units}"
     )
     ax.set_xlabel(xlabel, loc="right")
     ax.set_ylabel(ylabel, loc="top", rotation=0.0, verticalalignment="top")
@@ -670,7 +670,7 @@ def make_cr_offsets_stats_table(
 
     # Get CR offsets in pixels and in real time/space coordinates.
     offsets = np.asanyarray(offsets)
-    offsets = np.vstack([offsets, attrs.spacing * offsets])
+    offsets = np.vstack([offsets, attrs.posting * offsets])
 
     # Get CR offset statistics.
     # Note that we don't expect NaN values -- `offsets` should only contain

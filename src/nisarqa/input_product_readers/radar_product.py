@@ -206,6 +206,8 @@ class NisarRadarProduct(NisarProduct):
         )
         kwargs["zero_doppler_time"] = h5_file[path][...]
 
+        # From the xml Product Spec, zeroDopplerTimeSpacing is the
+        # '...spacing between consecutive entries in the zeroDopplerTime array'.
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,

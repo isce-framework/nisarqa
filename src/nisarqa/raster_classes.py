@@ -279,13 +279,98 @@ class Raster(IsComplex):
 
 
 @dataclass
-class SARRaster(Raster, ABC):
+class CoordinateGrid(ABC):
+    """Abstract Base Class for raster grid dataclasses."""
+
+    @property
+    @abstractmethod
+    def x_posting(self):
+        """
+        Posting in X direction of raster grid.
+
+        Notes
+        -----
+        "Spacing" refers to the (positive-valued) width of a pixel while
+        "posting" refers to the (positive- or negative-valued) stride between
+        points in a grid. (The spacing is the absolute value of the posting.)
+        """
+        pass
+
+    @property
+    def x_spacing(self):
+        """
+        Spacing in X direction of raster grid.
+
+        Notes
+        -----
+        "Spacing" refers to the (positive-valued) width of a pixel while
+        "posting" refers to the (positive- or negative-valued) stride between
+        points in a grid. (The spacing is the absolute value of the posting.)
+        """
+        return abs(self.x_posting)
+
+    @property
+    @abstractmethod
+    def x_pixel_centers(self):
+        """
+        1D vector of the raster grid's pixel center locations in X direction.
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def y_posting(self):
+        """
+        Posting in Y direction of raster grid.
+
+        Notes
+        -----
+        "Spacing" refers to the (positive-valued) width of a pixel while
+        "posting" refers to the (positive- or negative-valued) stride between
+        points in a grid. (The spacing is the absolute value of the posting.)
+
+        For NISAR L2 products, the y-coordinate posting of the
+        coordinate grid is negative (the positive y-axis points up in QA plots).
+        For NISAR L1 products (i.e. radar grids), the y-coordinate posting
+        is positive (the positive y-axis points down in QA plots).
+        """
+        pass
+
+    @property
+    def y_spacing(self):
+        """
+        Spacing in Y direction of raster grid.
+
+        Notes
+        -----
+        "Spacing" refers to the (positive-valued) width of a pixel while
+        "posting" refers to the (positive- or negative-valued) stride between
+        points in a grid. (The spacing is the absolute value of the posting.)
+        """
+        return abs(self.y_posting)
+
+    @property
+    @abstractmethod
+    def y_pixel_centers(self):
+        """
+        1D vector of the raster grid's pixel center locations in Y direction.
+        """
+        pass
+
+
+@dataclass
+class SARRaster(Raster, CoordinateGrid, ABC):
     """Abstract Base Class for SAR Raster dataclasses."""
 
     @property
     @abstractmethod
-    def y_axis_spacing(self):
-        """Pixel Spacing in Y direction (azimuth for range-Doppler rasters)"""
+    def y_ground_spacing(self):
+        """
+        Nominal ground spacing in Y direction, in meters.
+
+        Nominal ground spacing (in meters) in Y direction between
+        consecutive pixels near mid swath.
+        """
         pass
 
     @property
@@ -302,8 +387,13 @@ class SARRaster(Raster, ABC):
 
     @property
     @abstractmethod
-    def x_axis_spacing(self):
-        """Pixel Spacing in X direction (range for range-Doppler rasters)"""
+    def x_ground_spacing(self):
+        """
+        Nominal ground spacing in X direction, in meters.
+
+        Nominal ground spacing (in meters) in X direction between
+        consecutive pixels near mid swath.
+        """
         pass
 
     @property
@@ -316,46 +406,6 @@ class SARRaster(Raster, ABC):
     @abstractmethod
     def x_axis_label(self) -> str:
         """Label for the X direction (range for range-Doppler rasters)."""
-        pass
-
-
-@dataclass
-class CoordinateGrid:
-    """Abstract Base Class for raster grid dataclasses."""
-
-    @property
-    @abstractmethod
-    def x_posting(self):
-        """Posting in X direction of raster grid."""
-        pass
-
-    @property
-    @abstractmethod
-    def x_pixel_centers(self):
-        """
-        1D vector of the raster grid's pixel center locations in X direction.
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def y_posting(self):
-        """
-        Posting in Y direction of raster grid.
-
-        Note: For NISAR L2 products, the y-coordinate posting of the
-        coordinate grid is negative (the positive y-axis points up in QA plots).
-        For NISAR L1 products (i.e. radar grids), the y-coordinate posting
-        is positive (the positive y-axis points down in QA plots).
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def y_pixel_centers(self):
-        """
-        1D vector of the raster grid's pixel center locations in Y direction.
-        """
         pass
 
 
@@ -389,7 +439,7 @@ class RadarGrid(CoordinateGrid):
         Scene center ground range spacing of pixels of the grid, in meters.
     epoch : str
         The reference epoch for time coordinates in the grid,
-        in the format 'YYYY-MM-DDTHH:MM:SS'
+        in the format 'YYYY-MM-DDTHH:MM:SS'.
 
     Attributes
     ----------
@@ -514,17 +564,17 @@ class RadarRaster(SARRaster, RadarGrid):
     zero_doppler_time : numpy.ndarray
         1D vector of zero Doppler azimuth times (in seconds) measured relative
         to a UTC epoch. These correspond to the center of each pixel
-        of the raster grid in the X direction.
+        of the raster grid in the Y direction.
     zero_doppler_time_spacing : float
         Time interval in the along-track direction of the raster, in seconds.
         This is same as the spacing between consecutive entries in the
         `zero_doppler_time` array.
     slant_range : numpy.ndarray
         1D vector of the slant range values (in meters), corresponding to
-        the center of each pixel of the raster grid in the Y direction.
+        the center of each pixel of the raster grid in the X direction.
     slant_range_spacing : float
         Slant range spacing of grid, in meters. Same as difference between
-        consecutive samples in slant_range array.
+        consecutive samples in `slant_range` array.
     ground_az_spacing : float
         Scene center azimuth spacing of pixels of the grid, in meters.
     ground_range_spacing : float
@@ -562,7 +612,7 @@ class RadarRaster(SARRaster, RadarGrid):
         RadarGrid.__post_init__(self)
 
     @property
-    def y_axis_spacing(self):
+    def y_ground_spacing(self) -> float:
         return self.ground_az_spacing
 
     @property
@@ -574,7 +624,7 @@ class RadarRaster(SARRaster, RadarGrid):
         return f"Zero Doppler Time\n(seconds since {self.epoch})"
 
     @property
-    def x_axis_spacing(self):
+    def x_ground_spacing(self) -> float:
         return self.ground_range_spacing
 
     @property
@@ -598,13 +648,13 @@ class GeoGrid(CoordinateGrid):
     ----------
     epsg : int
         The EPSG code of the coordinate system.
-    x_spacing : float
+    x_axis_posting : float
         X posting of pixels of the grid, in units matching `x_coordinates`.
     x_coordinates : numpy.ndarray
         1D vector of the coordinate values of the center of each pixel
         of the raster grid in the X direction, in the units of the
         coordinate reference system represented by `epsg`.
-    y_spacing : float
+    y_axis_posting : float
         Y posting of pixels of the grid, in units matching `y_coordinates`.
         Note: For NISAR L2 products, the y-coordinate posting of the
         coordinate grid is negative (the positive y-axis points up in QA plots).
@@ -635,10 +685,13 @@ class GeoGrid(CoordinateGrid):
 
     epsg: int
 
-    x_spacing: float
+    # Call this `x_axis_posting` instead of simply `x_posting` to avoid
+    # name collisions with the property in the base class.
+    x_axis_posting: float
     x_coordinates: np.ndarray
 
-    y_spacing: float
+    # Call this `y_axis_posting` per reasoning above
+    y_axis_posting: float
     y_coordinates: np.ndarray
 
     x_start: float = field(init=False)
@@ -648,8 +701,8 @@ class GeoGrid(CoordinateGrid):
 
     def __post_init__(self):
         self.epsg = int(self.epsg)
-        self.x_spacing = float(self.x_spacing)
-        self.y_spacing = float(self.y_spacing)
+        self.x_axis_posting = float(self.x_axis_posting)
+        self.y_axis_posting = float(self.y_axis_posting)
 
         # Infer start and stop values
 
@@ -660,9 +713,8 @@ class GeoGrid(CoordinateGrid):
         # of referencing by the upper-left corner of the pixel, but the
         # NISAR L2 product writers construct `xCoordinates` and `yCoordinates`
         # to refer to the location of the center of the pixels.
-        self.x_start = float(self.x_coordinates[0] - 0.5 * self.x_spacing)
-
-        self.x_stop = float(self.x_coordinates[-1] + 0.5 * self.x_spacing)
+        self.x_start = float(self.x_coordinates[0] - 0.5 * self.x_posting)
+        self.x_stop = float(self.x_coordinates[-1] + 0.5 * self.x_posting)
 
         # Use the posting (not the spacing) to capture the
         # negative-valued stride of the y-coordinates for NISAR L2 products.
@@ -671,7 +723,7 @@ class GeoGrid(CoordinateGrid):
 
     @property
     def x_posting(self):
-        return self.x_spacing
+        return self.x_axis_posting
 
     @property
     def x_pixel_centers(self):
@@ -679,7 +731,7 @@ class GeoGrid(CoordinateGrid):
 
     @property
     def y_posting(self):
-        return self.y_spacing
+        return self.y_axis_posting
 
     @property
     def y_pixel_centers(self):
@@ -719,13 +771,13 @@ class GeoRaster(SARRaster, GeoGrid):
         name of the frequency for `data`, e.g. 'A' or 'B'
     epsg : int
         The EPSG code of the coordinate system.
-    x_spacing : float
+    x_axis_posting : float
         X posting of pixels of the grid, in units matching `x_coordinates`.
     x_coordinates : numpy.ndarray
         1D vector of the coordinate values of the center of each pixel
         of the raster grid in the X direction, in the units of the
         coordinate reference system represented by `epsg`.
-    y_spacing : float
+    y_axis_posting : float
         Y posting of pixels of the grid, in units matching `y_coordinates`.
         Note: For NISAR L2 products, the y-coordinate posting of the
         coordinate grid is negative (the positive y-axis points up in QA plots).
@@ -758,7 +810,7 @@ class GeoRaster(SARRaster, GeoGrid):
         GeoGrid.__post_init__(self)
 
     @property
-    def y_axis_spacing(self):
+    def y_ground_spacing(self) -> float:
         return self.y_spacing
 
     @property
@@ -770,7 +822,7 @@ class GeoRaster(SARRaster, GeoGrid):
         return f"Y Coordinate, EPSG:{self.epsg} (km)"
 
     @property
-    def x_axis_spacing(self):
+    def x_ground_spacing(self) -> float:
         return self.x_spacing
 
     @property
@@ -925,8 +977,8 @@ def decimate_raster_array_to_square_pixels(
     # Decimate to square pixels.
     return decimate_array_to_square_pixels(
         arr=np.array(raster_obj.data, copy=True),
-        y_axis_spacing=raster_obj.y_axis_spacing,
-        x_axis_spacing=raster_obj.x_axis_spacing,
+        y_axis_spacing=raster_obj.y_ground_spacing,
+        x_axis_spacing=raster_obj.x_ground_spacing,
     )
 
 
@@ -956,8 +1008,8 @@ def decimate_raster_array_to_square_pixels_with_strides(
     # Decimate to square pixels.
     return decimate_array_to_square_pixels_with_strides(
         arr=np.array(raster_obj.data, copy=True),
-        y_axis_spacing=raster_obj.y_axis_spacing,
-        x_axis_spacing=raster_obj.x_axis_spacing,
+        y_axis_spacing=raster_obj.y_ground_spacing,
+        x_axis_spacing=raster_obj.x_ground_spacing,
     )
 
 
@@ -974,8 +1026,10 @@ def decimate_array_to_square_pixels(
         approx. square pixels.
     y_axis_spacing : float
         Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+        Must be in same units as `x_axis_spacing`.
     x_axis_spacing : float
         Pixel Spacing in X direction (range for range-Doppler rasters).
+        Must be in same units as `y_axis_spacing`.
 
     Returns
     -------
@@ -1003,8 +1057,10 @@ def decimate_array_to_square_pixels_with_strides(
         approx. square pixels.
     y_axis_spacing : float
         Pixel Spacing in Y direction (azimuth for range-Doppler rasters).
+        Must be in same units as `x_axis_spacing`.
     x_axis_spacing : float
         Pixel Spacing in X direction (range for range-Doppler rasters).
+        Must be in same units as `y_axis_spacing`.
 
     Returns
     -------
@@ -1164,23 +1220,21 @@ class RadarRasterWithStats(RadarRaster, StatsMixin):
     zero_doppler_time : numpy.ndarray
         1D vector of zero Doppler azimuth times (in seconds) measured relative
         to a UTC epoch. These correspond to the center of each pixel
-        of the raster grid in the X direction.
+        of the raster grid in the Y direction.
     zero_doppler_time_spacing : float
         Time interval in the along-track direction of the raster, in seconds.
         This is same as the spacing between consecutive entries in the
         `zero_doppler_time` array.
     slant_range : numpy.ndarray
         1D vector of the slant range values (in meters), corresponding to
-        the center of each pixel of the raster grid in the Y direction.
+        the center of each pixel of the raster grid in the X direction.
     slant_range_spacing : float
         Slant range spacing of grid, in meters. Same as difference between
-        consecutive samples in slant_range array.
+        consecutive samples in `slant_range` array.
     ground_az_spacing : float
-        Scene center azimuth spacing of pixels of input array.
-        Units: meters
+        Scene center azimuth spacing of pixels of the grid, in meters.
     ground_range_spacing : float
-        Scene center ground range spacing of pixels of input array.
-        Units: meters
+        Scene center ground range spacing of pixels of the grid, in meters.
     epoch : str
         The reference epoch for time coordinates in the grid,
         in the format 'YYYY-MM-DDTHH:MM:SS'.
@@ -1244,13 +1298,13 @@ class GeoRasterWithStats(GeoRaster, StatsMixin):
         Name of the frequency for `img`, e.g. 'A' or 'B'
     epsg : int
         The EPSG code of the coordinate system.
-    x_spacing : float
+    x_axis_posting : float
         X posting of pixels of the grid, in units matching `x_coordinates`.
     x_coordinates : numpy.ndarray
         1D vector of the coordinate values of the center of each pixel
         of the raster grid in the X direction, in the units of the
         coordinate reference system represented by `epsg`.
-    y_spacing : float
+    y_axis_posting : float
         Y posting of pixels of the grid, in units matching `y_coordinates`.
         Note: For NISAR L2 products, the y-coordinate posting of the
         coordinate grid is negative (the positive y-axis points up in QA plots).
