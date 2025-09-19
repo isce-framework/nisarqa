@@ -685,9 +685,12 @@ class GeoGrid(CoordinateGrid):
 
     epsg: int
 
+    # Call this `x_axis_posting` instead of simply `x_posting` to avoid
+    # name collisions with the property in the base class.
     x_axis_posting: float
     x_coordinates: np.ndarray
 
+    # Call this `y_axis_posting` per reasoning above
     y_axis_posting: float
     y_coordinates: np.ndarray
 
