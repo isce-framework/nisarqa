@@ -88,9 +88,6 @@ def plot_connected_components_layer(
     fig.suptitle(title)
 
     # Step 1: Compute metrics on full raster (We should not skip any CC!):
-    # Note: if `cc_raster.data` is a NumPy array or memmap, this will only
-    # create a view of the underlying data.
-    # Do not alter `cc_full` later in this function!
     cc_full = cc_raster.data[()]
 
     labels, percentages = nisarqa.get_unique_elements_and_percentages(cc_full)
