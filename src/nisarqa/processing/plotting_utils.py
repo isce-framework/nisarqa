@@ -296,7 +296,7 @@ def downsample_img_to_size_of_axes_with_stride(
 
         if src_arr_height <= desired_longest:
             # input array is smaller than window extent. No downsampling needed.
-            return arr, 1
+            return np.array(arr, copy=True), 1
 
         # Use floor division. (Better to have resolution that is *slightly*
         # better than the axes size, rather than the image being too small
@@ -310,14 +310,14 @@ def downsample_img_to_size_of_axes_with_stride(
 
         if src_arr_width <= desired_longest:
             # input array is smaller than window extent. No downsampling needed.
-            return arr, 1
+            return np.array(arr, copy=True), 1
 
         # Use floor division. See explanation above.)
         stride = int(src_arr_width / desired_longest)
 
     # Downsample to the correct size along the X and Y directions.
     if mode == "decimate":
-        return arr[::stride, ::stride], stride
+        return np.array(arr[::stride, ::stride], copy=True), stride
     elif mode == "multilook":
         return nisarqa.multilook(arr=arr, nlooks=(stride, stride)), stride
     else:
