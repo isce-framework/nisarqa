@@ -576,7 +576,7 @@ def img2pdf_hsi(
 
     # Set all NaN pixels to 1 in each of the red-green-blue layers.
     # This way, the NaN pixels will appear white in the PDF.
-    img_to_plot = img_arr.copy()
+    img_to_plot = np.array(img_arr.data, copy=True)
     img_to_plot[~np.isfinite(img_arr)] = 1
 
     # Decimate image to a size that fits on the axes without interpolation
