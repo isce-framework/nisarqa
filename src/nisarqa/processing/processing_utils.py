@@ -48,7 +48,7 @@ def get_phase_array(
     """
 
     # Make a copy so that we do not alter the underlying data array.
-    phs_img = phs_or_complex_raster.data[...].copy()
+    phs_img = np.array(phs_or_complex_raster.data, copy=True)
 
     if phs_or_complex_raster.is_complex:
         # complex data; take the phase angle.
