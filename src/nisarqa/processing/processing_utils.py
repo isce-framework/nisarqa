@@ -37,8 +37,8 @@ def get_phase_array(
     Returns
     -------
     phs_img : numpy.ndarray
-        The phase image from the input raster, processed according to the input
-        parameters.
+        Copy of the phase image from the input raster, processed
+        according to the input parameters.
     cbar_min_max : pair of float
         The suggested range to use for plotting the phase image.
         If `phs_or_complex_raster` has complex valued data, then `cbar_min_max`
@@ -47,7 +47,8 @@ def get_phase_array(
         If `rewrap` is a None, the range will be [<array min>, <array max>].
     """
 
-    phs_img = phs_or_complex_raster.data[...]
+    # Make a copy so that we do not alter the underlying data array.
+    phs_img = phs_or_complex_raster.data[...].copy()
 
     if phs_or_complex_raster.is_complex:
         # complex data; take the phase angle.
@@ -121,7 +122,7 @@ def image_histogram_equalization(
     Returns
     -------
     equalized_img : numpy.ndarray
-        The image with histogram equalization applied.
+        Copy of the input image with histogram equalization applied.
         This image will be in range [0, 1].
 
     References
