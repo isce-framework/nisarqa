@@ -104,55 +104,6 @@ def get_phase_array(
     return phs_img, cbar_min_max
 
 
-def image_histogram_equalization(
-    image: np.ndarray, nbins: int = 256
-) -> np.ndarray:
-    """
-    Perform histogram equalization of a grayscale image.
-
-    Parameters
-    ----------
-    image : numpy.ndarray
-        N-dimensional image array. All dimensions will be combined when
-        computing the histogram.
-    nbins : int, optional
-        Number of bins for computing the histogram.
-        Defaults to 256.
-
-    Returns
-    -------
-    equalized_img : numpy.ndarray
-        Copy of the input image with histogram equalization applied.
-        This image will be in range [0, 1].
-
-    References
-    ----------
-    Adapted from: skimage.exposure.equalize_hist
-    Description of histogram equalization:
-    https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_equalize.html
-    """
-    # Do not include NaN values
-    img = image[np.isfinite(image)]
-
-    hist, bin_edges = np.histogram(img.flatten(), bins=nbins, range=None)
-    bin_centers = (bin_edges[:-1] + bin_edges[1:]) / 2.0
-
-    cdf = hist.cumsum()
-    cdf = cdf / float(cdf[-1])
-
-    out = np.interp(image.flatten(), bin_centers, cdf)
-    out = out.reshape(image.shape)
-
-    # Sanity Check. Mathematically, the output should be within range [0, 1].
-    assert np.all(
-        (0.0 <= out[np.isfinite(out)]) & (out[np.isfinite(out)] <= 1.0)
-    ), "`out` contains values outside of range [0, 1]."
-
-    # Unfortunately, np.interp currently always promotes to float64, so we
-    # have to cast back to single precision when float32 output is desired
-    return out.astype(image.dtype, copy=False)
-
-
 def clip_array(arr, percentile_range=(0.0, 100.0)):
     """
     Clip input array to the provided percentile range.

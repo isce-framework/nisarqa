@@ -214,19 +214,6 @@ def igram_qa(
                 stats_h5=stats_h5,
             )
 
-            # Save HSI Plots to PDF
-            if product_type == "rifg":
-                nisarqa.hsi_images_to_pdf_wrapped(
-                    product=product, report_pdf=report_pdf
-                )
-            else:
-                # RUNW or GUNW
-                nisarqa.hsi_images_to_pdf_unwrapped(
-                    product=product,
-                    report_pdf=report_pdf,
-                    rewrap=root_params.unw_phs_img.rewrap,
-                )
-
         log.info(f"PDF reports saved to {report_file}")
         log.info(f"HDF5 statistics saved to {stats_file}")
         log.info(f"CSV Summary PASS/FAIL checks saved to {summary_file}")
@@ -282,45 +269,21 @@ def save_igram_product_browse_png(product, params, browse_png):
 
     freq, pol = product.get_browse_freq_pol()
 
-    if params.browse_image == "phase":
-        if product_type == "RIFG":
-            nisarqa.make_wrapped_phase_png(
-                product=product,
-                freq=freq,
-                pol=pol,
-                png_filepath=browse_png,
-                longest_side_max=params.longest_side_max,
-            )
-        else:
-            nisarqa.make_unwrapped_phase_png(
-                product=product,
-                freq=freq,
-                pol=pol,
-                params=params,
-                png_filepath=browse_png,
-            )
-
-    elif params.browse_image == "hsi":
-        if product_type == "RIFG":
-            nisarqa.make_hsi_png_with_wrapped_phase(
-                product=product,
-                freq=freq,
-                pol=pol,
-                params=params,
-                png_filepath=browse_png,
-            )
-
-        else:
-            nisarqa.make_hsi_png_with_unwrapped_phase(
-                product=product,
-                freq=freq,
-                pol=pol,
-                params=params,
-                png_filepath=browse_png,
-            )
+    if product_type == "RIFG":
+        nisarqa.make_wrapped_phase_png(
+            product=product,
+            freq=freq,
+            pol=pol,
+            png_filepath=browse_png,
+            longest_side_max=params.longest_side_max,
+        )
     else:
-        raise ValueError(
-            f"`{params.browse_image=}`, only 'phase' or 'hsi' supported."
+        nisarqa.make_unwrapped_phase_png(
+            product=product,
+            freq=freq,
+            pol=pol,
+            params=params,
+            png_filepath=browse_png,
         )
 
 

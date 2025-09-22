@@ -3,7 +3,6 @@ from .az_and_slant_rng_variances import *
 from .connected_components import *
 from .corr_surface_peak_and_cross_variance import *
 from .histograms import *
-from .hsi import *
 from .ionosphere_phase_screen import *
 from .quiver_plots import *
 from .unwrapped_coh_mag import *

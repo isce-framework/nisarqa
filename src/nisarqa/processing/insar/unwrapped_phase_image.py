@@ -88,8 +88,9 @@ def plot_unwrapped_phase_image_to_pdf(
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output PDF file to append the unwrapped phase image plot(s) to.
     rewrap : float or None, optional
-        The multiple of pi to rewrap the unwrapped phase image when generating
-        the HSI image(s). If None, no rewrapped phase image will be plotted.
+        The multiple of pi to rewrap the unwrapped phase image and include
+        as an additional plot in the PDF. If None, no rewrapped phase image
+        will be plotted.
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
         Defaults to None.
     """

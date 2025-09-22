@@ -368,71 +368,10 @@ class IgramBrowseParamGroup(YamlParamGroup, HDF5ParamGroup):
 
     Parameters
     ----------
-    browse_image : string, optional
-        The image to use as the basis for the browse image PNG. Options:
-            "phase" : Wrapped phase.
-            "hsi" : An HSI image with phase information encoded as Hue and
-                coherence encoded as Intensity.
-            Defaults to "phase".
-    equalize_browse : bool, optional
-        Only used if `browse_image` is set to "hsi".
-        True to perform histogram equalization on the Intensity channel
-        (the coherence magnitude layer) in the browse image PNG.
-        False to not apply the equalization.
-        See: https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_equalize.html
-        Default is False.
     longest_side_max : int, optional
         The maximum number of pixels allowed for the longest side of the final
         2D multilooked browse image. Defaults to 2048 pixels.
     """
-
-    browse_image: str = field(
-        default="phase",
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="browse_image",
-                descr="""The image to use as the basis for the browse image PNG. Options:
-            "phase" : Wrapped phase.
-            "hsi" : An HSI image with phase information encoded as Hue and 
-            coherence encoded as Intensity.""",
-            ),
-            "hdf5_attrs": HDF5Attrs(
-                name="browseImage",
-                units="1",
-                descr=(
-                    "Basis image for the browse PNG. 'phase' if wrapped phase,"
-                    " 'hsi' if HSI image with phase information encoded as"
-                    " Hue and coherence encoded as Intensity."
-                ),
-                group_path=nisarqa.STATS_H5_QA_PROCESSING_GROUP,
-            ),
-        },
-    )
-
-    equalize_browse: bool = field(
-        default=False,
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="equalize_browse",
-                descr="""Only used if `browse_image` is set to "hsi".
-        True to perform histogram equalization on the Intensity channel
-        (the coherence magnitude layer) in the browse image PNG.
-        False to not apply the equalization. 
-        See: https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_equalize.html""",
-            ),
-            "hdf5_attrs": HDF5Attrs(
-                name="equalizeBrowse",
-                units="1",
-                descr=(
-                    "If True and if `browseImage` is 'hsi', histogram"
-                    " equalization was applied to the intensity channel"
-                    " (coherence magnitude layer) in the HSI browse image PNG."
-                    " Otherwise, not used while processing the browse PNG."
-                ),
-                group_path=nisarqa.STATS_H5_QA_PROCESSING_GROUP,
-            ),
-        },
-    )
 
     longest_side_max: int = field(
         default=2048,
@@ -447,19 +386,6 @@ class IgramBrowseParamGroup(YamlParamGroup, HDF5ParamGroup):
 
     def __post_init__(self):
         # VALIDATE INPUTS
-
-        # validate browse_image
-        browse_options = {"hsi", "phase"}
-        if self.browse_image not in browse_options:
-            raise ValueError(
-                f"`{self.browse_image=}`, must be one of {browse_options}."
-            )
-
-        # validate equalize_browse
-        if not isinstance(self.equalize_browse, bool):
-            raise TypeError(
-                f"`equalize_browse` must be bool: {self.equalize_browse}"
-            )
 
         # validate longest_side_max
         if not isinstance(self.longest_side_max, int):
@@ -479,19 +405,6 @@ class UNWIgramBrowseParamGroup(IgramBrowseParamGroup):
 
     Parameters
     ----------
-    browse_image : string, optional
-        The image to use as the basis for the browse image PNG. Options:
-            "phase" : (optionally re-wrapped) unwrapped phase.
-            "hsi" : An HSI image with (optionally re-wrapped) phase information
-                encoded as Hue and coherence encoded as Intensity.
-            Defaults to "phase".
-    equalize_browse : bool, optional
-        Only used if `browse_image` is set to "hsi".
-        True to perform histogram equalization on the Intensity channel
-        (the coherence magnitude layer) in the browse image PNG.
-        False to not apply the equalization.
-        See: https://scikit-image.org/docs/stable/auto_examples/color_exposure/plot_equalize.html
-        Default is False.
     longest_side_max : int, optional
         The maximum number of pixels allowed for the longest side of the final
         2D multilooked browse image. Defaults to 2048 pixels.
@@ -500,31 +413,6 @@ class UNWIgramBrowseParamGroup(IgramBrowseParamGroup):
         the browse PNG. If None, no rewrapping will occur.
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
     """
-
-    # Overrides the base class member.
-    browse_image: str = field(
-        default="phase",
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="browse_image",
-                descr="""The image to use as the basis for the browse image PNG. Options:
-            "phase" : (Optionally re-wrapped) unwrapped phase.
-            "hsi" : An HSI image with phase information encoded as Hue and 
-            coherence encoded as Intensity.""",
-            ),
-            "hdf5_attrs": HDF5Attrs(
-                name="browseImage",
-                units=None,
-                descr=(
-                    "Basis image for the browse PNG. 'phase' if (optionally"
-                    " re-wrapped) unwrapped phase, 'hsi' if an HSI image with"
-                    " that phase information encoded as Hue and coherence"
-                    " encoded as Intensity."
-                ),
-                group_path=nisarqa.STATS_H5_QA_PROCESSING_GROUP,
-            ),
-        },
-    )
 
     rewrap: Optional[float | int] = field(
         default=7,
@@ -598,8 +486,7 @@ class UNWPhaseImageParamGroup(YamlParamGroup, HDF5ParamGroup):
     ----------
     rewrap : float or None, optional
         The multiple of pi to rewrap the unwrapped phase image in the report
-        PDF. Will be used for both the unwrapped phase image plot(s) and
-        the HSI image plot(s). If None, no rewrapping will occur.
+        PDF. If None, no rewrapping will occur.
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
     """
 
@@ -609,8 +496,7 @@ class UNWPhaseImageParamGroup(YamlParamGroup, HDF5ParamGroup):
             "yaml_attrs": YamlAttrs(
                 name="rewrap",
                 descr="""The multiple of pi to rewrap the unwrapped phase image in the report
-                    PDF. Will be used for both the unwrapped phase image plot(s) and
-                    the HSI image plot(s). If None, no rewrapping will occur.
+                    PDF. If None, no rewrapping will occur.
                     Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).""",
             ),
             "hdf5_attrs": HDF5Attrs(
@@ -618,8 +504,7 @@ class UNWPhaseImageParamGroup(YamlParamGroup, HDF5ParamGroup):
                 units="1",
                 descr=(
                     "The multiple of pi for rewrapping the unwrapped phase"
-                    " image in the report PDF; applied to both unwrapped"
-                    " phase image plot(s) and HSI plot(s). 'None' if no"
+                    " image in the report PDF. 'None' if no"
                     " rewrapping occurred. Example: If `phaseImageRewrap`=3,"
                     " the image was rewrapped to the interval [0, 3pi)."
                 ),
