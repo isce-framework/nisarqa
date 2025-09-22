@@ -355,9 +355,7 @@ def make_hsi_as_rgb_img(
         hsi[:, :, 2] = image_histogram_equalization(image=coh_mag)
     else:
         # coh mag is already within range [0, 1].
-        # Make a copy, so that when we replace all non-finite values
-        # with 0 (below), we do not alter the input source array
-        hsi[:, :, 2] = coh_mag.copy()
+        hsi[:, :, 2] = coh_mag
 
     # The input arrays may contain some nan values.
     # But, we need to set them to zero for generating the HSI array.

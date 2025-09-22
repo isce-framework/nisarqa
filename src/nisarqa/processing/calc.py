@@ -140,7 +140,7 @@ def normalize(
     normalized_arr : numpy.ndarray
         A normalized copy of `arr`.
     """
-    arr = np.asanyarray(arr).copy()
+    arr = np.asanyarray(arr)
 
     if min_max is None:
         arr_min = np.nanmin(arr)
