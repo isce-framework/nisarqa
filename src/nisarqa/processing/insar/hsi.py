@@ -516,8 +516,8 @@ def make_hsi_raster(
             name=name,
             x_coordinates=phs_or_complex_raster.x_coordinates[::kx],
             x_axis_posting=phs_or_complex_raster.x_axis_posting * kx,
-            y_coordinates=phs_or_complex_raster.x_coordinates[::ky],
-            y_axis_posting=phs_or_complex_raster.x_axis_posting * ky,
+            y_coordinates=phs_or_complex_raster.y_coordinates[::ky],
+            y_axis_posting=phs_or_complex_raster.y_axis_posting * ky,
         )
     else:
         raise TypeError(

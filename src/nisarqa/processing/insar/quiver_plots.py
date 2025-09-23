@@ -600,9 +600,9 @@ def add_magnitude_image_and_quiver_plot_to_axes(
                 geo_grid=nisarqa.GeoGrid(
                     epsg=coord_grid.epsg,
                     x_coordinates=coord_grid.x_coordinates[::arrow_stride],
-                    x_axis_posting=coord_grid.x_axis_posting * arrow_stride,
+                    x_axis_posting=coord_grid.x_posting * arrow_stride,
                     y_coordinates=coord_grid.y_coordinates[::arrow_stride],
-                    y_axis_posting=coord_grid.y_axis_posting * arrow_stride,
+                    y_axis_posting=coord_grid.y_posting * arrow_stride,
                 ),
                 projection_params=quiver_projection_params,
             )
