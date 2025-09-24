@@ -362,7 +362,7 @@ class GOFFValidationParamGroup(ValidationGroupParamGroup):
 
 
 @dataclass(frozen=True)
-class IgramBrowseParamGroup(YamlParamGroup, HDF5ParamGroup):
+class IgramBrowseParamGroup(YamlParamGroup):
     """
     Parameters to generate the browse image PNG for RIFG, RUNW, and GUNW.
 
@@ -399,7 +399,7 @@ class IgramBrowseParamGroup(YamlParamGroup, HDF5ParamGroup):
 
 
 @dataclass(frozen=True)
-class UNWIgramBrowseParamGroup(IgramBrowseParamGroup):
+class UNWIgramBrowseParamGroup(IgramBrowseParamGroup, HDF5ParamGroup):
     """
     Parameters to generate the Browse Image PNG for RUNW or GUNW.
 
@@ -412,6 +412,7 @@ class UNWIgramBrowseParamGroup(IgramBrowseParamGroup):
         The multiple of pi to rewrap the unwrapped phase image when generating
         the browse PNG. If None, no rewrapping will occur.
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
+        Defaults to 7.
     """
 
     rewrap: Optional[float | int] = field(
@@ -421,8 +422,7 @@ class UNWIgramBrowseParamGroup(IgramBrowseParamGroup):
                 name="rewrap",
                 descr="""The multiple of pi to rewrap the unwrapped phase image
                     when generating the browse PNG. If None, no rewrapping will occur.
-                    Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
-                    """,
+                    Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).""",
             ),
             "hdf5_attrs": HDF5Attrs(
                 name="browseImageRewrap",
