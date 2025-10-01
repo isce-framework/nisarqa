@@ -701,35 +701,6 @@ def wrap_to_interval(val, *, start, stop):
     return wrap(val) if is_scalar else (wrap(v) for v in val)
 
 
-def pairwise(iterable: Iterable[T]) -> Generator[tuple[T, T], None, None]:
-    """
-    Return successive overlapping pairs taken from the input iterable.
-
-    Example: pairwise('ABCDEFG') -> AB BC CD DE EF FG
-
-    Source: https://docs.python.org/3/library/itertools.html#itertools.pairwise
-
-    Parameters
-    ----------
-    iterable : iterable of T
-        The input iterable.
-
-    Yields
-    ------
-    pair : pair of T
-        Successive overlapping pairs taken from the input iterable.
-        The number of 2-tuples in the output iterator will be one fewer than
-        the number of inputs. It will be empty if the input iterable has
-        fewer than two values.
-    """
-
-    iterator = iter(iterable)
-    a = next(iterator, None)
-    for b in iterator:
-        yield a, b
-        a = b
-
-
 @contextmanager
 def create_unique_subdirectory(
     parent_dir: str | os.PathLike | None = None,

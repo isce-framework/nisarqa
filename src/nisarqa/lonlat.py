@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import os
 import textwrap
-from collections.abc import Generator, Iterable, Sequence
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
 
 import numpy as np
+from numpy.typing import ArrayLike
 
 import nisarqa
 
@@ -37,26 +37,34 @@ def unwrap_longitudes(lons: Iterable[float]) -> list[float]:
         between any adjacent pair of longitude values is <= 180 degrees.
         The ordering of the points is preserved.
     """
-
     # since `lons` is an iterable, `wrap_to_interval` returns an iterator
     lons_180 = list(nisarqa.wrap_to_interval(val=lons, start=-180, stop=180))
 
-    unwrapped = [lons_180[0]]
+    return list(unwrap_degrees(angles=lons_180))
 
-    for prev_lon, curr_lon in nisarqa.pairwise(lons_180):
 
-        delta = curr_lon - prev_lon
+def unwrap_degrees(angles: ArrayLike) -> np.ndarray:
+    """
+    Unwrap a sequence of angles in degrees.
 
-        # If it's a large jump to the west, subtract 360
-        if delta > 180:
-            curr_lon -= 360
-        # If it's a large jump to the east, add 360
-        elif delta < -180:
-            curr_lon += 360
+    Unwraps the input angles such that the absolute differences between
+    adjacent elements are never greater than 180 degrees by adding a
+    multiple of 360 degrees to each element.
 
-        unwrapped.append(curr_lon)
+    Parameters
+    ----------
+    angles : array_like
+        The input sequence of angles, in degrees.
 
-    return unwrapped
+    Returns
+    -------
+    numpy.ndarray
+        The unwrapped angles, in degrees.
+    """
+    # `numpy.unwrap` doesn't correctly unwrap inputs in degrees prior
+    # to NumPy 1.21.0. See https://github.com/numpy/numpy/pull/16987.
+    # ISCE3 currently supports NumPy >=1.20.
+    return np.rad2deg(np.unwrap(np.deg2rad(angles)))
 
 
 def normalize_lon_lat_pts(lon_lat_points: Sequence[LonLat]) -> list[LonLat]:
