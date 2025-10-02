@@ -63,7 +63,7 @@ def unwrap_degrees(angles: ArrayLike) -> np.ndarray:
     """
     # `numpy.unwrap` doesn't correctly unwrap inputs in degrees prior
     # to NumPy 1.21.0. See https://github.com/numpy/numpy/pull/16987.
-    # ISCE3 currently supports NumPy >=1.20.
+    # nisarqa currently supports NumPy >=1.20.
     return np.rad2deg(np.unwrap(np.deg2rad(angles)))
 
 
