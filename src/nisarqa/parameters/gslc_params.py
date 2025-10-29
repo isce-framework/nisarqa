@@ -6,9 +6,9 @@ import nisarqa
 from .caltools_params import PointTargetAnalyzerParamGroup
 from .nisar_params import (
     InputFileGroupParamGroup,
+    NoCacheSoftwareConfigParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
-    SoftwareConfigParamGroup,
     ValidationGroupParamGroup,
     YamlAttrs,
 )
@@ -108,7 +108,7 @@ class GSLCRootParamGroup(RootParamGroup):
         Input File Group parameters for QA
     prodpath : ProductPathGroupParamGroup or None, optional
         Product Path Group parameters for QA
-    software_config : SoftwareConfigParamGroup or None, optional
+    software_config : NoCacheSoftwareConfigParamGroup or None, optional
         General QA Software Configuration Group parameters
     validation : ValidationGroupParamGroup or None, optional
         Validation Group parameters for QA
@@ -124,6 +124,7 @@ class GSLCRootParamGroup(RootParamGroup):
 
     # Overwrite parent's attributes b/c new type
     workflows: SLCWorkflowsParamGroup
+    software_config: NoCacheSoftwareConfigParamGroup
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
@@ -191,7 +192,7 @@ class GSLCRootParamGroup(RootParamGroup):
             Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="software_config",
-                param_grp_cls_obj=SoftwareConfigParamGroup,
+                param_grp_cls_obj=NoCacheSoftwareConfigParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.validate,
@@ -231,7 +232,7 @@ class GSLCRootParamGroup(RootParamGroup):
             "anc_files": GSLCDynamicAncillaryFileParamGroup,
             "prodpath": ProductPathGroupParamGroup,
             "workflows": SLCWorkflowsParamGroup,
-            "software_config": SoftwareConfigParamGroup,
+            "software_config": NoCacheSoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
             "histogram": HistogramParamGroup,

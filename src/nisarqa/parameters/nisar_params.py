@@ -1155,6 +1155,30 @@ class SoftwareConfigParamGroup(YamlParamGroup):
 
 
 @dataclass(frozen=True)
+class NoCacheSoftwareConfigParamGroup(SoftwareConfigParamGroup):
+    """
+    Parameters from the Software Config Group runconfig group with cache off.
+
+    Parameters
+    ----------
+    use_cache : bool, optional
+        True to cache selected dataset(s) into intermediate
+        memory-mapped flat file(s), which speeds up repeat access.
+        False to always read data directly from the input file.
+        Generally, enabling caching should reduce runtime.
+        Defaults to False.
+    delete_scratch_files : bool, optional
+        True to delete the nested QA scratch directory and its contents
+        from inside `scratch_dir_parent` when QA SAS is finished.
+        Defaults to True.
+    """
+
+    use_cache: bool = SoftwareConfigParamGroup.get_field_with_updated_default(
+        param_name="use_cache", default=False
+    )
+
+
+@dataclass(frozen=True)
 class ValidationGroupParamGroup(YamlParamGroup):
     """
     Parameters from the Validation Group runconfig group.
