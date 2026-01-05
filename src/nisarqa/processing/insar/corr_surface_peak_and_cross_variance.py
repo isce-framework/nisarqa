@@ -58,7 +58,7 @@ def process_surface_peak(
                 ) as surface_peak,
             ):
                 # Compute Statistics first, in case of malformed layers
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=surface_peak,
                     params=params_surface_peak,
                     stats_h5=stats_h5,
@@ -249,12 +249,12 @@ def process_cross_variance_and_surface_peak(
                     ) as surface_peak,
                 ):
                     # Compute Statistics first, in case of malformed layers
-                    nisarqa.compute_and_save_basic_statistics(
+                    nisarqa.process_and_save_basic_statistics(
                         raster=cross_off_var,
                         params=params_cross_offset,
                         stats_h5=stats_h5,
                     )
-                    nisarqa.compute_and_save_basic_statistics(
+                    nisarqa.process_and_save_basic_statistics(
                         raster=surface_peak,
                         params=params_surface_peak,
                         stats_h5=stats_h5,

@@ -42,7 +42,7 @@ def process_unw_coh_mag(
             with product.get_unwrapped_coh_mag(freq=freq, pol=pol) as coh_mag:
                 # Compute Statistics first, in case of malformed layers
                 # (which could cause plotting to fail)
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=coh_mag,
                     params=params,
                     stats_h5=stats_h5,

@@ -47,7 +47,7 @@ def process_phase_image_unwrapped(
             with product.get_unwrapped_phase(freq=freq, pol=pol) as img:
                 # Compute Statistics first, in case of malformed layers
                 # (which could cause plotting to fail)
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=img, stats_h5=stats_h5, params=params
                 )
 

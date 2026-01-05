@@ -57,12 +57,12 @@ def process_ionosphere_phase_screen(
             ):
                 # Compute Statistics first, in case of malformed layers
                 # (which could cause plotting to fail)
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=iono_phs,
                     stats_h5=stats_h5,
                     params=params_iono_phs_screen,
                 )
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=iono_uncertainty,
                     stats_h5=stats_h5,
                     params=params_iono_phs_uncert,

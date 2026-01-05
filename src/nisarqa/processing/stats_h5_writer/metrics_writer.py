@@ -592,11 +592,65 @@ def get_stats_name_descr(stat: str, component: str | None) -> tuple[str, str]:
         )
 
 
+def copy_imagery_metrics_to_stats_h5(
+    raster: nisarqa.RadarRasterWithStats | nisarqa.GeoRasterWithStats,
+    stats_h5: h5py.File,
+) -> None:
+    """
+    Copy min, max, mean, and std from input raster to HDF5.
+
+    Parameters
+    ----------
+    raster : nisarqa.RadarRasterWithStats or nisarqa.GeoRasterWithStats
+        Input Raster.
+    stats_h5 : h5py.File
+        The output file to save metrics to.
+
+    Notes
+    -----
+    If the input raster's stats attribute contains metrics with values
+    of `None`, those metrics will not appear in the output stats HDF5.
+    """
+    for m in ("min", "max", "mean", "std"):
+        metrics = []
+        if raster.is_complex:
+            for component in ("real", "imag"):
+                # get tuple of (val, name, descr)
+                val_name_descr = raster.get_stat_val_name_descr(
+                    stat=m, component=component
+                )
+                metrics.append(val_name_descr)
+        else:
+            # get tuple of (val, name, descr)
+            val_name_descr = raster.get_stat_val_name_descr(stat=m)
+            metrics.append(val_name_descr)
+
+        for val, name, descr in metrics:
+            if val is not None:
+                # XXX: This will create a dataset with a snake_case name,
+                # which differs from the usual camelCase naming convention,
+                # but matches the name of the attribute in the input
+                # product.
+                nisarqa.create_dataset_in_h5group(
+                    h5_file=stats_h5,
+                    grp_path=raster.stats_h5_group_path,
+                    ds_name=name,
+                    ds_data=val,
+                    ds_description=descr,
+                    ds_units=raster.units,
+                )
+            else:
+                nisarqa.get_logger().error(
+                    f"Attribute `{name}` is missing or has no"
+                    f" value. Dataset: {raster.name}"
+                )
+
+
 def copy_non_insar_imagery_metrics(
     product: nisarqa.NonInsarProduct, stats_h5: h5py.File
 ) -> None:
     """
-    Copy min/max/mean/std metrics of freq+pol imagery layers to QA HDF5.
+    Copy min/max/mean/std metrics of all freq+pol imagery layers to QA HDF5.
 
     This function accommodates both real and complex datasets.
 
@@ -607,49 +661,12 @@ def copy_non_insar_imagery_metrics(
     stats_h5 : h5py.File
         Handle to an HDF5 file where the metrics should be saved.
     """
-    log = nisarqa.get_logger()
 
     for freq in product.freqs:
         for pol in product.get_pols(freq=freq):
             with product.get_raster(freq=freq, pol=pol) as img:
-                dest_path = (
-                    f"{nisarqa.STATS_H5_QA_FREQ_GROUP % (product.band, freq)}"
-                    f"/{pol}"
-                )
 
-                for m in ("min", "max", "mean", "std"):
-                    metrics = []
-                    if img.is_complex:
-                        for component in ("real", "imag"):
-                            # get tuple of (val, name, descr)
-                            val_name_descr = img.get_stat_val_name_descr(
-                                stat=m, component=component
-                            )
-                            metrics.append(val_name_descr)
-                    else:
-                        # get tuple of (val, name, descr)
-                        val_name_descr = img.get_stat_val_name_descr(stat=m)
-                        metrics.append(val_name_descr)
-
-                    for val, name, descr in metrics:
-                        if val is not None:
-                            # XXX: This will create a dataset with a snake_case name,
-                            # which differs from the usual camelCase naming convention,
-                            # but matches the name of the attribute in the input
-                            # product.
-                            nisarqa.create_dataset_in_h5group(
-                                h5_file=stats_h5,
-                                grp_path=dest_path,
-                                ds_name=name,
-                                ds_data=val,
-                                ds_description=descr,
-                                ds_units=img.units,
-                            )
-                        else:
-                            log.error(
-                                f"Attribute `{name}` is missing or has no"
-                                f" value. Dataset: {img.name}"
-                            )
+                copy_imagery_metrics_to_stats_h5(raster=img, stats_h5=stats_h5)
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

@@ -252,11 +252,11 @@ def process_range_and_az_offsets(
     """
     # Compute Statistics first, in case of malformed layers
     # (which could cause plotting to fail)
-    nisarqa.compute_and_save_basic_statistics(
+    nisarqa.process_and_save_basic_statistics(
         raster=az_offset, stats_h5=stats_h5, params=params
     )
 
-    nisarqa.compute_and_save_basic_statistics(
+    nisarqa.process_and_save_basic_statistics(
         raster=rg_offset, stats_h5=stats_h5, params=params
     )
 

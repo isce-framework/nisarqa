@@ -33,9 +33,9 @@ class WrappedGroup(InsarProduct):
     @contextmanager
     def get_wrapped_igram(
         self, freq: str, pol: str
-    ) -> Iterator[nisarqa.RadarRaster | nisarqa.GeoRaster]:
+    ) -> Iterator[nisarqa.RadarRasterWithStats | nisarqa.GeoRasterWithStats]:
         """
-        Get the complex-valued wrapped interferogram image *Raster.
+        Get the complex-valued wrapped interferogram image *RasterWithStats.
 
         Parameters
         ----------
@@ -44,15 +44,23 @@ class WrappedGroup(InsarProduct):
 
         Yields
         ------
-        raster : RadarRaster or GeoRaster
+        raster : RadarRasterWithStats or GeoRasterWithStats
             Generated *Raster for the requested dataset.
+
+        Notes
+        -----
+        As of Jan 2026 (Product Spec Version 1.4.0), the wrapped interferogram
+        layers do not contain min/max/mean/std statistics as attributes.
+        This means that the `stats` attribute in the yielded `raster` will
+        contain `None` values for each metric. However, should this change
+        in subsequent ISCE3 releases, these values be populated accordingly.
         """
         parent_path = self._wrapped_group_path(freq=freq, pol=pol)
         path = f"{parent_path}/wrappedInterferogram"
 
         with h5py.File(self.filepath) as f:
             yield self._get_raster_from_path(
-                h5_file=f, raster_path=path, parse_stats=False
+                h5_file=f, raster_path=path, parse_stats=True
             )
 
     @contextmanager

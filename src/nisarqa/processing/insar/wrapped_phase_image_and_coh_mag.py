@@ -57,12 +57,12 @@ def process_phase_image_wrapped(
             ):
                 # Compute Statistics first, in case of malformed layers
                 # (which could cause plotting to fail)
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=complex_img,
                     params=params_wrapped_igram,
                     stats_h5=stats_h5,
                 )
-                nisarqa.compute_and_save_basic_statistics(
+                nisarqa.process_and_save_basic_statistics(
                     raster=coh_img,
                     params=params_coh_mag,
                     stats_h5=stats_h5,

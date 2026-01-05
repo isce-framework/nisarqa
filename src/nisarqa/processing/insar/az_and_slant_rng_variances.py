@@ -62,12 +62,12 @@ def process_az_and_slant_rg_variances_from_offset_product(
                 ):
                     # Compute Statistics first, in case of malformed layers
                     # (which could cause plotting to fail)
-                    nisarqa.compute_and_save_basic_statistics(
+                    nisarqa.process_and_save_basic_statistics(
                         raster=az_off_var,
                         params=params,
                         stats_h5=stats_h5,
                     )
-                    nisarqa.compute_and_save_basic_statistics(
+                    nisarqa.process_and_save_basic_statistics(
                         raster=rg_off_var,
                         params=params,
                         stats_h5=stats_h5,
