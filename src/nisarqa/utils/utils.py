@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import shutil
@@ -755,10 +756,46 @@ def create_unique_subdirectory(
     try:
         yield path
     finally:
-        log = nisarqa.get_logger()
         if delete:
+            log = nisarqa.get_logger()
+            # Use onerror callback to handle NFS "silly rename" behavior
+            # See: https://github.com/isce-framework/nisarqa/issues/152
+
+            # shutil.rmtree's onerror was deprecated in Python 3.12 and was
+            # planned to be removed in 3.14, but its deprecation was changed
+            # to docs only, with no pending removal version.
+            # See: https://github.com/python/cpython/pull/118947
+            def onerror(func, error_path, exc_info):
+                """Error handler for shutil.rmtree to handle NFS issues."""
+                exc_type, exc_value, exc_tb = exc_info
+
+                if issubclass(exc_type, FileNotFoundError):
+                    # File was already deleted (possibly by NFS), ignore
+                    pass
+                elif issubclass(exc_type, OSError):
+                    # Check if this is a "Directory not empty" error
+                    # This can occur on NFS due to "silly rename" (.nfsXXXXX files)
+                    if exc_value.errno in (errno.ENOTEMPTY, errno.EEXIST):
+                        # Log but don't raise - allow clean exit on NFS
+                        log.warning(
+                            f"nisarqa Could not delete '{error_path}': "
+                            f" {exc_value}. This may occur on Network File"
+                            " Systems where files are temporarily renamed"
+                            " before deletion."
+                        )
+                    else:
+                        # Some other OSError - raise it
+                        log.error(f"Error deleting '{error_path}': {exc_value}")
+                        raise
+                else:
+                    # Unexpected error type - raise it
+                    log.error(
+                        f"Unexpected error deleting '{error_path}': {exc_value}"
+                    )
+                    raise
+
             try:
-                shutil.rmtree(path)
+                shutil.rmtree(path, onerror=onerror)
             except FileNotFoundError:
                 msg = (
                     f"Created directory was '{path}', but it was"
