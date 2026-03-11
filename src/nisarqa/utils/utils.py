@@ -770,11 +770,20 @@ def create_unique_subdirectory(
                 exc_type, exc_value, exc_tb = exc_info
 
                 if issubclass(exc_type, FileNotFoundError):
-                    # File was already deleted (possibly by NFS), ignore
-                    pass
-                elif issubclass(exc_type, OSError):
-                    # Check if this is a "Directory not empty" error
-                    # This can occur on NFS due to "silly rename" (.nfsXXXXX files)
+                    # Directory was already deleted. Notify users because likely
+                    # they are violating a nisarqa design pattern; they
+                    # should fix their code to prevent tricky runtime bugs.
+                    msg = (
+                        f"Created directory was '{path}', but it was"
+                        " deleted external to (but within the context of)"
+                        " this context manager."
+                    )
+                    log.error(msg)
+                    raise FileNotFoundError(msg)
+
+                if issubclass(exc_type, OSError):
+                    # Check if this is a "Directory not empty" error. This can
+                    # occur on NFS due to "silly rename" (.nfsXXXXX files)
                     if exc_value.errno in (errno.ENOTEMPTY, errno.EEXIST):
                         # Log but don't raise - allow clean exit on NFS
                         log.warning(
@@ -794,18 +803,9 @@ def create_unique_subdirectory(
                     )
                     raise
 
-            try:
-                shutil.rmtree(path, onerror=onerror)
-            except FileNotFoundError:
-                msg = (
-                    f"Created directory was '{path}', but it was"
-                    " deleted external to (but within the context of)"
-                    " this context manager."
-                )
-                log.error(msg)
-                raise FileNotFoundError(msg)
-            else:
-                log.info(f"Directory deleted recursively: '{path}'")
+            # Delete directory. Exceptions will be handled via onerror.
+            shutil.rmtree(path, onerror=onerror)
+            log.info(f"Directory deleted recursively: '{path}'")
 
 
 def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
