@@ -592,6 +592,35 @@ def get_stats_name_descr(stat: str, component: str | None) -> tuple[str, str]:
         )
 
 
+def get_list_of_real_stats_names() -> list[str]:
+    """
+    Return a list of the names of all statistics for real-valued datasets.
+
+    These names are per NISAR conventions, for min/max/mean/std statistics.
+    """
+
+    stat_names = []
+    for stat in ("min", "max", "mean", "std"):
+        s, _ = get_stats_name_descr(stat, component=None)
+        stat_names.append(s)
+    return stat_names
+
+
+def get_list_of_imag_stats_names() -> list[str]:
+    """
+    Return a list of the names of all statistics for complex-valued datasets.
+
+    These names are per NISAR conventions, for min/max/mean/std statistics.
+    """
+
+    stat_names = []
+    for comp in ("real", "imag"):
+        for stat in ("min", "max", "mean", "std"):
+            s, _ = get_stats_name_descr(stat, component=comp)
+            stat_names.append(s)
+    return stat_names
+
+
 def copy_non_insar_imagery_metrics(
     product: nisarqa.NonInsarProduct, stats_h5: h5py.File
 ) -> None:
