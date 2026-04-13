@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import errno
 import logging
 import os
 import shutil
@@ -755,20 +756,56 @@ def create_unique_subdirectory(
     try:
         yield path
     finally:
-        log = nisarqa.get_logger()
         if delete:
-            try:
-                shutil.rmtree(path)
-            except FileNotFoundError:
-                msg = (
-                    f"Created directory was '{path}', but it was"
-                    " deleted external to (but within the context of)"
-                    " this context manager."
-                )
-                log.error(msg)
-                raise FileNotFoundError(msg)
-            else:
-                log.info(f"Directory deleted recursively: '{path}'")
+            log = nisarqa.get_logger()
+            # Use onerror callback to handle NFS "silly rename" behavior
+            # See: https://github.com/isce-framework/nisarqa/issues/152
+
+            # shutil.rmtree's onerror was deprecated in Python 3.12 and was
+            # planned to be removed in 3.14, but its deprecation was changed
+            # to docs only, with no pending removal version.
+            # See: https://github.com/python/cpython/pull/118947
+            def onerror(func, error_path, exc_info):
+                """Error handler for shutil.rmtree to handle NFS issues."""
+                exc_type, exc_value, exc_tb = exc_info
+
+                if issubclass(exc_type, FileNotFoundError):
+                    # Directory was already deleted. Notify users because likely
+                    # they are violating a nisarqa design pattern; they
+                    # should fix their code to prevent tricky runtime bugs.
+                    msg = (
+                        f"Created directory was '{path}', but it was"
+                        " deleted external to (but within the context of)"
+                        " this context manager."
+                    )
+                    log.error(msg)
+                    raise FileNotFoundError(msg)
+
+                if issubclass(exc_type, OSError):
+                    # Check if this is a "Directory not empty" error. This can
+                    # occur on NFS due to "silly rename" (.nfsXXXXX files)
+                    if exc_value.errno in (errno.ENOTEMPTY, errno.EEXIST):
+                        # Log but don't raise - allow clean exit on NFS
+                        log.warning(
+                            f"nisarqa Could not delete '{error_path}': "
+                            f" {exc_value}. This may occur on Network File"
+                            " Systems where files are temporarily renamed"
+                            " before deletion."
+                        )
+                    else:
+                        # Some other OSError - raise it
+                        log.error(f"Error deleting '{error_path}': {exc_value}")
+                        raise
+                else:
+                    # Unexpected error type - raise it
+                    log.error(
+                        f"Unexpected error deleting '{error_path}': {exc_value}"
+                    )
+                    raise
+
+            # Delete directory. Exceptions will be handled via onerror.
+            shutil.rmtree(path, onerror=onerror)
+            log.info(f"Directory deleted recursively: '{path}'")
 
 
 def set_global_scratch_dir(scratch_dir: str | os.PathLike) -> None:
