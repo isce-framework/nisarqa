@@ -21,20 +21,24 @@ SEABORN_COLORBLIND = [
     (0.33725490196078434, 0.7058823529411765, 0.9137254901960784),
 ]
 CUSTOM_CYCLER = (
-    cycler(color=SEABORN_COLORBLIND[:6])
+    cycler(color=SEABORN_COLORBLIND[:10])
+    # repeat/mix line styles and widths to reach 10 unique combinations
     + cycler(
         linestyle=[
             "-",
             "-.",
             "--",
+            ":",
             (0, (3, 1, 1, 1)),
             (0, (3, 5, 1, 5, 1, 5)),
+            "-",
+            "-.",
+            "--",
             ":",
         ]
     )
-    + cycler(lw=np.linspace(3, 1, 6))
+    + cycler(lw=[1.5, 2.0, 2.5, 3.0, 1.5, 2.0, 2.5, 3.0, 2.0, 1.5])
 )
-
 
 #: The UTC time at which this module was first loaded, in ISO 8601 format with
 #: integer seconds precision.
