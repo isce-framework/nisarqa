@@ -165,7 +165,7 @@ def geocode_radar_raster(
     epsg : int
         The EPSG code for the output geocoded raster. Supports any valid EPSG
         (e.g., 4326 for lat/lon, 32610 for UTM Zone 10N, 3413 for polar
-        stereographic).
+        stereographic) that is supported by isce3::core::createProj.
     dem_file : path-like or None, optional
         Path to a DEM file; required for accurate geolocation of the pixels.
         If None, a temporary zero-height DEM will be used (global coverage
@@ -275,6 +275,10 @@ def geocode_radar_raster(
 
         # Get bounding box in target projection's native units
         xs = [c[0] for c in corners_proj]
+        if srs.IsGeographic:
+            # Ensure that longitudes are unwrapped
+            xs = nisarqa.unwrap_longitudes(xs)
+
         ys = [c[1] for c in corners_proj]
         minx, maxx = min(xs), max(xs)
         miny, maxy = min(ys), max(ys)
@@ -472,8 +476,6 @@ def geocode_radar_raster(
         )
 
         # Set output file's projection and geotransform
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(epsg)
         output_ds.SetProjection(srs.ExportToWkt())
 
         output_geotransform = [
