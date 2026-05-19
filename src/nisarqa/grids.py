@@ -109,7 +109,7 @@ class CoordinateGrid(ABC):
             axis, respectively.
         mode : str, optional
             Downsampling algorithm. One of:
-                "decimate" : (default) Pure decimation. For example, if
+                "decimate" : Pure decimation. For example, if
                     `y_stride` is 3 and `x_stride` is 4, then rows 0, 3, ...,
                     and columns 0, 4, ... will be extracted to form
                     the downsampled grid.
