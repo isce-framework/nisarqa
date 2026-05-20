@@ -347,11 +347,15 @@ class RadarGrid(CoordinateGrid):
             ISCE3 radar grid parameters object representing this raster's
             coordinate system.
         """
+
         # Parse the epoch string to create an ISCE3 DateTime object
         ref_epoch = isce3.core.DateTime(self.epoch)
 
-        # Convert look_side to ISCE3 LookSide enum if it's a string
-        # TODO - check if it is ok to skip conversion and pass the string
+        # Convert look_side to ISCE3 LookSide enum
+        # XXX - ISCE3's RadarGridParameters constructor has multiple interfaces:
+        # If the look side is a str, then the parameter name is `look_side`.
+        # If the look side is an isce3.core.LookSide, then the parameter
+        # name is lookside (no underscore).
         if isinstance(look_side, str):
             if look_side.lower() == "left":
                 look_side = isce3.core.LookSide.Left
