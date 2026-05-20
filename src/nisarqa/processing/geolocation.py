@@ -642,11 +642,15 @@ def reproject_geo_raster(
             prefix="browse4326_in_", suffix=".tif", dir=scratch, delete=True
         ) as source_temp,
         tempfile.NamedTemporaryFile(
+            prefix="browse4326_vrt_", suffix=".vrt", dir=scratch, delete=True
+        ) as temporary_vrt,
+        tempfile.NamedTemporaryFile(
             prefix="browse4326_reproj_", suffix=".tif", dir=scratch, delete=True
         ) as reproj_temp,
     ):
         source_file = source_temp.name
         reprojected_file = reproj_temp.name
+        temp_vrt = temporary_vrt.name
 
         # Note: Keep source_temp and reproj_temp file handles open throughout.
         # On Unix systems, GDAL can work with files that have open handles.
@@ -679,20 +683,13 @@ def reproject_geo_raster(
         warp_options = {
             "srcSRS": f"EPSG:{source_epsg}",
             "resampleAlg": resample,
-            "format": "GTiff",
             "dstNodata": fill_value,
-            # Constrain output dimensions to match input dimensions.
-            # This is intentional for browse image generation to ensure
-            # predictable output shapes and improve visual appearance
-            # for the browse products (particularly in polar regions),
-            # regardless of the source and target projections.
-            # This means that the output's x spacing and y spacing will no
-            # longer be approx. equal (i.e. output won't have ~square pixels).
-            "height": src_height,
-            "width": src_width,
         }
 
-        if geogrid.is_geographic and geogrid.crosses_antimeridian:
+        srs_out = osr.SpatialReference()
+        srs_out.ImportFromEPSG(output_epsg)
+
+        if srs_out.IsGeographic() and geogrid.crosses_antimeridian:
             # For antimeridian crossing, use +lon_wrap=180 to shift the
             # coordinate system center to 180 degrees (dateline) instead
             # of 0 degrees (prime meridian).
@@ -703,10 +700,53 @@ def reproject_geo_raster(
             # Standard reprojection for non-dateline-crossing data
             warp_options["dstSRS"] = f"EPSG:{output_epsg}"
 
+        # Do initial warp to get extent; use a VRT to avoid warping each pixel.
+        # Then we can calculate the sizes/spacings that will give 
+        # square-ish pixels while obeying the max size constraint.
+        maxdim = max(src_height, src_width)
+        vrt = gdal.Warp(
+            temp_vrt,
+            source_file,
+            format="VRT",
+            height=maxdim,
+            width=maxdim,
+            **warp_options,
+        )
+
+        # Calculate extents in output projection.
+        gt = vrt.GetGeoTransform()
+        left, top, dx, dy = gt[0], gt[3], gt[1], gt[5]
+        right = left + vrt.RasterXSize * dx
+        bottom = top + vrt.RasterYSize * dy
+        x_extent = right - left  # already unwrapped via dstSRS if needed
+        y_extent = top - bottom
+
+        # Calculate aspect ratio, taking care of dy/dx=cos(lat) for longlat.
+        # Assume other projections have dy/dx=1.
+        if srs_out.IsGeographic():
+            # Compute the ratio of ground distance (per degree of longitude)
+            # at this raster's average latitude vs. at the equator
+            longitude_scale_factor = np.cos(np.deg2rad((top + bottom) / 2))
+            aspect_ratio = x_extent * longitude_scale_factor / y_extent
+        else:
+            aspect_ratio = x_extent / y_extent
+
+        # Assign maxdim to largest extent and scale the other dimension to
+        # preserve aspect ratio.
+        if aspect_ratio > 1.0:
+            width = maxdim
+            height = round(maxdim / aspect_ratio)
+        else:
+            height = maxdim
+            width = round(maxdim * aspect_ratio)
+
         gdal.Warp(
             reprojected_file,
             source_file,
-            options=gdal.WarpOptions(**warp_options),
+            format="GTiff",
+            height=height,
+            width=width,
+            **warp_options,
         )
 
         # Open reprojected image
