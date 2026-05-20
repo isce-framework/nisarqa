@@ -701,7 +701,7 @@ def reproject_geo_raster(
             warp_options["dstSRS"] = f"EPSG:{output_epsg}"
 
         # Do initial warp to get extent; use a VRT to avoid warping each pixel.
-        # Then we can calculate the sizes/spacings that will give 
+        # Then we can calculate the sizes/spacings that will give
         # square-ish pixels while obeying the max size constraint.
         maxdim = max(src_height, src_width)
         vrt = gdal.Warp(
