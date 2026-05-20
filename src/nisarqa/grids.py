@@ -814,11 +814,11 @@ class GeoGrid(CoordinateGrid):
 
         # Implementation plan:
         # Step 1: Convert the grid's corner coordinates to EPSG:4326 (lon/lat).
-        # Step 2: Determine if there is an antimeridian crossing by examining:
-        #    1. Whether longitude coordinates extend beyond [-180, 180] degrees
-        #        (i.e., unwrapped coordinates like -181 or 181 degrees)
-        #    2. Whether there are large discontinuous jumps (>180) between
-        #        corner longitude values, which indicate a dateline crossing
+        # Step 2: Wrap all longitudes to [-180, 180) to normalize any unwrapped
+        #    coordinates (e.g., 181 degrees or -181 degrees).
+        # Step 3: Determine if there is an antimeridian crossing by examining
+        #    whether there are large discontinuous jumps (>180) between
+        #    wrapped corner longitude values, which indicate a dateline crossing
 
         # Create projection object for this grid's EPSG
         proj = isce3.core.make_projection(self.epsg)
@@ -839,16 +839,17 @@ class GeoGrid(CoordinateGrid):
             lon_deg = np.rad2deg(lon_rad)
             corner_lons.append(lon_deg)
 
-        # Check if any longitude extends beyond [-180, 180]
-        for lon in corner_lons:
-            if lon < -180 or lon > 180:
-                return True
+        # Ensure all longitudes are wrapped to [-180, 180) to normalize
+        # unwrapped coordinates
+        wrapped_lons = list(
+            nisarqa.wrap_to_interval(corner_lons, start=-180, stop=180)
+        )
 
-        # Check for discontinuous jumps between corner longitudes
+        # Check for discontinuous jumps between wrapped corner longitudes
         # A jump > 180 indicates wrapping across the dateline
-        for i in range(len(corner_lons)):
-            for j in range(i + 1, len(corner_lons)):
-                if abs(corner_lons[i] - corner_lons[j]) > 180:
+        for i in range(len(wrapped_lons)):
+            for j in range(i + 1, len(wrapped_lons)):
+                if abs(wrapped_lons[i] - wrapped_lons[j]) > 180:
                     return True
 
         return False
