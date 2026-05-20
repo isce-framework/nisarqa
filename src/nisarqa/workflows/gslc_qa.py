@@ -143,7 +143,7 @@ def gslc_qa(
                     input_raster_represents_power=input_raster_represents_power,
                     browse_paths=root_params.get_browse_paths(),
                     browse_latlon_params=root_params.browse_latlon,
-                    dem_file=root_params.anc_files.dem_file,
+                    dem_file=None,  # Parameter ignored for Level-2 products
                 )
                 log.info("Processing of Backscatter images complete.")
 
