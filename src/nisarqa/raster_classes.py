@@ -546,6 +546,10 @@ def compare_raster_metadata(raster1, raster2, almost_identical=True):
     ------
     ValueError
         If metadata does not match
+
+    See Also
+    --------
+    compare_grid_metadata : Compare the metadata for two *Grid instances.
     """
     # This function only compares fields in instances of the RadarRaster or
     # GeoRaster base classes. Child classes have additional fields, which we
@@ -610,16 +614,7 @@ def compare_raster_metadata(raster1, raster2, almost_identical=True):
                     f" has value {r1_val}, but `raster2` has value {r2_val}."
                 )
         elif isinstance(r1_val, nisarqa.CoordinateGrid):
-            for grid_f in fields(r1_val):
-                field_name = grid_f.name
-                grid1_val = getattr(r1_val, field_name)
-                grid2_val = getattr(r2_val, field_name)
-            if grid1_val != grid2_val:
-                raise ValueError(
-                    f"Values do not match for Coordinate Grid's `{field_name}`"
-                    f" field. `raster1`'s grid has value {r1_val},"
-                    f" but `raster2`'s grid has value {r2_val}."
-                )
+            nisarqa.compare_grid_metadata(r1_val, r2_val)
         else:
             if np.any(np.abs(r1_val - r2_val) > 1e-6):
                 raise ValueError(

@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import os
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
+from typing import overload
 
 import isce3
 import numpy as np
@@ -895,6 +896,77 @@ def _get_multilooked_center_coordinates(coords: ArrayLike, nlooks: int):
         decimated = (left_coords + right_coords) / 2.0
 
     return decimated
+
+@overload
+def compare_raster_metadata(
+    grid1: nisarqa.RadarGrid,
+    grid2: nisarqa.RadarGrid,
+) -> None: ...
+
+
+@overload
+def compare_grid_metadata(
+    grid1: nisarqa.GeoGrid,
+    grid2: nisarqa.GeoGrid,
+) -> None: ...
+
+
+def compare_grid_metadata(grid1, grid2):
+    """
+    Compare the metadata of two *Grid instances.
+
+    Compare metadata fields for two *Grid instances.
+    This is useful for checking that two raster images have approximately
+    equal grids, which will allow the rasters to be combined smoothly
+    into a single image. For example, this is a useful check prior to
+    combining a phase image raster and a coherence magnitude raster
+    to create an HSI image.
+    Raises a ValueError if two fields do not match.
+
+    Parameters
+    ----------
+    grid1, grid2 : nisarqa.RadarGrid | nisarqa.GeoGrid
+        *Grid to compare. `grid1` and `grid2` must either both be
+        instances of RadarGrids or both be instances of GeoGrids.
+
+    Raises
+    ------
+    ValueError
+        If metadata does not match
+
+    See Also
+    --------
+    compare_raster_metadata : Compare the metadata for two *Raster instances.
+    """
+    r_grid = nisarqa.RadarGrid
+    g_grid = nisarqa.GeoGrid
+    if isinstance(grid1, r_grid) and isinstance(grid2, r_grid):
+        raster_class = r_grid
+    elif isinstance(grid1, g_grid) and isinstance(grid2, g_grid):
+        raster_class = g_grid
+    else:
+        raise TypeError(
+            f"{type(grid1)=} and {type(grid2)=}, must both be instances"
+            " of either RadarGrid or of GeoGrid."
+        )
+
+    for f in fields(raster_class):
+        field_name = f.name
+        r1_val = getattr(grid1, field_name)
+        r2_val = getattr(grid2, field_name)
+
+        if isinstance(r1_val, str):
+            if r1_val != r2_val:
+                raise ValueError(
+                    f"Values do not match for `{field_name}` field. `grid1`"
+                    f" has value {r1_val}, but `grid2` has value {r2_val}."
+                )
+        else:
+            if np.any(np.abs(r1_val - r2_val) > 1e-6):
+                raise ValueError(
+                    f"Values do not match for `{field_name}` field. `grid1`"
+                    f" has value {r1_val}, but `grid2` has value {r2_val}."
+                )
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
