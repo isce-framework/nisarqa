@@ -16,6 +16,7 @@ from .nisar_params import (
     HDF5Attrs,
     HDF5ParamGroup,
     InputFileGroupParamGroup,
+    L1RadarBrowseLatLonParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
     SoftwareConfigParamGroup,
@@ -127,6 +128,56 @@ class DynamicAncillaryFileParamGroup(YamlParamGroup):
 
     Parameters
     ----------
+    dem_file : str or None, optional
+        Optional Digital Elevation Model (DEM) file in a GDAL-compatible raster
+        format. Used for geocoding Level-1 radar products to lat/lon for browse
+        image generation, if applicable (i.e. if the browse_latlon feature
+        is enabled). If None (no DEM is supplied), a zero-height DEM will be
+        used, which may produce less accurate geolocation results.
+        Defaults to None.
+    """
+
+    dem_file: str = field(
+        default=None,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="dem_file",
+                descr="""Optional Digital Elevation Model (DEM) file in a
+                GDAL-compatible raster format. Used for geocoding Level-1 radar
+                products to lat/lon for browse image generation, if applicable
+                (i.e. if `browse_latlon` is enabled). If None (no DEM is supplied),
+                a zero-height DEM will be used, which may produce less accurate
+                geolocation results.""",
+            )
+        },
+    )
+
+    def __post_init__(self):
+        if self.dem_file is not None:
+            nisarqa.validate_is_file(
+                filepath=self.dem_file,
+                parameter_name="dem_file",
+            )
+
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "dynamic_ancillary_file_group"]
+
+
+@dataclass(frozen=True)
+class RSLCDynamicAncillaryFileParamGroup(DynamicAncillaryFileParamGroup):
+    """
+    The parameters from the QA Dynamic Ancillary File runconfig group for RSLC.
+
+    This corresponds to the `groups: dynamic_ancillary_file_group`
+    runconfig group.
+
+    Extends DynamicAncillaryFileParamGroup with corner reflector file support.
+
+    Parameters
+    ----------
+    dem_file : str or None, optional
+        Inherited from DynamicAncillaryFileParamGroup. Defaults to None.
     corner_reflector_file : str or None, optional
         The input corner reflector file's file name (with path).
         A valid corner reflector file is required for the Absolute Calibration
@@ -154,16 +205,16 @@ class DynamicAncillaryFileParamGroup(YamlParamGroup):
     )
 
     def __post_init__(self):
+        # Call parent validation for dem_file
+        super().__post_init__()
+
+        # Validate corner_reflector_file
         if self.corner_reflector_file is not None:
             nisarqa.validate_is_file(
                 filepath=self.corner_reflector_file,
                 parameter_name="corner_reflector_file",
                 extension=".csv",
             )
-
-    @staticmethod
-    def get_path_to_group_in_runconfig():
-        return ["runconfig", "groups", "dynamic_ancillary_file_group"]
 
 
 # TODO - move to generic SLC module
@@ -218,7 +269,7 @@ class BackscatterImageParamGroup(YamlParamGroup, HDF5ParamGroup):
         Defaults to (1024, 1024).
     output_individual_pngs : bool, optional
         True to output one grayscale PNG+KML pair per raster image layer; these
-        will be generated in addition to the standard browse image PNG+KML.
+        will be generated in addition to the primary browse image PNG+KML.
         The filename of each additional file will include a suffix noting
         that image's frequency and polarization.
         False to have the primary browse image be the only PNG+KML generated.
@@ -369,7 +420,7 @@ class BackscatterImageParamGroup(YamlParamGroup, HDF5ParamGroup):
             "yaml_attrs": YamlAttrs(
                 name="output_individual_pngs",
                 descr="""True to output one grayscale PNG+KML pair per raster image layer; these
-                will be generated in addition to the standard browse image PNG+KML.
+                will be generated in addition to the primary browse image PNG+KML.
                 The filename of each additional file will include a suffix noting
                 that image's frequency and polarization.
                 False to have the primary browse image be the only PNG+KML generated.
@@ -1033,13 +1084,15 @@ class RSLCRootParamGroup(RootParamGroup):
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
         Backscatter Image Group parameters for RSLC QA
+    browse_latlon : L1RadarBrowseLatLonParamGroup or None, optional
+        Browse LatLon Group parameters for RSLC QA (EPSG 4326 browse images)
     histogram : HistogramParamGroup or None, optional
         Histogram Group parameters for RSLC or GSLC QA
     range_spectra : RangeSpectraParamGroup or None, optional
         Range Spectra Group parameters for RSLC QA
     az_spectra : AzimuthSpectraParamGroup or None, optional
         Azimuth Spectra Group parameters for RSLC QA
-    anc_files : DynamicAncillaryFileParamGroup or None, optional
+    anc_files : RSLCDynamicAncillaryFileParamGroup or None, optional
         Dynamic Ancillary File Group parameters for RSLC QA-Caltools
     abs_cal : AbsCalParamGroup or None, optional
         Absolute Radiometric Calibration group parameters for RSLC QA-Caltools
@@ -1052,12 +1105,13 @@ class RSLCRootParamGroup(RootParamGroup):
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
+    browse_latlon: Optional[L1RadarBrowseLatLonParamGroup] = None
     histogram: Optional[HistogramParamGroup] = None
     range_spectra: Optional[RangeSpectraParamGroup] = None
     az_spectra: Optional[AzimuthSpectraParamGroup] = None
 
     # CalTools parameters
-    anc_files: Optional[DynamicAncillaryFileParamGroup] = None
+    anc_files: Optional[RSLCDynamicAncillaryFileParamGroup] = None
     abs_cal: Optional[AbsCalParamGroup] = None
     pta: Optional[RSLCPointTargetAnalyzerParamGroup] = None
 
@@ -1177,6 +1231,11 @@ class RSLCRootParamGroup(RootParamGroup):
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse_latlon",
+                param_grp_cls_obj=L1RadarBrowseLatLonParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
                 root_param_grp_attr_name="histogram",
                 param_grp_cls_obj=HistogramParamGroup,
             ),
@@ -1196,9 +1255,11 @@ class RSLCRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=AbsCalParamGroup,
             ),
             Grp(
-                flag_param_grp_req=workflows.abs_cal or workflows.point_target,
+                flag_param_grp_req=workflows.qa_reports
+                or workflows.point_target
+                or workflows.abs_cal,
                 root_param_grp_attr_name="anc_files",
-                param_grp_cls_obj=DynamicAncillaryFileParamGroup,
+                param_grp_cls_obj=RSLCDynamicAncillaryFileParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.point_target,
@@ -1215,12 +1276,13 @@ class RSLCRootParamGroup(RootParamGroup):
         # the groups will appear in the runconfig.
         return {
             "input_f": InputFileGroupParamGroup,
-            "anc_files": DynamicAncillaryFileParamGroup,
+            "anc_files": RSLCDynamicAncillaryFileParamGroup,
             "prodpath": ProductPathGroupParamGroup,
             "workflows": RSLCWorkflowsParamGroup,
             "software_config": SoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
+            "browse_latlon": L1RadarBrowseLatLonParamGroup,
             "histogram": HistogramParamGroup,
             "range_spectra": RangeSpectraParamGroup,
             "az_spectra": AzimuthSpectraParamGroup,

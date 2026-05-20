@@ -5,7 +5,6 @@ from dataclasses import dataclass
 from functools import cached_property
 
 import h5py
-import isce3
 import numpy as np
 
 import nisarqa
@@ -29,24 +28,6 @@ class NisarGeoProduct(NisarProduct):
     @property
     def is_geocoded(self) -> bool:
         return True
-
-    def get_browse_latlonquad(self) -> nisarqa.LatLonQuad:
-        epsg = self.epsg
-        proj = isce3.core.make_projection(epsg)
-
-        geo_corners = ()
-        for y in self.browse_y_range:
-            for x in self.browse_x_range:
-                # Use a dummy height value in computing the inverse projection.
-                # isce3 projections are always 2-D transformations -- the height
-                # has no effect on lon/lat
-                lon, lat, _ = proj.inverse([x, y, 0])
-
-                # convert lon/lat radians to degrees suitable for LatLonQuad
-                point = nisarqa.LonLat(np.rad2deg(lon), np.rad2deg(lat))
-                geo_corners += (point,)
-
-        return nisarqa.LatLonQuad(*geo_corners, normalize_longitudes=True)
 
     @cached_property
     def _data_group_path(self) -> str:
@@ -77,36 +58,6 @@ class NisarGeoProduct(NisarProduct):
                 ) from exc
 
             return f[proj_path][...]
-
-    @property
-    @abstractmethod
-    def browse_x_range(self) -> tuple[float, float]:
-        """
-        Get the x range coordinates for the browse image.
-
-        Returns
-        -------
-        x_range : tuple of float
-            The range of the x coordinates for the browse image.
-            Format:
-                (<x_start>, <x_stop>)
-        """
-        pass
-
-    @property
-    @abstractmethod
-    def browse_y_range(self) -> tuple[float, float]:
-        """
-        Get the y range coordinates for the browse image.
-
-        Returns
-        -------
-        y_range : tuple of float
-            The range of the y coordinates for the browse image.
-            Format:
-                (<y_start>, <y_stop>)
-        """
-        pass
 
     def _get_raster_from_path(
         self, h5_file: h5py.File, raster_path: str, *, parse_stats: bool
@@ -158,23 +109,10 @@ class NisarGeoProduct(NisarProduct):
             errmsg = f"Input file does not contain raster {raster_path}"
             raise nisarqa.DatasetNotFoundError(errmsg)
 
-        # Arguments to pass to the constructor of `GeoRaster` or `GeoRasterWithStats`
-        kwargs = {}
-
         # Get dataset object and check for correct dtype
         dataset = _get_dataset_handle(h5_file, raster_path)
 
-        if self.use_cache:
-            kwargs["data"] = _get_or_create_cached_memmap(
-                input_file=self.filepath,
-                dataset_path=raster_path,
-            )
-        else:
-            kwargs["data"] = dataset
-
-        kwargs["units"] = _get_units(dataset)
-        kwargs["fill_value"] = _get_fill_value(dataset)
-
+        # Collect grid parameters
         # From the xml Product Spec, xCoordinateSpacing is the
         # 'Nominal spacing in meters between consecutive pixels'
 
@@ -191,14 +129,13 @@ class NisarGeoProduct(NisarProduct):
             dataset_to_find="xCoordinateSpacing",
         )
         x_posting = float(h5_file[path][...])
-        kwargs["x_axis_posting"] = x_posting
 
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="xCoordinates",
         )
-        kwargs["x_coordinates"] = h5_file[path][...]
+        x_coordinates = h5_file[path][...]
 
         # From the xml Product Spec, yCoordinateSpacing is the
         # 'Nominal spacing in meters between consecutive lines'.
@@ -213,26 +150,43 @@ class NisarGeoProduct(NisarProduct):
             dataset_to_find="yCoordinateSpacing",
         )
         y_posting = float(h5_file[path][...])
-        kwargs["y_axis_posting"] = y_posting
 
         path = _get_path_to_nearest_dataset(
             h5_file=h5_file,
             starting_path=raster_path,
             dataset_to_find="yCoordinates",
         )
-        kwargs["y_coordinates"] = h5_file[path][...]
+        y_coordinates = h5_file[path][...]
 
-        # Construct Name
+        # Create the GeoGrid instance
+        geo_grid = nisarqa.GeoGrid(
+            epsg=self.epsg,
+            x_axis_posting=x_posting,
+            x_coordinates=x_coordinates,
+            y_axis_posting=y_posting,
+            y_coordinates=y_coordinates,
+        )
+
+        # Arguments to pass to the constructor of `GeoRaster` or `GeoRasterWithStats`
+        kwargs = {}
+
+        if self.use_cache:
+            kwargs["data"] = _get_or_create_cached_memmap(
+                input_file=self.filepath,
+                dataset_path=raster_path,
+            )
+        else:
+            kwargs["data"] = dataset
+
+        kwargs["units"] = _get_units(dataset)
+        kwargs["fill_value"] = _get_fill_value(dataset)
         kwargs["name"] = self._get_raster_name(raster_path)
-
         kwargs["stats_h5_group_path"] = self._get_stats_h5_group_path(
             raster_path
         )
-
         kwargs["band"] = self.band
         kwargs["freq"] = "A" if "frequencyA" in raster_path else "B"
-
-        kwargs["epsg"] = self.epsg
+        kwargs["grid"] = geo_grid
 
         if parse_stats:
             kwargs["stats"] = _parse_dataset_stats_from_h5(

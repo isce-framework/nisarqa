@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from functools import cached_property
 
 import h5py
+import isce3
 import numpy as np
 
 import nisarqa
@@ -464,6 +465,27 @@ class NonInsarProduct(NisarProduct):
                 else:
                     log.error(msg)
                 raise nisarqa.InvalidNISARProductError(msg)
+
+    def get_orbit(self) -> isce3.core.Orbit:
+        """
+        Get the orbit for the input product.
+
+        Returns
+        -------
+        orbit : isce3.core.Orbit
+            The Orbit for the input product.
+        """
+
+        metadata_path = self._metadata_group_path
+        with h5py.File(self.filepath, "r") as f:
+            try:
+                orbit_grp = f[metadata_path]["orbit"]
+            except KeyError as e:
+                raise nisarqa.DatasetNotFoundError from e
+
+            orbit = isce3.core.load_orbit_from_h5_group(orbit_grp)
+
+        return orbit
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

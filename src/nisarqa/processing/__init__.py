@@ -4,6 +4,7 @@ from .processing_utils import *
 from .caltools import *
 from .setup_pdf import *
 from .calc import *
+from .geolocation import *
 from .multilook import *
 from .tiling import *
 from .stats_h5_writer import *

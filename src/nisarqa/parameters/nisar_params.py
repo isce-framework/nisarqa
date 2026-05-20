@@ -989,6 +989,177 @@ class WorkflowsParamGroup(YamlParamGroup):
 
 
 @dataclass(frozen=True)
+class BrowseLatLonParamGroup(YamlParamGroup):
+    """
+    Parameters for generating EPSG 4326 (lat/lon) version of browse products.
+
+    This corresponds to the `qa_reports: browse_latlon` runconfig group.
+
+    This dataclass should be treated as an abstract base class.
+    Product-specific subclasses should be used:
+        L1RadarBrowseLatLonParamGroup for Level-1 radar products or
+        L2GeoBrowseLatLonParamGroup for Level-2 geocoded products.
+
+    Parameters
+    ----------
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    """
+
+    output_browse_latlon: bool = field(
+        default=False,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="output_browse_latlon",
+                descr=f"""True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        suffix '_{nisarqa.LATLON_SUFFIX}' (e.g., 'BROWSE_{nisarqa.LATLON_SUFFIX}.png' and 'BROWSE_{nisarqa.LATLON_SUFFIX}.kml').""",
+            )
+        },
+    )
+
+    def __post_init__(self):
+        # Validate output_browse_latlon
+        if not isinstance(self.output_browse_latlon, bool):
+            raise TypeError(
+                f"`output_browse_latlon` must be bool: {self.output_browse_latlon}"
+            )
+
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "qa_reports", "browse_latlon"]
+
+
+@dataclass(frozen=True)
+class L1RadarBrowseLatLonParamGroup(BrowseLatLonParamGroup):
+    """
+    Parameters for generating EPSG 4326 (lat/lon) browse products for L1.
+
+    Extends BrowseLatLonParamGroup with Level-1 specific parameters for
+    ISCE3 geocoding (RSLC, RIFG, RUNW, ROFF).
+
+    Parameters
+    ----------
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
+        'bicubic', 'nearest', 'biquintic'.
+        Ignored if `output_browse_latlon` is False.
+        When output browse image data contains phase discontinuities
+        (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+        other methods can create artifacts when interpolating across the jump.
+        Defaults to 'bilinear'.
+    """
+
+    resample: str = field(
+        default="bilinear",
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="resample",
+                descr="""Resampling method for ISCE3 geocoding. Options: 'sinc',
+                'bilinear', 'bicubic', 'nearest', 'biquintic'.
+                Ignored if `output_browse_latlon` is False.
+                When output browse image data contains phase discontinuities
+                (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+                other methods can create artifacts when interpolating across the jump.""",
+            )
+        },
+    )
+
+    def __post_init__(self):
+        # Call parent validation
+        super().__post_init__()
+
+        # Validate resample
+        valid_resample = ["sinc", "bilinear", "bicubic", "nearest", "biquintic"]
+        if self.resample not in valid_resample:
+            raise ValueError(
+                f"`resample` must be one of {valid_resample}: {self.resample}"
+            )
+
+
+@dataclass(frozen=True)
+class L2GeoBrowseLatLonParamGroup(BrowseLatLonParamGroup):
+    """
+    Parameters for generating EPSG 4326 (lat/lon) browse products for L2.
+
+    Extends BrowseLatLonParamGroup with Level-2 specific parameters for
+    GDAL reprojection (GSLC, GCOV, GUNW, GOFF).
+
+    Parameters
+    ----------
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling algorithm for GDAL reprojection. Options: 'near',
+        'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode'.
+        Ignored if `output_browse_latlon` is False.
+        Defaults to 'average'.
+    """
+
+    resample: str = field(
+        default="average",
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="resample",
+                descr="""Resampling algorithm for GDAL reprojection. Options: 'near',
+                'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode'.
+                Ignored if `output_browse_latlon` is False.""",
+            )
+        },
+    )
+
+    def __post_init__(self):
+        # Call parent validation
+        super().__post_init__()
+
+        # Validate resample
+        valid_resample = [
+            "near",
+            "bilinear",
+            "cubic",
+            "cubicspline",
+            "lanczos",
+            "average",
+            "mode",
+        ]
+        if self.resample not in valid_resample:
+            raise ValueError(
+                f"`resample` must be one of {valid_resample}: {self.resample}"
+            )
+
+
+@dataclass(frozen=True)
 class InputFileGroupParamGroup(YamlParamGroup):
     """
     Parameters from the Input File Group runconfig group.
@@ -1597,6 +1768,34 @@ class RootParamGroup(ABC):
         # return Path(f{self._get_input_file_basename_stripped}.kml")
 
         return Path("BROWSE.kml")
+
+    def get_browse_paths(self) -> nisarqa.BrowseOutputPaths:
+        """
+        Return a BrowseOutputPaths instance with the configured output paths.
+
+        This factory method creates a BrowseOutputPaths object containing the
+        output directory and browse/KML filenames from this root params group.
+
+        Returns
+        -------
+        nisarqa.BrowseOutputPaths
+            A BrowseOutputPaths instance configured with this param group's
+            output directory, browse PNG filename, and KML filename.
+
+        Examples
+        --------
+        >>> root_params = nisarqa.GCOVRootParamGroup(...)
+        >>> browse_paths = root_params.get_browse_paths()
+        >>> browse_paths.primary_browse_path
+        PosixPath('/output/qa/BROWSE.png')
+        >>> browse_paths.browse_latlon_path
+        PosixPath('/output/qa/BROWSE_LATLON.png')
+        """
+        return nisarqa.BrowseOutputPaths(
+            output_dir=self.get_output_dir(),
+            browse_filename=str(self.get_browse_png_filename()),
+            kml_filename=str(self.get_kml_browse_filename()),
+        )
 
     def get_summary_csv_filename(self) -> Path:
         """Return the Pass/Fail checks summary csv filename as a Path object.

@@ -101,25 +101,5 @@ class GUNW(
             # Path for product spec v0.9.0 (...and maybe subsequent versions?)
             return f"{self.get_freq_path(freq)}/unwrappedInterferogram/{pol}"
 
-    @cached_property
-    def browse_x_range(self) -> tuple[float, float]:
-        freq, pol = self.get_browse_freq_pol()
-
-        with self.get_unwrapped_phase(freq, pol) as img:
-            x_start = img.x_start
-            x_stop = img.x_stop
-
-        return (x_start, x_stop)
-
-    @cached_property
-    def browse_y_range(self) -> tuple[float, float]:
-        freq, pol = self.get_browse_freq_pol()
-
-        with self.get_unwrapped_phase(freq, pol) as img:
-            y_start = img.y_start
-            y_stop = img.y_stop
-
-        return (y_start, y_stop)
-
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

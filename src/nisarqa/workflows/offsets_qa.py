@@ -122,15 +122,6 @@ def offsets_qa(
     if root_params.workflows.qa_reports:
         log.info("Beginning processing of `qa_reports` items...")
 
-        log.info(f"Beginning processing of browse KML...")
-        nisarqa.write_latlonquad_to_kml(
-            llq=product.get_browse_latlonquad(),
-            output_dir=out_dir,
-            kml_filename=root_params.get_kml_browse_filename(),
-            png_filename=root_params.get_browse_png_filename(),
-        )
-        log.info(f"Browse image kml file saved to {browse_file_kml}")
-
         with (
             h5py.File(stats_file, mode="w") as stats_h5,
             PdfPages(report_file) as report_pdf,
@@ -145,15 +136,25 @@ def offsets_qa(
             # Save frequency/polarization info to stats file
             product.save_qa_metadata_to_h5(stats_h5=stats_h5)
 
-            # Generate along track + slant range browse image, quiver plots,
-            # and side-by-side plots for PDF
+            # Generate along track + slant range browse image PNG, KML,
+            # optionally EPSG 4326 (lat/lon) products, and quiver plots for PDF
+            log.info("Generating browse products...")
+            dem = None
+            if (
+                hasattr(root_params, "anc_files")
+                and root_params.anc_files is not None
+            ):
+                dem = root_params.anc_files.dem_file
+
             nisarqa.process_az_and_slant_rg_offsets_from_offset_product(
                 product=product,
                 params_quiver=root_params.quiver,
                 params_offsets=root_params.az_rng_offsets,
+                params_browse=root_params.browse,
                 report_pdf=report_pdf,
                 stats_h5=stats_h5,
-                browse_png=browse_file_png,
+                browse_paths=root_params.get_browse_paths(),
+                dem_file=dem,
             )
 
             nisarqa.process_az_and_slant_rg_variances_from_offset_product(

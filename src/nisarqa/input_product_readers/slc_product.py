@@ -311,8 +311,9 @@ class SLCProduct(NonInsarProduct):
             # either there is only one image provided (e.g. single pol),
             # or the images provided are not one of the expected cases.
             # Either way, WLOG plot one of the image(s) in `pol_imgs`.
-            gray_img = pol_imgs.popitem()[1]
-            nisarqa.plot_to_grayscale_png(img_arr=gray_img, filepath=filepath)
+            nisarqa.plot_to_grayscale_png(
+                img_arr=arbitrary_img, filepath=filepath
+            )
 
             # This `else` is a catch-all clause. Return early, so that
             # we do not try to plot to RGB

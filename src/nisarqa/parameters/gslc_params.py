@@ -6,6 +6,7 @@ import nisarqa
 from .caltools_params import PointTargetAnalyzerParamGroup
 from .nisar_params import (
     InputFileGroupParamGroup,
+    L2GeoBrowseLatLonParamGroup,
     NoCacheSoftwareConfigParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
@@ -25,28 +26,29 @@ objects_to_skip = nisarqa.get_all(__name__)
 @dataclass(frozen=True)
 class GSLCDynamicAncillaryFileParamGroup(DynamicAncillaryFileParamGroup):
     """
-    The parameters from the QA Dynamic Ancillary File runconfig group.
+    The parameters from the QA Dynamic Ancillary File runconfig group for GSLC.
 
     This corresponds to the `groups: dynamic_ancillary_file_group`
     runconfig group.
 
+    Extends DynamicAncillaryFileParamGroup with corner reflector file support.
+
     Parameters
     ----------
-    corner_reflector_file : str or None, optional
-        The input corner reflector file's file name (with path).
-        A valid corner reflector file is required for the Point Target Analyzer
-        workflow to generate results. Defaults to None.
     dem_file : str or None, optional
+        Inherited from DynamicAncillaryFileParamGroup.
         Optional Digital Elevation Model (DEM) file in a GDAL-compatible raster
         format. Used for flattening phase removal of the GSLC data for point
         target analysis (PTA), if applicable (i.e. if the PTA tool is enabled
         and the GSLC is flattened). If None (no DEM is supplied), the PTA
         tool will attempt to un-flatten using the reference ellipsoid, which may
         produce less accurate results. Defaults to None.
+    corner_reflector_file : str or None, optional
+        The input corner reflector file's file name (with path).
+        A valid corner reflector file is required for the Point Target Analyzer
+        workflow to generate results. Defaults to None.
     """
 
-    # Override the base class's attribute in order to update the runconfig
-    # description.
     corner_reflector_file: str = field(
         default=None,
         metadata={
@@ -62,6 +64,7 @@ class GSLCDynamicAncillaryFileParamGroup(DynamicAncillaryFileParamGroup):
         },
     )
 
+    # Override dem_file to update the description for GSLC-specific usage
     dem_file: str = field(
         default=None,
         metadata={
@@ -79,12 +82,15 @@ class GSLCDynamicAncillaryFileParamGroup(DynamicAncillaryFileParamGroup):
     )
 
     def __post_init__(self):
+        # Call parent validation (handles dem_file)
         super().__post_init__()
 
-        if self.dem_file is not None:
+        # Validate corner_reflector_file
+        if self.corner_reflector_file is not None:
             nisarqa.validate_is_file(
-                filepath=self.dem_file,
-                parameter_name="dem_file",
+                filepath=self.corner_reflector_file,
+                parameter_name="corner_reflector_file",
+                extension=".csv",
             )
 
 
@@ -114,6 +120,8 @@ class GSLCRootParamGroup(RootParamGroup):
         Validation Group parameters for QA
     backscatter_img : BackscatterImageParamGroup or None, optional
         Backscatter Image Group parameters for SLC QA
+    browse_latlon : L2GeoBrowseLatLonParamGroup or None, optional
+        Browse LatLon Group parameters for GSLC QA (EPSG 4326 browse images)
     histogram : HistogramParamGroup or None, optional
         Histogram Group parameters for RSLC or GSLC QA
     anc_files : GSLCDynamicAncillaryFileParamGroup or None, optional
@@ -128,6 +136,7 @@ class GSLCRootParamGroup(RootParamGroup):
 
     # QA parameters
     backscatter_img: Optional[BackscatterImageParamGroup] = None
+    browse_latlon: Optional[L2GeoBrowseLatLonParamGroup] = None
     histogram: Optional[HistogramParamGroup] = None
 
     # CalTools parameters
@@ -206,8 +215,13 @@ class GSLCRootParamGroup(RootParamGroup):
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse_latlon",
+                param_grp_cls_obj=L2GeoBrowseLatLonParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
                 root_param_grp_attr_name="histogram",
-                param_grp_cls_obj=nisarqa.HistogramParamGroup,
+                param_grp_cls_obj=HistogramParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.point_target,
@@ -235,6 +249,7 @@ class GSLCRootParamGroup(RootParamGroup):
             "software_config": NoCacheSoftwareConfigParamGroup,
             "validation": ValidationGroupParamGroup,
             "backscatter_img": BackscatterImageParamGroup,
+            "browse_latlon": L2GeoBrowseLatLonParamGroup,
             "histogram": HistogramParamGroup,
             "pta": PointTargetAnalyzerParamGroup,
         }

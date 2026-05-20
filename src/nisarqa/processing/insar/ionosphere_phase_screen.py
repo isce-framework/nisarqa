@@ -14,7 +14,7 @@ from ..plotting_utils import (
     format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
 )
-from ..processing_utils import get_phase_array
+from ._utils import get_phase_array
 from .histograms import process_two_histograms
 
 objects_to_skip = nisarqa.get_all(name=__name__)

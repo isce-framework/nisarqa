@@ -4,12 +4,14 @@ import functools
 import os
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import overload
+from typing import Any, overload
 
+import h5py
 import isce3
 import matplotlib as mpl
 import matplotlib.colors as colors
 import numpy as np
+from numpy.typing import ArrayLike
 from matplotlib import pyplot as plt
 from matplotlib.backends.backend_pdf import PdfPages
 
@@ -150,48 +152,22 @@ def plot_offsets_quiver_plot_to_pdf(
 
     # Construct coordinate grid parameters to match our
     # freshly-decimated `az_off` and `rg_off`
+    # WLOG, use az_offset. (`nisarqa.compare_raster_metadata` ensured that
+    # the `rg_offset` has the same coordinate grid as `az_offset`.)
     kwargs = {}
+
+    # First, decimate using the same strides used to decimate to square pixels
+    tmp_grid = az_offset.grid.downsample(
+        y_stride=ky1, x_stride=kx1, mode="decimate"
+    )
+
+    # Second, decimate using the same strides used to decimate to size of axes
+    kwargs["coord_grid"] = tmp_grid.downsample(
+        y_stride=stride1, x_stride=stride1, mode="decimate"
+    )
+
     if isinstance(az_offset, nisarqa.GeoRaster):
-        # `nisarqa.compare_raster_metadata` ensures that the `rg_offset`
-        # has the same coordinate grid as `az_offset`.
-        y_coordinates = az_offset.y_coordinates
-        x_coordinates = az_offset.x_coordinates
-
-        # Modify with same strides as used above to decimate to square pixels
-        # and size of axes
-        y_coords = y_coordinates[::ky1][::stride1]
-        x_coords = x_coordinates[::kx1][::stride1]
-
-        assert az_off.shape[0] == len(y_coords)
-        assert az_off.shape[1] == len(x_coords)
-
-        x_posting = az_offset.x_posting * kx1 * stride1
-        y_posting = az_offset.y_posting * ky1 * stride1
-
-        kwargs["coord_grid"] = nisarqa.GeoGrid(
-            epsg=az_offset.epsg,
-            x_axis_posting=x_posting,
-            x_coordinates=x_coords,
-            y_axis_posting=y_posting,
-            y_coordinates=y_coords,
-        )
-
         kwargs["quiver_projection_params"] = quiver_projection_params
-
-    else:
-        assert isinstance(az_offset, nisarqa.RadarRaster)
-
-        zero_dop_spacing = az_offset.zero_doppler_time_spacing * ky1 * stride1
-
-        kwargs["coord_grid"] = nisarqa.RadarGrid(
-            zero_doppler_time=az_offset.zero_doppler_time[::ky1][::stride1],
-            zero_doppler_time_spacing=zero_dop_spacing,
-            slant_range=az_offset.slant_range[::kx1][::stride1],
-            slant_range_spacing=az_offset.slant_range_spacing * kx1 * stride1,
-            ground_az_spacing=az_offset.ground_az_spacing * ky1 * stride1,
-            ground_range_spacing=az_offset.ground_range_spacing * kx1 * stride1,
-            epoch=az_offset.epoch,
-        )
 
     im, cbar_min, cbar_max = add_magnitude_image_and_quiver_plot_to_axes(
         ax=ax,
@@ -230,49 +206,269 @@ def plot_offsets_quiver_plot_to_pdf(
     return cbar_min, cbar_max
 
 
-@overload
-def plot_single_quiver_plot_to_png(
-    az_offset: nisarqa.RadarRaster,
-    rg_offset: nisarqa.RadarRaster,
-    params: nisarqa.QuiverParamGroup,
-    png_filepath: str | os.PathLike,
-) -> tuple[int, int]: ...
-
-
-@overload
-def plot_single_quiver_plot_to_png(
-    az_offset: nisarqa.GeoRaster,
-    rg_offset: nisarqa.GeoRaster,
-    params: nisarqa.QuiverParamGroup,
-    png_filepath: str | os.PathLike,
-    quiver_projection_params: None | nisarqa.ParamsForAzRgOffsetsToProjected,
-) -> tuple[int, int]: ...
-
-
-def plot_single_quiver_plot_to_png(
-    az_offset, rg_offset, params, png_filepath, quiver_projection_params=None
+def process_offsets_quiver_browse(
+    product: nisarqa.OffsetProduct,
+    params_browse: Any,
+    params_quiver: nisarqa.QuiverParamGroup,
+    browse_paths: nisarqa.BrowseOutputPaths,
+    stats_h5: h5py.File,
+    *,
+    dem_file: str | os.PathLike | None = None,
 ):
     """
-    Process and save a single quiver plot to PDF and (optional) PNG.
+    Generate browse quiver plot PNG and KML for offset products.
+
+    This function processes azimuth and slant range offset rasters to create:
+    - A primary browse PNG with quiver plot
+    - A KML file with accurate corner coordinates
+    - An optional EPSG 4326 (lat/lon) browse PNG and KML
+    - Saves decimation metadata to stats.h5
 
     Parameters
     ----------
-    az_offset : nisarqa.RadarRaster or nisarqa.GeoRaster
-        Along track offset layer to be processed. Must correspond to
-        `rg_offset`.
-    rg_offset : nisarqa.RadarRaster or nisarqa.GeoRaster
-        Slant range offset layer to be processed. Must correspond to
-        `az_offset`.
-    params : nisarqa.QuiverParamGroup
+    product : nisarqa.OffsetProduct
+        Input NISAR offset product (ROFF or GOFF).
+    params_browse : nisarqa.OffsetsBrowseParamGroup and
+            nisarqa.L1RadarBrowseLatLonParamGroup or nisarqa.L2GeoBrowseLatLonParamGroup
+        A structure containing the processing parameters for the browse PNG.
+    params_quiver : nisarqa.QuiverParamGroup
+        A structure containing processing parameters to generate quiver plots.
+    browse_paths : nisarqa.BrowseOutputPaths
+        Container with output directory and browse/KML filenames.
+    stats_h5 : h5py.File
+        The output file to save QA metrics, etc. to.
+    dem_file : path-like or None, optional
+        Path to a DEM file for accurate geolocation. Used for radar products
+        when generating KMLs; ignored for geocoded products. If None, a
+        zero-height DEM will be used. Defaults to None.
+    """
+
+    # XXX - Python's type annotations do not currently have a good syntax
+    # for multiple inheritance in combination with a Union.
+    # Instead, use type narrowing to assist type checkers:
+    if not isinstance(params_browse, nisarqa.OffsetsBrowseParamGroup):
+        msg = f"{type(params_browse)=}, must be OffsetsBrowseParamGroup"
+        raise TypeError(msg)
+    t = (
+        nisarqa.L1RadarBrowseLatLonParamGroup
+        | nisarqa.L2GeoBrowseLatLonParamGroup
+    )
+    if not isinstance(params_browse, t):
+        msg = f"{type(params_browse)=}, must be L1RadarBrowseLatLonParamGroup or L2GeoBrowseLatLonParamGroup"
+        raise TypeError(msg)
+
+    # Generate a browse PNG for one layer
+    freq, pol, layer_num = product.get_browse_freq_pol_layer()
+    log = nisarqa.get_logger()
+
+    with (
+        product.get_along_track_offset(
+            freq=freq, pol=pol, layer_num=layer_num
+        ) as az_offset,
+        product.get_slant_range_offset(
+            freq=freq, pol=pol, layer_num=layer_num
+        ) as rg_offset,
+    ):
+
+        # Compute decimation values for the browse image PNG.
+        if (az_offset.freq == "A") and (
+            params_browse.browse_decimation_freqa is not None
+        ):
+            y_decimation, x_decimation = params_browse.browse_decimation_freqa
+        elif (az_offset.freq == "B") and (
+            params_browse.browse_decimation_freqb is not None
+        ):
+            y_decimation, x_decimation = params_browse.browse_decimation_freqb
+        else:
+            # Square the pixels. Decimate if needed to stay within longest side max.
+            longest_side_max = params_browse.longest_side_max
+
+            if longest_side_max is None:
+                # Update to be the longest side of the array. This way no downsizing
+                # of the image will occur, but we can still output square pixels.
+                longest_side_max = max(np.shape(rg_offset.data))
+
+            y_decimation, x_decimation = nisarqa.compute_square_pixel_nlooks(
+                img_shape=np.shape(az_offset.data),
+                sample_spacing=[
+                    az_offset.y_ground_spacing,
+                    az_offset.x_ground_spacing,
+                ],
+                longest_side_max=longest_side_max,
+            )
+
+        # Grab the datasets into arrays in memory.
+        # While doing this, convert to square pixels and correct pixel dimensions.
+        az_off = az_offset.data[::y_decimation, ::x_decimation]
+        rg_off = rg_offset.data[::y_decimation, ::x_decimation]
+
+        # Decimate the grid using the same strides used to decimate to size of axes
+        # WLOG use az_offset's grid since az and rg have the same grid
+        browse_grid = az_offset.grid.downsample(
+            y_stride=y_decimation, x_stride=x_decimation, mode="decimate"
+        )
+
+        proj_params = {}
+        if isinstance(az_offset, nisarqa.GeoRaster):
+            # Construct the `proj_params` object. This will trigger
+            # downstream functions to modify the quiver arrows for the
+            # input product's projected coordinates.
+            proj_params["quiver_projection_params"] = (
+                nisarqa.ParamsForAzRgOffsetsToProjected(
+                    orbit=product.get_orbit(ref_or_sec="reference"),
+                    wavelength=product.wavelength(freq=freq),
+                    look_side=product.look_direction,
+                )
+            )
+
+        plot_single_quiver_plot_to_png(
+            az_off=az_off,
+            rg_off=rg_off,
+            coord_grid=browse_grid,
+            quiver_params=params_quiver,
+            png_filepath=browse_paths.primary_browse_path,
+            **proj_params,
+        )
+        log.info(f"Browse PNG saved to {browse_paths.primary_browse_path}")
+
+        nisarqa.create_dataset_in_h5group(
+            h5_file=stats_h5,
+            grp_path=nisarqa.STATS_H5_QA_PROCESSING_GROUP % product.band,
+            ds_name="browseDecimation",
+            ds_data=[y_decimation, x_decimation],
+            ds_units="1",
+            ds_description=(
+                "Decimation strides for the browse image."
+                " Format: [<y decimation>, <x decimation>]."
+            ),
+        )
+
+        # Generate KML with accurate corners for the browse image
+        if product.is_geocoded:
+            # Level-2
+            browse_grid.save_kml(browse_paths=browse_paths)
+        else:
+            # Level-1
+            browse_grid.save_kml(
+                browse_paths=browse_paths,
+                orbit=product.get_orbit(ref_or_sec="reference"),
+                wavelength=product.wavelength(freq=freq),
+                look_side=product.look_direction,
+                dem_file=dem_file,
+            )
+
+        log.info(f"Browse KML saved to {browse_paths.primary_kml_path}")
+
+        # Generate EPSG 4326 browse if requested
+        if params_browse.output_browse_latlon:
+            log.info("Generating EPSG 4326 (lat/lon) browse...")
+
+            if product.is_geocoded:
+                # Level-2: GOFF - Reproject using GDAL
+                geocoded_az, qa_geogrid_4326 = nisarqa.reproject_geo_raster(
+                    image_array=az_off,
+                    fill_value=az_offset.fill_value,
+                    geogrid=browse_grid,
+                    output_epsg=4326,
+                    resample=params_browse.resample,
+                )
+
+                geocoded_rg, _ = nisarqa.reproject_geo_raster(
+                    image_array=rg_off,
+                    fill_value=rg_offset.fill_value,
+                    geogrid=browse_grid,
+                    output_epsg=4326,
+                    resample=params_browse.resample,
+                )
+
+            else:
+                # Level-1: ROFF - Geocode using ISCE3
+                geocoded_az, qa_geogrid_4326 = nisarqa.geocode_radar_raster(
+                    radar_array=az_off,
+                    radargrid=browse_grid,
+                    orbit=product.get_orbit(ref_or_sec="reference"),
+                    wavelength=product.wavelength(freq=freq),
+                    look_side=product.look_direction,
+                    epsg=4326,
+                    dem_file=dem_file,
+                    resample=params_browse.resample,
+                )
+
+                geocoded_rg, _ = nisarqa.geocode_radar_raster(
+                    radar_array=rg_off,
+                    radargrid=browse_grid,
+                    orbit=product.get_orbit(ref_or_sec="reference"),
+                    wavelength=product.wavelength(freq=freq),
+                    look_side=product.look_direction,
+                    epsg=4326,
+                    dem_file=dem_file,
+                    resample=params_browse.resample,
+                )
+
+            # EPSG 4326 arrays are geocoded, but the pixel values still
+            # represent offsets in az and range, so we need to provide
+            # projection params in order to geocode the quiver arrows too.
+            quiver_proj_params = nisarqa.ParamsForAzRgOffsetsToProjected(
+                orbit=product.get_orbit(ref_or_sec="reference"),
+                wavelength=product.wavelength(freq=freq),
+                look_side=product.look_direction,
+            )
+
+            # Generate the EPSG 4326 browse PNG
+            suffix = nisarqa.LATLON_SUFFIX
+            png_4326_path = browse_paths.get_browse_path(suffix=suffix)
+
+            plot_single_quiver_plot_to_png(
+                az_off=geocoded_az,
+                rg_off=geocoded_rg,
+                coord_grid=qa_geogrid_4326,
+                quiver_params=params_quiver,
+                png_filepath=png_4326_path,
+                quiver_projection_params=quiver_proj_params,
+            )
+
+            log.info(f"EPSG 4326 (lat/lon) browse PNG saved to {png_4326_path}")
+
+            # Generate EPSG 4326 KML
+            qa_geogrid_4326.save_kml(browse_paths=browse_paths, suffix=suffix)
+
+            kml_4326_path = browse_paths.get_kml_path(suffix=suffix)
+            log.info(f"EPSG 4326 (lat/lon) browse KML saved to {kml_4326_path}")
+
+
+def plot_single_quiver_plot_to_png(
+    az_off: ArrayLike,
+    rg_off: ArrayLike,
+    coord_grid: nisarqa.RadarGrid | nisarqa.GeoGrid,
+    quiver_params: nisarqa.QuiverParamGroup,
+    png_filepath: str | os.PathLike,
+    quiver_projection_params: (
+        None | nisarqa.ParamsForAzRgOffsetsToProjected
+    ) = None,
+):
+    """
+    Process and save a single quiver plot to PNG.
+
+    Parameters
+    ----------
+    az_off : array-like
+        Along track offset array to be processed. Must correspond to
+        `rg_off`.
+    rg_off : array-like
+        Slant range offset array to be processed. Must correspond to
+        `az_off`.
+    coord_grid : nisarqa.RadarGrid or nisarqa.GeoGrid
+        Coordinate grid for `az_off` and `rg_off`.
+    quiver_params : nisarqa.QuiverParamGroup
         A structure containing processing parameters to generate quiver plots.
     png_filepath : path-like
-        Filename (with path) for the image PNG.
+        Filename (with path) for the output PNG image.
     quiver_projection_params : None or ParamsForAzRgOffsetsToProjected, optional
         ** Strongly recommend providing parameters for GOFF and GUNW **
-        Set to None if the contents of the offset rasters use the same
+        Set to None if the contents of the offset arrays use the same
         coordinate grid as the raster image (e.g. both are
         azimuth/range grid, such as for ROFF, RIFG, and RUNW).
-        If offsets arrays are nisarqa.GeoRaster and these parameters are
+        If `coord_grid` is nisarqa.GeoRaster and these parameters are
         provided, they will be used to modify the quiver arrows to
         represent displacement direction and relative magnitude in
         projected coordinates. Note: the plotted image (and colorbar) will
@@ -280,100 +476,24 @@ def plot_single_quiver_plot_to_png(
         only the quiver arrows will be projected.
         Defaults to None.
 
-    Returns
-    -------
-    y_dec, x_dec : int
-        The decimation stride value used in the Y axis direction and X axis
-        direction (respectively).
-
     Notes
     -----
     NISAR GOFF and GUNW along track and slant range offsets rasters are
     geocoded to projected coordinates, but their pixel values represent the
     offset in azimuth and slant range directions (respectively).
-    Because of this, if `az_offset` and `rg_offset` come from GOFF or GUNW,
+    Because of this, if `az_off` and `rg_off` come from GOFF or GUNW,
     and if `quiver_projection_params` is set to None, then the quiver arrows
     will not be plotted in the correct direction/magnitude for the projected
     X/Y image grid (i.e. they'll appear to point the wrong direction).
     """
-    # Validate input rasters
-    nisarqa.compare_raster_metadata(az_offset, rg_offset, almost_identical=True)
 
-    # Compute decimation values for the browse image PNG.
-    if (az_offset.freq == "A") and (params.browse_decimation_freqa is not None):
-        y_decimation, x_decimation = params.browse_decimation_freqa
-    elif (az_offset.freq == "B") and (
-        params.browse_decimation_freqb is not None
-    ):
-        y_decimation, x_decimation = params.browse_decimation_freqb
-    else:
-        # Square the pixels. Decimate if needed to stay within longest side max.
-        longest_side_max = params.longest_side_max
-
-        if longest_side_max is None:
-            # Update to be the longest side of the array. This way no downsizing
-            # of the image will occur, but we can still output square pixels.
-            longest_side_max = max(np.shape(rg_offset.data))
-
-        y_decimation, x_decimation = nisarqa.compute_square_pixel_nlooks(
-            img_shape=np.shape(az_offset.data),
-            sample_spacing=[
-                az_offset.y_ground_spacing,
-                az_offset.x_ground_spacing,
-            ],
-            longest_side_max=longest_side_max,
-        )
-
-    # Grab the datasets into arrays in memory.
-    # While doing this, convert to square pixels and correct pixel dimensions.
-    az_off = az_offset.data[::y_decimation, ::x_decimation]
-    rg_off = rg_offset.data[::y_decimation, ::x_decimation]
-
-    # Construct coordinate grid parameters to match our
-    # freshly-decimated `az_off` and `rg_off`
-    kwargs = {}
     if quiver_projection_params is not None:
-        if isinstance(az_offset, nisarqa.RadarRaster):
+        if isinstance(coord_grid, nisarqa.RadarGrid):
             raise TypeError(
-                "Input az and rg offset rasters are instances of"
-                f" nisarqa.RadarRaster, but {type(quiver_projection_params)=}."
+                "Input coordinate grid is an instance of"
+                f" nisarqa.RadarGrid, but {type(quiver_projection_params)=}."
                 " It should be set to None for rasters on the radar grid."
             )
-        kwargs["quiver_projection_params"] = quiver_projection_params
-
-    if isinstance(az_offset, nisarqa.GeoRaster):
-        x_coordinates = az_offset.x_coordinates
-        y_coordinates = az_offset.y_coordinates
-        x_coords = x_coordinates[::x_decimation]
-        y_coords = y_coordinates[::y_decimation]
-
-        assert az_off.shape[1] == len(x_coords)
-        assert az_off.shape[0] == len(y_coords)
-
-        x_posting = az_offset.x_posting * x_decimation
-        y_posting = az_offset.y_posting * y_decimation
-
-        kwargs["coord_grid"] = nisarqa.GeoGrid(
-            epsg=az_offset.epsg,
-            x_axis_posting=x_posting,
-            x_coordinates=x_coords,
-            y_axis_posting=y_posting,
-            y_coordinates=y_coords,
-        )
-    else:
-        assert isinstance(az_offset, nisarqa.RadarRaster)
-
-        zero_dop_spacing = az_offset.zero_doppler_time_spacing * y_decimation
-
-        kwargs["coord_grid"] = nisarqa.RadarGrid(
-            zero_doppler_time=az_offset.zero_doppler_time[::y_decimation],
-            zero_doppler_time_spacing=zero_dop_spacing,
-            slant_range=az_offset.slant_range[::x_decimation],
-            slant_range_spacing=az_offset.slant_range_spacing * x_decimation,
-            ground_az_spacing=az_offset.ground_az_spacing * y_decimation,
-            ground_range_spacing=az_offset.ground_range_spacing * x_decimation,
-            epoch=az_offset.epoch,
-        )
 
     # Next, we need to add the background image + quiver plot arrows onto
     # an Axes, and then save this to a PNG with exact pixel dimensions as
@@ -382,17 +502,16 @@ def plot_single_quiver_plot_to_png(
         add_magnitude_image_and_quiver_plot_to_axes,
         az_off=az_off,
         rg_off=rg_off,
-        params=params,
-        **kwargs,
+        params=quiver_params,
+        coord_grid=coord_grid,
+        quiver_projection_params=quiver_projection_params,
     )
 
     save_mpl_plot_to_png(
         axes_partial_func=quiver_func,
-        raster_shape=az_off.shape,
+        raster_shape=np.shape(az_off),
         png_filepath=png_filepath,
     )
-
-    return y_decimation, x_decimation
 
 
 def add_magnitude_image_and_quiver_plot_to_axes(
@@ -922,6 +1041,35 @@ def get_offset_values_in_projected_coordinates(
             # input arrays, use the forward() method of the same `proj`
             # object we created above.
             x_shift, y_shift, _ = proj.forward([lon, lat, 0])
+
+            # Handle longitude wrapping for EPSG 4326.
+            # If the image crosses the antimeridian, the output x_shift from
+            # the coordinate transformations might be in a different 360 degree
+            # period than the input x_coord. For example:
+            # - Input x_coord = 246 degree (using [0, 360] convention)
+            # - Output x_shift = -114 degree (normalized to [-180, 180])
+            # This would cause a spurious ~360 degree offset.
+            # Adjust x_shift to be in the same 360 degree period as x_coord.
+            if geo_grid.is_geographic and geo_grid.crosses_antimeridian:
+                if np.any(arrow_tails_x > 180) and np.any(arrow_tails_x < -180):
+                    raise NotImplementedError(
+                        "Input `geo_grid.x_coordinates` contains longitude"
+                        " values which span an interval that is larger than"
+                        "360 degrees total. Please update code for proper"
+                        "bookkeeping of this scenario."
+                    )
+                elif np.any(arrow_tails_x > 180):
+                    # longitude interval is (typically) [0, 360]
+                    x_shift = nisarqa.wrap_to_interval(
+                        val=x_shift, start=0, stop=360
+                    )
+                elif np.any(arrow_tails_x < -180):
+                    # longitude interval is (typically) [-360, 0]
+                    x_shift = nisarqa.wrap_to_interval(
+                        val=x_shift, start=-360, stop=0
+                    )
+                else:
+                    assert False, "Unreachable code reached"
 
             # 6) Compute new offset values in projected coordinates:
             #       (x_1 - x_0, y_1 - y_0)

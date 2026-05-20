@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+import h5py
+
 import nisarqa
 
 from .non_insar_geo_product import NonInsarGeoProduct

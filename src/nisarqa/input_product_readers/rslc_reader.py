@@ -235,6 +235,25 @@ class RSLC(SLCProduct, NisarRadarProduct):
 
         return _get_proc_center_freq(freq)
 
+    def center_freq(self, freq: str) -> float:
+        """
+        The processed center frequency for input product's Frequency `freq`.
+
+        This is a wrapper around `get_processed_center_frequency()`.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        center_freq : float
+            The processed center frequency for input product's Frequency `freq`,
+            in hertz.
+        """
+        return self.get_processed_center_frequency(freq=freq)
+
     def metadata_crosstalk_luts(
         self,
     ) -> Iterator[nisarqa.MetadataLUT1D]:

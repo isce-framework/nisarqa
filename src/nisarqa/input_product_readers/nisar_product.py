@@ -7,6 +7,7 @@ from functools import cached_property, lru_cache
 from pathlib import Path
 
 import h5py
+import isce3
 import numpy as np
 
 import nisarqa
@@ -55,19 +56,6 @@ class NisarProduct(ABC):
     @abstractmethod
     def is_geocoded(self) -> bool:
         """True if product is geocoded; False if range Doppler grid."""
-        pass
-
-    @abstractmethod
-    def get_browse_latlonquad(self) -> nisarqa.LatLonQuad:
-        """
-        Create a LatLonQuad for the corners of the input product.
-
-        Returns
-        -------
-        llq : LatLonQuad
-            A LatLonQuad object containing the four corner coordinates for this
-            product's browse image, in degrees.
-        """
         pass
 
     @cached_property
@@ -911,6 +899,48 @@ class NisarProduct(ABC):
             Examples: "GSLC_L_A_HH" or "GUNW_L_A_HH_unwrappedPhase".
         """
         pass
+
+    @abstractmethod
+    def center_freq(self, freq: str) -> float:
+        """
+        The processed center frequency for input product's Frequency `freq`.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        center_freq : float
+            The processed center frequency for input product's Frequency `freq`,
+            in hertz.
+        """
+        pass
+
+    def wavelength(self, freq: str) -> float:
+        """
+        The wavelength corresponding to the processed center frequency.
+
+        The wavelength for input product's Frequency `freq`. This is computed
+        from the processed center frequency.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        wavelength : float
+            The wavelength for input product's Frequency `freq`, in meters.
+        """
+        # Wavelength can be inferred from the processed center frequency
+        # center frequency is in units of hertz
+        center_freq = self.center_freq(freq=freq)
+
+        # wavelength = <speed of light> / centerFrequency
+        return isce3.core.speed_of_light / center_freq
 
     def _build_metadata_lut(
         self,

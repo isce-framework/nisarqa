@@ -141,9 +141,9 @@ def gslc_qa(
                     report_pdf=report_pdf,
                     plot_title_prefix=name_of_backscatter_content,
                     input_raster_represents_power=input_raster_represents_power,
-                    out_dir=out_dir,
-                    browse_filename=root_params.get_browse_png_filename(),
-                    kml_filename=root_params.get_kml_browse_filename(),
+                    browse_paths=root_params.get_browse_paths(),
+                    browse_latlon_params=root_params.browse_latlon,
+                    dem_file=None,  # Parameter ignored for Level-2 products
                 )
                 log.info("Processing of Backscatter images complete.")
 

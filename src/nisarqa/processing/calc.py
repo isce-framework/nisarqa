@@ -75,8 +75,8 @@ def nearest_odd_int(k):
         result = result + 1
 
     # Sanity Check
-    assert result % 2 == 1, print("the result should be an odd value.")
-    assert isinstance(result, int), print("the result should be an integer.")
+    assert result % 2 == 1, "the result should be an odd value."
+    assert isinstance(result, int), "the result should be an integer."
 
     return result
 

@@ -6,6 +6,7 @@ __all__ = [
     "RunConfigList",
     "RunConfigDict",
     "MetadataLUTT",
+    "CoordinateGridT",
     "T",
 ]
 
@@ -23,5 +24,7 @@ RunConfigDict = Mapping[
 RootParamGroupT = TypeVar("RootParamGroupT", bound="RootParamGroup")
 
 MetadataLUTT = TypeVar("MetadataLUTT", bound="MetadataLUT1D")
+
+CoordinateGridT = TypeVar("CoordinateGridT", bound="CoordinateGrid")
 
 T = TypeVar("T")

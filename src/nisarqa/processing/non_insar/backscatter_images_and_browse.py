@@ -22,11 +22,11 @@ def process_backscatter_imgs_and_browse(
     stats_h5: h5py.File,
     report_pdf: PdfPages,
     *,
-    out_dir: str | os.Pathlike,
-    browse_filename: str,
-    kml_filename: str,
+    browse_paths: nisarqa.BrowseOutputPaths,
     input_raster_represents_power: bool = False,
     plot_title_prefix: str = "Backscatter Coefficient",
+    browse_latlon_params: nisarqa.BrowseLatLonParamGroup | None = None,
+    dem_file: str | os.PathLike | None = None,
 ) -> None:
     """
     Generate Backscatter Image plots for the Report PDF and browse product.
@@ -45,15 +45,8 @@ def process_backscatter_imgs_and_browse(
         The output file to save QA metrics, etc. to
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output PDF file to append the backscatter image plot to
-    out_dir : path-like
-        The directory to write the output PNG and KML file(s) to. This
-        directory must already exist.
-    browse_filename : str
-        The basename of the output browse image PNG file. The file will be
-        created in `out_dir`. Example: "BROWSE.png".
-    kml_filename : str
-        The basename of the output browse image KML file. The file will be
-        created in `out_dir`. Example: "BROWSE.kml".
+    browse_paths : nisarqa.BrowseOutputPaths
+        Container with output directory and browse/KML filenames.
     input_raster_represents_power : bool, optional
         The input dataset rasters associated with these histogram parameters
         should have their pixel values represent either power or root power.
@@ -68,6 +61,18 @@ def process_backscatter_imgs_and_browse(
         Suggestions: "RSLC Backscatter Coefficient (beta-0)" or
         "GCOV Backscatter Coefficient (gamma-0)".
         Defaults to "Backscatter Coefficient".
+    browse_latlon_params : BrowseLatLonParamGroup or None, optional
+        Parameters for generating EPSG 4326 (lat/lon) browse images.
+        If None, or if `browse_latlon_params.output_browse_latlon` is False,
+        no EPSG 4326 browse is generated. Defaults to None.
+    dem_file : path-like or None, optional
+        Digital Elevation Model (DEM) file path in a GDAL-compatible raster
+        format.
+        Used for Level-1 products when geocoding the EPSG 4326 (lat/lon) browse;
+        if None, a zero-height DEM will be used.
+        Will be ignored if lat/lon browse products are not generated
+        or if `product` is a Level-2 Geocoded product.
+        Defaults to None.
     """
 
     # Select which layers will be needed for the browse image.
@@ -82,22 +87,24 @@ def process_backscatter_imgs_and_browse(
     # match the set of TxRx polarizations needed to form the browse image
     pol_imgs_for_browse = {}
 
-    # Process each image in the dataset
+    # Store browse grid one time
+    primary_browse_grid = None
 
+    # Process each image in the dataset
     for freq in product.freqs:
         for pol in product.get_pols(freq=freq):
-            # Open the *SARRaster image
-
             with product.get_raster(freq=freq, pol=pol) as img:
                 with nisarqa.log_runtime(
                     f"`get_multilooked_backscatter_img` for Frequency {freq}"
                     f" Polarization {pol}"
                 ):
-                    multilooked_img = get_multilooked_backscatter_img(
-                        img=img,
-                        params=params,
-                        stats_h5=stats_h5,
-                        input_raster_represents_power=input_raster_represents_power,
+                    multilooked_img, nlooks = (
+                        get_multilooked_backscatter_img_with_nlooks(
+                            img=img,
+                            params=params,
+                            stats_h5=stats_h5,
+                            input_raster_represents_power=input_raster_represents_power,
+                        )
                     )
 
                 corrected_img, orig_vmin, orig_vmax = apply_image_correction(
@@ -105,25 +112,33 @@ def process_backscatter_imgs_and_browse(
                 )
 
                 if params.output_individual_pngs:
-
-                    def _indiv_path(
-                        basename: str | os.PathLike,
-                    ) -> str:
-                        base = Path(basename)
-                        return f"{base.stem}_{freq}_{pol}{base.suffix}"
-
+                    suffix = f"{freq}_{pol}"
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
-                        filepath=Path(out_dir, _indiv_path(browse_filename)),
+                        filepath=browse_paths.get_browse_path(suffix=suffix),
                     )
 
                     # Generate the KML that corresponds to the individual PNG
-                    nisarqa.write_latlonquad_to_kml(
-                        llq=product.get_browse_latlonquad(),
-                        output_dir=out_dir,
-                        kml_filename=_indiv_path(kml_filename),
-                        png_filename=_indiv_path(browse_filename),
+                    # Compute accurate corners for browse using decimated coordinate vectors
+                    indiv_grid = img.grid.downsample(
+                        y_stride=nlooks[0],
+                        x_stride=nlooks[1],
+                        mode="multilook",
                     )
+                    if isinstance(img, nisarqa.RadarRaster):
+                        indiv_grid.save_kml(
+                            browse_paths=browse_paths,
+                            suffix=suffix,
+                            orbit=product.get_orbit(),
+                            wavelength=product.wavelength(freq=freq),
+                            look_side=product.look_direction,
+                            dem_file=dem_file,
+                        )
+                    else:
+                        indiv_grid.save_kml(
+                            browse_paths=browse_paths,
+                            suffix=suffix,
+                        )
 
                 if params.gamma is not None:
                     inverse_func = functools.partial(
@@ -179,25 +194,106 @@ def process_backscatter_imgs_and_browse(
                     # ...keep the multilooked, color-corrected image in memory
                     pol_imgs_for_browse[pol] = corrected_img
 
-    # Construct the browse image
-    browse_path = Path(out_dir, browse_filename)
-    product.save_browse(pol_imgs=pol_imgs_for_browse, filepath=browse_path)
+                    # Save the primary browse KML. Do this once, since all
+                    # primary browse rasters share the same grid.
+                    if primary_browse_grid is None:
 
-    # Generate the KML that corresponds to the browse image
-    nisarqa.write_latlonquad_to_kml(
-        llq=product.get_browse_latlonquad(),
-        output_dir=out_dir,
-        kml_filename=kml_filename,
-        png_filename=browse_filename,
+                        primary_browse_grid = img.grid.downsample(
+                            y_stride=nlooks[0],
+                            x_stride=nlooks[1],
+                            mode="multilook",
+                        )
+                        if isinstance(img, nisarqa.RadarRaster):
+                            primary_browse_grid.save_kml(
+                                browse_paths=browse_paths,
+                                orbit=product.get_orbit(),
+                                wavelength=product.wavelength(freq=freq),
+                                look_side=product.look_direction,
+                                dem_file=dem_file,
+                            )
+                        else:
+                            primary_browse_grid.save_kml(
+                                browse_paths=browse_paths
+                            )
+
+                        # XXX - Keep these, in case we make lat/lon browse below
+                        primary_browse_freq = freq  # For L1 products
+                        primary_browse_fill = img.fill_value  # For L2 products
+
+    # Construct the nominal browse image (in input's native coordinate system)
+    product.save_browse(
+        pol_imgs=pol_imgs_for_browse, filepath=browse_paths.primary_browse_path
     )
+
     log = nisarqa.get_logger()
-    log.info(f"Browse image PNG file saved to {browse_path}")
-    log.info(f"Browse image KML file saved to {Path(out_dir, kml_filename)}")
+    log.info(
+        f"Browse image PNG file saved to {browse_paths.primary_browse_path}"
+    )
+    log.info(f"Browse image KML file saved to {browse_paths.primary_kml_path}")
+
+    # Generate EPSG 4326 browse if requested
+    if (
+        browse_latlon_params is not None
+        and browse_latlon_params.output_browse_latlon
+    ):
+        log.info("Generating EPSG 4326 browse...")
+        pol_imgs_4326 = {}
+
+        for pol, img_arr in pol_imgs_for_browse.items():
+
+            if product.is_geocoded:
+                # Level-2: Reproject using GDAL
+                # Convert fill_value to float (take real part if complex)
+                fill_val = (
+                    np.real(primary_browse_fill)
+                    if np.iscomplexobj(primary_browse_fill)
+                    else primary_browse_fill
+                )
+                geocoded_arr, qa_geogrid_4326 = nisarqa.reproject_geo_raster(
+                    image_array=img_arr,
+                    fill_value=fill_val,
+                    geogrid=primary_browse_grid,
+                    output_epsg=4326,
+                    resample=browse_latlon_params.resample,
+                )
+            else:
+                # Level-1: Geocode using ISCE3
+                geocoded_arr, qa_geogrid_4326 = nisarqa.geocode_radar_raster(
+                    radar_array=img_arr,
+                    radargrid=primary_browse_grid,
+                    orbit=product.get_orbit(),
+                    wavelength=product.wavelength(freq=primary_browse_freq),
+                    look_side=product.look_direction,
+                    epsg=4326,
+                    dem_file=dem_file,
+                    resample=browse_latlon_params.resample,
+                )
+
+            pol_imgs_4326[pol] = geocoded_arr
+
+        # Save EPSG 4326 browse PNG
+        suffix = nisarqa.LATLON_SUFFIX
+        png_4326_path = browse_paths.get_browse_path(suffix=suffix)
+
+        product.save_browse(
+            pol_imgs=pol_imgs_4326,
+            filepath=png_4326_path,
+        )
+        log.info(f"EPSG 4326 (lat/lon) browse PNG saved to {png_4326_path}")
+
+        # Generate EPSG 4326 KML
+        qa_geogrid_4326.save_kml(browse_paths=browse_paths, suffix=suffix)
+
+        kml_4326_path = browse_paths.get_kml_path(suffix=suffix)
+        log.info(f"EPSG 4326 (lat/lon) browse KML saved to {kml_4326_path}")
 
 
-def get_multilooked_backscatter_img(
-    img, params, stats_h5, input_raster_represents_power=False
-):
+def get_multilooked_backscatter_img_with_nlooks(
+    img: nisarqa.GeoRaster | nisarqa.RadarRaster,
+    params: nisarqa.BackscatterImageParamGroup,
+    stats_h5: h5py.File,
+    input_raster_represents_power: bool = False,
+) -> tuple[np.ndarray, tuple[int, int]]:
     """
     Generate the multilooked Backscatter Image array for a single
     polarization image.
@@ -225,6 +321,9 @@ def get_multilooked_backscatter_img(
     -------
     out_img : numpy.ndarray
         The multilooked Backscatter Image
+    nlooks : tuple of int
+        The number of looks applied along (azimuth/Y, range/X) axes.
+        Format: (num_rows, num_cols)
     """
     log = nisarqa.get_logger()
     log.info(f"Beginning multilooking for backscatter image {img.name}...")
@@ -307,6 +406,52 @@ def get_multilooked_backscatter_img(
     log.debug(f"Final multilooked image shape: {out_img.shape}")
     log.info(f"Multilooking complete for backscatter image {img.name}.")
 
+    return out_img, tuple(nlooks)
+
+
+def get_multilooked_backscatter_img(
+    img: nisarqa.GeoRaster | nisarqa.RadarRaster,
+    params: nisarqa.BackscatterImageParamGroup,
+    stats_h5: h5py.File,
+    input_raster_represents_power: bool = False,
+) -> np.ndarray:
+    """
+    Generate the multilooked Backscatter Image array for a single
+    polarization image.
+
+    This is a convenience wrapper around `get_multilooked_backscatter_img_with_nlooks()`
+    that maintains backward compatibility by discarding the nlooks return value.
+
+    Parameters
+    ----------
+    img : RadarRaster or GeoRaster
+        The raster to be processed
+    params : BackscatterImageParamGroup
+        A structure containing the parameters for processing
+        and outputting the backscatter image(s).
+    stats_h5 : h5py.File
+        The output file to save QA metrics, etc. to
+    input_raster_represents_power : bool, optional
+        The input dataset rasters associated with these histogram parameters
+        should have their pixel values represent either power or root power.
+        If `True`, then QA SAS assumes the input data already represents
+        power and uses the pixels' magnitudes for computations.
+        If `False`, then QA SAS assumes the input data represents root power
+        aka magnitude and will handle the full computation to power using
+        the formula:  power = abs(<magnitude>)^2 .
+        Defaults to False (root power).
+
+    Returns
+    -------
+    out_img : numpy.ndarray
+        The multilooked Backscatter Image
+    """
+    out_img, _ = get_multilooked_backscatter_img_with_nlooks(
+        img=img,
+        params=params,
+        stats_h5=stats_h5,
+        input_raster_represents_power=input_raster_represents_power,
+    )
     return out_img
 
 

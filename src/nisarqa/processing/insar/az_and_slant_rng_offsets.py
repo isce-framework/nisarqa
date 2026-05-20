@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import os
-from typing import overload
+from dataclasses import replace
+from pathlib import Path
+from typing import Any, overload
 
 import h5py
 import numpy as np
@@ -19,6 +21,7 @@ from .histograms import process_two_histograms
 from .quiver_plots import (
     plot_offsets_quiver_plot_to_pdf,
     plot_single_quiver_plot_to_png,
+    process_offsets_quiver_browse,
 )
 
 objects_to_skip = nisarqa.get_all(name=__name__)
@@ -68,18 +71,22 @@ def process_az_and_slant_rg_offsets_from_offset_product(
     product: nisarqa.OffsetProduct,
     params_quiver: nisarqa.QuiverParamGroup,
     params_offsets: nisarqa.ThresholdParamGroup,
+    params_browse: Any,  # will be type-narrowed in the function
     report_pdf: PdfPages,
     stats_h5: h5py.File,
-    browse_png: str | os.PathLike,
+    *,
+    browse_paths: nisarqa.BrowseOutputPaths,
+    dem_file: str | os.PathLike | None = None,
 ):
     """
     Process side-by-side az and range offsets plots and quiver plots.
 
     This function takes each pair of along track offset and slant range offset
     raster layers, and:
-        * Saves the browse image quiver plot as a PNG.
+        * Saves the browse image quiver plot as a PNG with accurate KML.
             - (The specific freq+pol+layer_number to use for the browse image
                is determined by the input `product`.)
+        * Optionally generates EPSG 4326 (lat/lon) browse PNG and KML.
         * Plots them side-by-side and appends this plot to PDF
         * Computes statistics for these layers
         * Plots them as a quiver plot and appends this plot to PDF
@@ -97,56 +104,62 @@ def process_az_and_slant_rg_offsets_from_offset_product(
     params_offsets : nisarqa.ThresholdParamGroup
         A structure containing the parameters for checking the percentage
         of invalid pixels in the azimuth and slant range offsets layers.
+    params_browse : nisarqa.OffsetsBrowseParamGroup and
+            nisarqa.L1RadarBrowseLatLonParamGroup or nisarqa.L2GeoBrowseLatLonParamGroup
+        A structure containing the processing parameters for the browse PNG.
+        Must be an instance of OffsetsBrowseParamGroup and (via multiple
+        inheritance) also an instance of either:
+            L1RadarBrowseLatLonParamGroup or L2GeoBrowseLatLonParamGroup
     report_pdf : matplotlib.backends.backend_pdf.PdfPages
         The output pdf file to append the quiver plot to.
     stats_h5 : h5py.File
         The output file to save QA metrics, etc. to.
-    browse_png : path-like
-        Filename (with path) for the browse image PNG.
+    browse_paths : nisarqa.BrowseOutputPaths
+        Container with output directory and browse/KML filenames.
+    dem_file : path-like or None, optional
+        Path to a DEM file for accurate geolocation. Used for radar products
+        when generating KMLs; ignored for geocoded products. If None, a
+        zero-height DEM will be used. Defaults to None.
     """
-    # Generate a browse PNG for one layer
-    freq, pol, layer_num = product.get_browse_freq_pol_layer()
 
-    with (
-        product.get_along_track_offset(
-            freq=freq, pol=pol, layer_num=layer_num
-        ) as az_off,
-        product.get_slant_range_offset(
-            freq=freq, pol=pol, layer_num=layer_num
-        ) as rg_off,
-    ):
+    # XXX - Python's type annotations do not currently have a good syntax
+    # for multiple inheritance in combination with a Union.
+    # Instead, use type narrowing to assist type checkers:
+    if not isinstance(params_browse, nisarqa.OffsetsBrowseParamGroup):
+        msg = f"{type(params_browse)=}, must be OffsetsBrowseParamGroup"
+        raise TypeError(msg)
+    t = (
+        nisarqa.L1RadarBrowseLatLonParamGroup
+        | nisarqa.L2GeoBrowseLatLonParamGroup
+    )
+    if not isinstance(params_browse, t):
+        msg = f"{type(params_browse)=}, must be L1RadarBrowseLatLonParamGroup or L2GeoBrowseLatLonParamGroup"
+        raise TypeError(msg)
 
-        proj_params = {}
-        if isinstance(az_off, nisarqa.GeoRaster):
-            # Construct the `proj_params` object. This will trigger
-            # downstream functions to modify the quiver arrows for the
-            # input product's projected coordinates.
-            proj_params["quiver_projection_params"] = (
-                nisarqa.ParamsForAzRgOffsetsToProjected(
-                    orbit=product.get_orbit(ref_or_sec="reference"),
-                    wavelength=product.wavelength(freq=freq),
-                    look_side=product.look_direction,
-                )
+    # Generate browse quiver plot PNG and KML for the selected layer
+    process_offsets_quiver_browse(
+        product=product,
+        params_browse=params_browse,
+        params_quiver=params_quiver,
+        browse_paths=browse_paths,
+        stats_h5=stats_h5,
+        dem_file=dem_file,
+    )
+
+    # Set up projection parameters for PDF quiver plots
+    # (This is same for all freq/pol/layer combinations)
+    proj_params = {}
+    if product.is_geocoded:
+        # For geocoded products, we need projection params so that
+        # quiver arrows are modified for the product's projected coordinates.
+        # Get one freq to use for the projection params
+        freq = product.freqs[0]
+        proj_params["quiver_projection_params"] = (
+            nisarqa.ParamsForAzRgOffsetsToProjected(
+                orbit=product.get_orbit(ref_or_sec="reference"),
+                wavelength=product.wavelength(freq=freq),
+                look_side=product.look_direction,
             )
-
-        y_dec, x_dec = plot_single_quiver_plot_to_png(
-            az_offset=az_off,
-            rg_offset=rg_off,
-            params=params_quiver,
-            png_filepath=browse_png,
-            **proj_params,
-        )
-
-        nisarqa.create_dataset_in_h5group(
-            h5_file=stats_h5,
-            grp_path=nisarqa.STATS_H5_QA_PROCESSING_GROUP % product.band,
-            ds_name="browseDecimation",
-            ds_data=[y_dec, x_dec],
-            ds_units="1",
-            ds_description=(
-                "Decimation strides for the browse image."
-                " Format: [<y decimation>, <x decimation>]."
-            ),
         )
 
     # Populate PDF with side-by-side plots and quiver plots.

@@ -12,6 +12,8 @@ from .nisar_params import (
     HDF5Attrs,
     HDF5ParamGroup,
     InputFileGroupParamGroup,
+    L1RadarBrowseLatLonParamGroup,
+    L2GeoBrowseLatLonParamGroup,
     ProductPathGroupParamGroup,
     RootParamGroup,
     SoftwareConfigParamGroup,
@@ -24,6 +26,7 @@ from .nisar_params import (
     ZeroIsValidThreshold99ParamGroup,
     ZeroIsValidThresholdParamGroup,
 )
+from .rslc_caltools_params import DynamicAncillaryFileParamGroup
 
 objects_to_skip = nisarqa.get_all(__name__)
 
@@ -457,24 +460,317 @@ class UNWIgramBrowseParamGroup(IgramBrowseParamGroup, HDF5ParamGroup):
 
 
 @dataclass(frozen=True)
-class RIFGIgramBrowseParamGroup(IgramBrowseParamGroup):
+class RIFGBrowseParamGroup(
+    L1RadarBrowseLatLonParamGroup,
+    IgramBrowseParamGroup,
+):
+    """
+    Parameters for RIFG browse image generation.
+
+    Overrides the default resample method to 'nearest' for RIFG products
+    because interferograms contain phase jumps that should not be interpolated.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image. Defaults to 2048 pixels.
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
+        'bicubic', 'nearest', 'biquintic'.
+        Ignored if `output_browse_latlon` is False.
+        When output browse image data contains phase discontinuities
+        (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+        other methods can create artifacts when interpolating across the jump.
+        Defaults to 'nearest'.
+    """
+
+    # Override resample default for RIFG (phase jumps require nearest neighbor)
+    resample: str = (
+        L1RadarBrowseLatLonParamGroup.get_field_with_updated_default(
+            param_name="resample", default="nearest"
+        )
+    )
+
     @staticmethod
     def get_path_to_group_in_runconfig():
-        return ["runconfig", "groups", "qa", "rifg", "qa_reports", "browse_png"]
+        return ["runconfig", "groups", "qa", "rifg", "qa_reports", "browse"]
 
 
 @dataclass(frozen=True)
-class RUNWIgramBrowseParamGroup(UNWIgramBrowseParamGroup):
+class RUNWBrowseParamGroup(
+    L1RadarBrowseLatLonParamGroup,
+    UNWIgramBrowseParamGroup,
+):
+    """
+    Parameters for RUNW browse image generation.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image. Defaults to 2048 pixels.
+    rewrap : float or None, optional
+        The multiple of pi to rewrap the unwrapped phase image when generating
+        the browse PNG. If None, no rewrapping will occur.
+        Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
+        Defaults to 7.
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
+        'bicubic', 'nearest', 'biquintic'.
+        Ignored if `output_browse_latlon` is False.
+        Defaults to 'bilinear'.
+    """
+
     @staticmethod
     def get_path_to_group_in_runconfig():
-        return ["runconfig", "groups", "qa", "runw", "qa_reports", "browse_png"]
+        return ["runconfig", "groups", "qa", "runw", "qa_reports", "browse"]
 
 
 @dataclass(frozen=True)
-class GUNWIgramBrowseParamGroup(UNWIgramBrowseParamGroup):
+class GUNWBrowseParamGroup(
+    L2GeoBrowseLatLonParamGroup,
+    UNWIgramBrowseParamGroup,
+):
+    """
+    Parameters for GUNW browse image generation.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image. Defaults to 2048 pixels.
+    rewrap : float or None, optional
+        The multiple of pi to rewrap the unwrapped phase image when generating
+        the browse PNG. If None, no rewrapping will occur.
+        Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
+        Defaults to 7.
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling algorithm for GDAL reprojection. Options: 'near',
+        'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode'.
+        Ignored if `output_browse_latlon` is False.
+        Defaults to 'average'.
+    """
+
     @staticmethod
     def get_path_to_group_in_runconfig():
-        return ["runconfig", "groups", "qa", "gunw", "qa_reports", "browse_png"]
+        return ["runconfig", "groups", "qa", "gunw", "qa_reports", "browse"]
+
+
+@dataclass(frozen=True)
+class OffsetsBrowseParamGroup(YamlParamGroup):
+    """
+    Parameters to generate browse products (PNG+KML) for Offsets products.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image PNG. Defaults to 2048 pixels.
+    browse_decimation_freqa, browse_decimation_freqb : pair of int or None, optional
+        Stride along each axis of the Frequency A (or Frequency B)
+        image arrays for decimating the raster for the browse PNG.
+        This takes precedence over `longest_side_max`.
+        Format: [<num_rows>, <num_cols>]
+        Example: [6,7]
+        If None, the QA code computes the strides values per `longest_side_max`
+        and decimating the raster such that the pixels are roughly square.
+        Defaults to None.
+    """
+
+    longest_side_max: int = field(
+        default=2048,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="longest_side_max",
+                descr="""The maximum number of pixels allowed for the longest
+                side of the final 2D browse image PNG.""",
+            )
+        },
+    )
+
+    _decimation_descr_template: ClassVar[
+        str
+    ] = """Stride along each axis of the Frequency %s
+        image arrays for decimating the raster for the browse PNG.
+        This takes precedence over `longest_side_max`.
+        Format: [<num_rows>, <num_cols>]
+        Example: [6,7]
+        If None, QA-SAS will compute the decimation strides based on `longeset_side_max`
+        and decimating the raster such that the pixels are roughly square."""
+
+    browse_decimation_freqa: Optional[Sequence[int]] = field(
+        default=None,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="browse_decimation_freqa",
+                descr=_decimation_descr_template % "A",
+            )
+        },
+    )
+
+    browse_decimation_freqb: Optional[Sequence[int]] = field(
+        default=None,
+        metadata={
+            "yaml_attrs": YamlAttrs(
+                name="browse_decimation_freqb",
+                descr=_decimation_descr_template % "B",
+            )
+        },
+    )
+
+    def __post_init__(self):
+
+        if not isinstance(self.longest_side_max, int):
+            raise TypeError(
+                f"longest_side_max must be an int: {self.longest_side_max}"
+            )
+        if self.longest_side_max <= 0:
+            raise ValueError(
+                f"`longest_side_max` must be positive: {self.longest_side_max}"
+            )
+
+        self._validate_pair_of_numeric(
+            param_value=self.browse_decimation_freqa,
+            param_name="browse_decimation_freqa",
+            min=1,
+            max=None,
+            none_is_valid_value=True,
+            strictly_increasing=False,
+        )
+
+        self._validate_pair_of_numeric(
+            param_value=self.browse_decimation_freqb,
+            param_name="browse_decimation_freqb",
+            min=1,
+            max=None,
+            none_is_valid_value=True,
+            strictly_increasing=False,
+        )
+
+
+@dataclass(frozen=True)
+class ROFFBrowseParamGroup(
+    L1RadarBrowseLatLonParamGroup, OffsetsBrowseParamGroup
+):
+    """
+    Parameters to generate browse products (PNG+KML) for ROFF products.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image PNG. Defaults to 2048 pixels.
+    browse_decimation_freqa, browse_decimation_freqb : pair of int or None, optional
+        Stride along each axis of the Frequency A (or Frequency B)
+        image arrays for decimating the raster for the browse PNG.
+        This takes precedence over `longest_side_max`.
+        Format: [<num_rows>, <num_cols>]
+        Example: [6,7]
+        If None, the QA code computes the strides values per `longest_side_max`
+        and decimating the raster such that the pixels are roughly square.
+        Defaults to None.
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
+        'bicubic', 'nearest', 'biquintic'.
+        Ignored if `output_browse_latlon` is False.
+        Defaults to 'bilinear'.
+    """
+
+    def __post_init__(self):
+        OffsetsBrowseParamGroup.__post_init__(self)
+        L1RadarBrowseLatLonParamGroup.__post_init__(self)
+
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "roff", "qa_reports", "browse"]
+
+
+@dataclass(frozen=True)
+class GOFFBrowseParamGroup(
+    L2GeoBrowseLatLonParamGroup, OffsetsBrowseParamGroup
+):
+    """
+    Parameters to generate browse products (PNG+KML) for ROFF products.
+
+    Parameters
+    ----------
+    longest_side_max : int, optional
+        The maximum number of pixels allowed for the longest side of the final
+        2D multilooked browse image PNG. Defaults to 2048 pixels.
+    browse_decimation_freqa, browse_decimation_freqb : pair of int or None, optional
+        Stride along each axis of the Frequency A (or Frequency B)
+        image arrays for decimating the raster for the browse PNG.
+        This takes precedence over `longest_side_max`.
+        Format: [<num_rows>, <num_cols>]
+        Example: [6,7]
+        If None, the QA code computes the strides values per `longest_side_max`
+        and decimating the raster such that the pixels are roughly square.
+        Defaults to None.
+    output_browse_latlon : bool, optional
+        True to generate a version of the primary browse PNG+KML that is
+        projected to EPSG 4326 (lon/lat) coordinate system for accurate
+        geolocation in GIS software.
+        False to only generate primary browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the primary
+        browse PNG+KML outputs (where the PNG reflects the input product's
+        native coordinate system). The EPSG 4326 outputs will use the
+        primary browse filename suffixed with '_LATLON'.
+        Defaults to False.
+    resample : str, optional
+        Resampling algorithm for GDAL reprojection. Options: 'near',
+        'bilinear', 'cubic', 'cubicspline', 'lanczos', 'average', 'mode'.
+        Ignored if `output_browse_latlon` is False.
+        Defaults to 'average'.
+    """
+
+    def __post_init__(self):
+        OffsetsBrowseParamGroup.__post_init__(self)
+        L2GeoBrowseLatLonParamGroup.__post_init__(self)
+
+    @staticmethod
+    def get_path_to_group_in_runconfig():
+        return ["runconfig", "groups", "qa", "goff", "qa_reports", "browse"]
 
 
 @dataclass(frozen=True)
@@ -841,14 +1137,6 @@ class QuiverParamGroup(YamlParamGroup):
         If None, the range is computed using the min and max magnitudes
         of along track and slant range offset.
         Defaults to None.
-    browse_decimation_freqa, browse_decimation_freqb : pair of int or None, optional
-        Stride along each axis of the Frequency A (or Frequency B)
-        image arrays for decimating the quiver plot image.
-        Format: [<num_rows>, <num_cols>]
-        Example: [6,7]
-        If None, the QA code computes the strides values
-        based on `longest_side_max` and by squaring the pixels.
-        Defaults to None.
     arrow_density : float, optional
         Number of arrows (vectors) to plot per the longest edge of the raster.
         Defaults to 20.
@@ -860,11 +1148,6 @@ class QuiverParamGroup(YamlParamGroup):
         vector length and the number of vectors.
         Defaults to None.
         See: The `scaling` parameter for `matplotlib.axes.Axes.quiver`.
-    longest_side_max : int, optional
-        The maximum number of pixels allowed for the longest side of the final
-        2D decimated browse image. If None, no downscaling will occur
-        (other than to form square pixels).
-        Defaults to 2048 pixels.
     """
 
     cbar_min_max: Optional[Sequence[float]] = field(
@@ -877,36 +1160,6 @@ class QuiverParamGroup(YamlParamGroup):
                 which (in turn) is used for the interval of the colorbar.
                 If None, the interval is computed using the min and max 
                 magnitudes of along track and slant range offset.""",
-            )
-        },
-    )
-
-    _decimation_descr_template: ClassVar[
-        str
-    ] = """Stride along each axis of the Frequency %s
-        image arrays for decimating the quiver plot image for the browse PNG.
-        This takes precedence over `longest_side_max`.
-        Format: [<num_rows>, <num_cols>]
-        Example: [6,7]
-        If None, QA-SAS will compute the decimation strides
-        based on `longest_side_max` and creating square pixels."""
-
-    browse_decimation_freqa: Optional[Sequence[int]] = field(
-        default=None,
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="browse_decimation_freqa",
-                descr=_decimation_descr_template % "A",
-            )
-        },
-    )
-
-    browse_decimation_freqb: Optional[Sequence[int]] = field(
-        default=None,
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="browse_decimation_freqb",
-                descr=_decimation_descr_template % "B",
             )
         },
     )
@@ -937,18 +1190,6 @@ class QuiverParamGroup(YamlParamGroup):
         },
     )
 
-    longest_side_max: int = field(
-        default=2048,
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="longest_side_max",
-                descr="""The maximum number of pixels allowed for the longest
-                side of the final 2D browse image. If `decimation_freqX` is not
-                None, then `longest_side_max` will be ignored.""",
-            )
-        },
-    )
-
     def __post_init__(self):
         # VALIDATE INPUTS
 
@@ -959,24 +1200,6 @@ class QuiverParamGroup(YamlParamGroup):
             max=None,
             none_is_valid_value=True,
             strictly_increasing=True,
-        )
-
-        self._validate_pair_of_numeric(
-            param_value=self.browse_decimation_freqa,
-            param_name="browse_decimation_freqa",
-            min=1,
-            max=None,
-            none_is_valid_value=True,
-            strictly_increasing=False,
-        )
-
-        self._validate_pair_of_numeric(
-            param_value=self.browse_decimation_freqb,
-            param_name="browse_decimation_freqb",
-            min=1,
-            max=None,
-            none_is_valid_value=True,
-            strictly_increasing=False,
         )
 
         if not isinstance(self.arrow_density, (int, float)):
@@ -1002,18 +1225,6 @@ class QuiverParamGroup(YamlParamGroup):
             raise TypeError(
                 f"{arrow_scaling=} and has type {type(arrow_scaling)}, but must"
                 " be an int or float or None."
-            )
-
-        # validate longest_side_max
-        if not isinstance(self.longest_side_max, int):
-            longest_side_max = self.longest_side_max
-            raise TypeError(
-                f"{longest_side_max=} and has type {type(longest_side_max)},"
-                " but must be an int."
-            )
-        if self.longest_side_max <= 0:
-            raise ValueError(
-                f"`longest_side_max` must be positive: {self.longest_side_max}"
             )
 
 
@@ -1644,12 +1855,16 @@ class RIFGRootParamGroup(RootParamGroup):
         QA Workflows parameters.
     input_f : RIFGInputFileGroupParamGroup or None, optional
         Input File Group parameters.
+    anc_files : DynamicAncillaryFileParamGroup or None, optional
+        Dynamic Ancillary File Group parameters for QA
     prodpath : RIFGProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
     software_config : RIFGSoftwareConfigParamGroup or None, optional
         General QA Software Configuration Group parameters
     validation : RIFGValidationParamGroup or None, optional
         Validation Group parameters for QA
+    browse : RIFGBrowseParamGroup or None, optional
+        Browse Image Group parameters.
     wrapped_igram : RIFGWrappedIgramParamGroup or None, optional
         Wrapped Interferogram Layer Group parameters.
     coh_mag : RIFGCohMagLayerParamGroup or None, optional
@@ -1658,23 +1873,22 @@ class RIFGRootParamGroup(RootParamGroup):
         Along track and slant range offsets layers Groups parameters.
     corr_surface_peak : RIFGCorrSurfacePeakLayerParamGroup or None, optional
         Parameters for correlation surface peak layer plots.
-    browse : RIFGIgramBrowseParamGroup or None, optional
-        Browse Image Group parameters.
     """
 
     workflows: RIFGWorkflowsParamGroup
 
     # Shared parameters
     input_f: Optional[RIFGInputFileGroupParamGroup] = None
+    anc_files: Optional[DynamicAncillaryFileParamGroup] = None
     prodpath: Optional[RIFGProductPathGroupParamGroup] = None
     software_config: Optional[RIFGSoftwareConfigParamGroup] = None
     validation: Optional[RIFGValidationParamGroup] = None
 
+    browse: Optional[RIFGBrowseParamGroup] = None
     wrapped_igram: Optional[RIFGWrappedIgramParamGroup] = None
     coh_mag: Optional[RIFGCohMagLayerParamGroup] = None
     az_rng_offsets: Optional[RIFGAzAndRangeOffsetsParamGroup] = None
     corr_surface_peak: Optional[RIFGCorrSurfacePeakLayerParamGroup] = None
-    browse: Optional[RIFGIgramBrowseParamGroup] = None
 
     @staticmethod
     def get_mapping_of_workflows2param_grps(workflows):
@@ -1691,6 +1905,11 @@ class RIFGRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=RIFGInputFileGroupParamGroup,
             ),
             Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="anc_files",
+                param_grp_cls_obj=DynamicAncillaryFileParamGroup,
+            ),
+            Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=RIFGProductPathGroupParamGroup,
@@ -1704,6 +1923,11 @@ class RIFGRootParamGroup(RootParamGroup):
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=RIFGValidationParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse",
+                param_grp_cls_obj=RIFGBrowseParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
@@ -1725,11 +1949,6 @@ class RIFGRootParamGroup(RootParamGroup):
                 root_param_grp_attr_name="corr_surface_peak",
                 param_grp_cls_obj=RIFGCorrSurfacePeakLayerParamGroup,
             ),
-            Grp(
-                flag_param_grp_req=workflows.qa_reports,
-                root_param_grp_attr_name="browse",
-                param_grp_cls_obj=RIFGIgramBrowseParamGroup,
-            ),
         )
 
         return grps_to_parse
@@ -1740,15 +1959,16 @@ class RIFGRootParamGroup(RootParamGroup):
         # the groups will appear in the runconfig.
         return {
             "input_f": RIFGInputFileGroupParamGroup,
+            "anc_files": DynamicAncillaryFileParamGroup,
             "prodpath": RIFGProductPathGroupParamGroup,
             "workflows": RIFGWorkflowsParamGroup,
             "software_config": RIFGSoftwareConfigParamGroup,
             "validation": RIFGValidationParamGroup,
+            "browse": RIFGBrowseParamGroup,
             "wrapped_igram": RIFGWrappedIgramParamGroup,
             "coh_mag": RIFGCohMagLayerParamGroup,
             "az_rng_offsets": RIFGAzAndRangeOffsetsParamGroup,
             "corr_surface_peak": RIFGCorrSurfacePeakLayerParamGroup,
-            "browse": RIFGIgramBrowseParamGroup,
         }
 
 
@@ -1770,12 +1990,16 @@ class RUNWRootParamGroup(RootParamGroup):
         QA Workflows parameters.
     input_f : RUNWInputFileGroupParamGroup or None, optional
         Input File Group parameters.
+    anc_files : DynamicAncillaryFileParamGroup or None, optional
+        Dynamic Ancillary File Group parameters for QA
     prodpath : RUNWProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
     software_config : RUNWSoftwareConfigParamGroup or None, optional
         General QA Software Configuration Group parameters
     validation : RUNWValidationParamGroup or None, optional
         Validation Group parameters for QA
+    browse : RUNWBrowseParamGroup or None, optional
+        Browse Image Group parameters.
     unw_phs_img : RUNWPhaseImageParamGroup or None, optional
         Unwrapped Phase Image Group parameters.
     coh_mag : RUNWCohMagLayerParamGroup or None, optional
@@ -1790,17 +2014,17 @@ class RUNWRootParamGroup(RootParamGroup):
         Along track and slant range offsets layers Groups parameters.
     corr_surface_peak : RUNWCorrSurfacePeakLayerParamGroup or None, optional
         Parameters for correlation surface peak layer plots.
-    browse : RUNWIgramBrowseParamGroup or None, optional
-        Browse Image Group parameters.
     """
 
     # Shared parameters
     workflows: RUNWWorkflowsParamGroup
     input_f: Optional[RUNWInputFileGroupParamGroup] = None
+    anc_files: Optional[DynamicAncillaryFileParamGroup] = None
     prodpath: Optional[RUNWProductPathGroupParamGroup] = None
     software_config: Optional[RUNWSoftwareConfigParamGroup] = None
     validation: Optional[RUNWValidationParamGroup] = None
 
+    browse: Optional[RUNWBrowseParamGroup] = None
     unw_phs_img: Optional[RUNWPhaseImageParamGroup] = None
     coh_mag: Optional[RUNWCohMagLayerParamGroup] = None
     connected_components: Optional[RUNWConnectedComponentsParamGroup] = None
@@ -1808,7 +2032,6 @@ class RUNWRootParamGroup(RootParamGroup):
     iono_phs_uncert: Optional[RUNWIonoPhaseUncertaintyParamGroup] = None
     az_rng_offsets: Optional[RUNWAzAndRangeOffsetsParamGroup] = None
     corr_surface_peak: Optional[RUNWCorrSurfacePeakLayerParamGroup] = None
-    browse: Optional[RUNWIgramBrowseParamGroup] = None
 
     @staticmethod
     def get_mapping_of_workflows2param_grps(workflows):
@@ -1825,6 +2048,11 @@ class RUNWRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=RUNWInputFileGroupParamGroup,
             ),
             Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="anc_files",
+                param_grp_cls_obj=DynamicAncillaryFileParamGroup,
+            ),
+            Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=RUNWProductPathGroupParamGroup,
@@ -1838,6 +2066,11 @@ class RUNWRootParamGroup(RootParamGroup):
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=RUNWValidationParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse",
+                param_grp_cls_obj=RUNWBrowseParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
@@ -1874,11 +2107,6 @@ class RUNWRootParamGroup(RootParamGroup):
                 root_param_grp_attr_name="corr_surface_peak",
                 param_grp_cls_obj=RUNWCorrSurfacePeakLayerParamGroup,
             ),
-            Grp(
-                flag_param_grp_req=workflows.qa_reports,
-                root_param_grp_attr_name="browse",
-                param_grp_cls_obj=RUNWIgramBrowseParamGroup,
-            ),
         )
 
         return grps_to_parse
@@ -1889,10 +2117,12 @@ class RUNWRootParamGroup(RootParamGroup):
         # the groups will appear in the runconfig.
         return {
             "input_f": RUNWInputFileGroupParamGroup,
+            "anc_files": DynamicAncillaryFileParamGroup,
             "prodpath": RUNWProductPathGroupParamGroup,
             "workflows": RUNWWorkflowsParamGroup,
             "software_config": RUNWSoftwareConfigParamGroup,
             "validation": RUNWValidationParamGroup,
+            "browse": RUNWBrowseParamGroup,
             "unw_phs_img": RUNWPhaseImageParamGroup,
             "coh_mag": RUNWCohMagLayerParamGroup,
             "connected_components": RUNWConnectedComponentsParamGroup,
@@ -1900,7 +2130,6 @@ class RUNWRootParamGroup(RootParamGroup):
             "iono_phs_uncert": RUNWIonoPhaseUncertaintyParamGroup,
             "az_rng_offsets": RUNWAzAndRangeOffsetsParamGroup,
             "corr_surface_peak": RUNWCorrSurfacePeakLayerParamGroup,
-            "browse": RUNWIgramBrowseParamGroup,
         }
 
 
@@ -1928,6 +2157,8 @@ class GUNWRootParamGroup(RootParamGroup):
         General QA Software Configuration Group parameters
     validation : GUNWValidationParamGroup or None, optional
         Validation Group parameters for QA
+    browse : GUNWBrowseParamGroup or None, optional
+        Browse Image Group parameters.
     unw_phs_img : GUNWPhaseImageParamGroup or None, optional
         Unwrapped Phase Image Group parameters.
     wrapped_igram : GUNWWrappedIgramParamGroup or None, optional
@@ -1946,8 +2177,6 @@ class GUNWRootParamGroup(RootParamGroup):
         Along track and slant range offsets layers Groups parameters.
     corr_surface_peak : GUNWCorrSurfacePeakLayerParamGroup or None, optional
         Parameters for correlation surface peak layer plots.
-    browse : GUNWIgramBrowseParamGroup or None, optional
-        Browse Image Group parameters.
     """
 
     workflows: GUNWWorkflowsParamGroup
@@ -1958,6 +2187,7 @@ class GUNWRootParamGroup(RootParamGroup):
     software_config: Optional[GUNWSoftwareConfigParamGroup] = None
     validation: Optional[GUNWValidationParamGroup] = None
 
+    browse: Optional[GUNWBrowseParamGroup] = None
     unw_phs_img: Optional[GUNWPhaseImageParamGroup] = None
     wrapped_igram: Optional[GUNWWrappedIgramParamGroup] = None
     coh_mag: Optional[GUNWCohMagLayerParamGroup] = None
@@ -1966,7 +2196,6 @@ class GUNWRootParamGroup(RootParamGroup):
     iono_phs_uncert: Optional[GUNWIonoPhaseUncertaintyParamGroup] = None
     az_rng_offsets: Optional[GUNWAzAndRangeOffsetsParamGroup] = None
     corr_surface_peak: Optional[GUNWCorrSurfacePeakLayerParamGroup] = None
-    browse: Optional[GUNWIgramBrowseParamGroup] = None
 
     @staticmethod
     def get_mapping_of_workflows2param_grps(workflows):
@@ -1996,6 +2225,11 @@ class GUNWRootParamGroup(RootParamGroup):
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=GUNWValidationParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse",
+                param_grp_cls_obj=GUNWBrowseParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
@@ -2037,11 +2271,6 @@ class GUNWRootParamGroup(RootParamGroup):
                 root_param_grp_attr_name="corr_surface_peak",
                 param_grp_cls_obj=GUNWCorrSurfacePeakLayerParamGroup,
             ),
-            Grp(
-                flag_param_grp_req=workflows.qa_reports,
-                root_param_grp_attr_name="browse",
-                param_grp_cls_obj=GUNWIgramBrowseParamGroup,
-            ),
         )
 
         return grps_to_parse
@@ -2056,6 +2285,7 @@ class GUNWRootParamGroup(RootParamGroup):
             "workflows": GUNWWorkflowsParamGroup,
             "software_config": GUNWSoftwareConfigParamGroup,
             "validation": GUNWValidationParamGroup,
+            "browse": GUNWBrowseParamGroup,
             "unw_phs_img": GUNWPhaseImageParamGroup,
             "wrapped_igram": GUNWWrappedIgramParamGroup,
             "coh_mag": GUNWCohMagLayerParamGroup,
@@ -2064,7 +2294,6 @@ class GUNWRootParamGroup(RootParamGroup):
             "iono_phs_uncert": GUNWIonoPhaseUncertaintyParamGroup,
             "az_rng_offsets": GUNWAzAndRangeOffsetsParamGroup,
             "corr_surface_peak": GUNWCorrSurfacePeakLayerParamGroup,
-            "browse": GUNWIgramBrowseParamGroup,
         }
 
 
@@ -2086,12 +2315,16 @@ class ROFFRootParamGroup(RootParamGroup):
         QA Workflows parameters.
     input_f : ROFFInputFileGroupParamGroup or None, optional
         Input File Group parameters.
+    anc_files : DynamicAncillaryFileParamGroup or None, optional
+        Dynamic Ancillary File Group parameters for QA
     prodpath : ROFFProductPathGroupParamGroup or None, optional
         Product Path Group parameters.
     software_config : ROFFSoftwareConfigParamGroup or None, optional
         General QA Software Configuration Group parameters
     validation : ROFFValidationParamGroup or None, optional
         Validation Group parameters for QA
+    browse : ROFFBrowseParamGroup or None, optional
+        Browse Group parameters for ROFF QA.
     az_rng_offsets : ROFFAzAndRangeOffsetsParamGroup or None, optional
         Along track and slant range offsets layers Groups parameters.
     quiver : ROFFQuiverParamGroup or None, optional
@@ -2108,10 +2341,12 @@ class ROFFRootParamGroup(RootParamGroup):
 
     # Shared parameters
     input_f: Optional[ROFFInputFileGroupParamGroup] = None
+    anc_files: Optional[DynamicAncillaryFileParamGroup] = None
     prodpath: Optional[ROFFProductPathGroupParamGroup] = None
     software_config: Optional[ROFFSoftwareConfigParamGroup] = None
     validation: Optional[ROFFValidationParamGroup] = None
 
+    browse: Optional[ROFFBrowseParamGroup] = None
     az_rng_offsets: Optional[ROFFAzAndRangeOffsetsParamGroup] = None
     quiver: Optional[ROFFQuiverParamGroup] = None
     variances: Optional[ROFFVarianceLayersParamGroup] = None
@@ -2133,6 +2368,11 @@ class ROFFRootParamGroup(RootParamGroup):
                 param_grp_cls_obj=ROFFInputFileGroupParamGroup,
             ),
             Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="anc_files",
+                param_grp_cls_obj=DynamicAncillaryFileParamGroup,
+            ),
+            Grp(
                 flag_param_grp_req=flag_any_workflows_true,
                 root_param_grp_attr_name="prodpath",
                 param_grp_cls_obj=ROFFProductPathGroupParamGroup,
@@ -2146,6 +2386,11 @@ class ROFFRootParamGroup(RootParamGroup):
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=ROFFValidationParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse",
+                param_grp_cls_obj=ROFFBrowseParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
@@ -2182,10 +2427,12 @@ class ROFFRootParamGroup(RootParamGroup):
         # the groups will appear in the runconfig.
         return {
             "input_f": ROFFInputFileGroupParamGroup,
+            "anc_files": DynamicAncillaryFileParamGroup,
             "prodpath": ROFFProductPathGroupParamGroup,
             "workflows": ROFFWorkflowsParamGroup,
             "software_config": ROFFSoftwareConfigParamGroup,
             "validation": ROFFValidationParamGroup,
+            "browse": ROFFBrowseParamGroup,
             "az_rng_offsets": ROFFAzAndRangeOffsetsParamGroup,
             "quiver": ROFFQuiverParamGroup,
             "variances": ROFFVarianceLayersParamGroup,
@@ -2218,6 +2465,8 @@ class GOFFRootParamGroup(RootParamGroup):
         General QA Software Configuration Group parameters
     validation : VerificationGroupParamGroup or None, optional
         Validation Group parameters for QA
+    browse : GOFFBrowseParamGroup or None, optional
+        Browse Group parameters for GOFF QA.
     az_rng_offsets : GOFFAzAndRangeOffsetsParamGroup or None, optional
         Along track and slant range offsets layers Groups parameters.
     quiver : GOFFQuiverParamGroup or None, optional
@@ -2238,6 +2487,7 @@ class GOFFRootParamGroup(RootParamGroup):
     software_config: Optional[GOFFSoftwareConfigParamGroup] = None
     validation: Optional[GOFFValidationParamGroup] = None
 
+    browse: Optional[GOFFBrowseParamGroup] = None
     az_rng_offsets: Optional[GOFFAzAndRangeOffsetsParamGroup] = None
     quiver: Optional[GOFFQuiverParamGroup] = None
     variances: Optional[GOFFVarianceLayersParamGroup] = None
@@ -2272,6 +2522,11 @@ class GOFFRootParamGroup(RootParamGroup):
                 flag_param_grp_req=workflows.validate,
                 root_param_grp_attr_name="validation",
                 param_grp_cls_obj=GOFFValidationParamGroup,
+            ),
+            Grp(
+                flag_param_grp_req=workflows.qa_reports,
+                root_param_grp_attr_name="browse",
+                param_grp_cls_obj=GOFFBrowseParamGroup,
             ),
             Grp(
                 flag_param_grp_req=workflows.qa_reports,
@@ -2312,6 +2567,7 @@ class GOFFRootParamGroup(RootParamGroup):
             "workflows": GOFFWorkflowsParamGroup,
             "software_config": GOFFSoftwareConfigParamGroup,
             "validation": GOFFValidationParamGroup,
+            "browse": GOFFBrowseParamGroup,
             "az_rng_offsets": GOFFAzAndRangeOffsetsParamGroup,
             "quiver": GOFFQuiverParamGroup,
             "variances": GOFFVarianceLayersParamGroup,

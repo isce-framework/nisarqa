@@ -683,7 +683,7 @@ def wrap_to_interval(val, *, start, stop):
     >>> x
     <generator object wrap_to_interval.<locals>.<genexpr> at 0x185f08040>
     >>> list(x)
-    [-370.0, 10.0]
+    [-10.0, 10.0]
     """
     if not (stop > start):
         raise ValueError(f"{stop=} must be greater than {start=}")

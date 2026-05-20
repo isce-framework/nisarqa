@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from typing import Optional, overload
+from typing import Any, overload
 
 import h5py
 import numpy as np
@@ -14,9 +14,8 @@ from ..plotting_utils import (
     downsample_img_to_size_of_axes,
     format_axes_ticks_and_labels,
     format_cbar_ticks_for_multiples_of_pi,
-    plot_2d_array_and_save_to_png,
 )
-from ..processing_utils import get_phase_array
+from ._utils import get_phase_array, make_phase_browse
 from .histograms import process_two_histograms
 
 objects_to_skip = nisarqa.get_all(name=__name__)
@@ -224,15 +223,17 @@ def plot_wrapped_phase_image_and_coh_mag_to_pdf(
     plt.close(fig)
 
 
-def make_wrapped_phase_png(
+def make_wrapped_phase_browse(
     product: nisarqa.WrappedGroup,
+    *,
     freq: str,
     pol: str,
-    png_filepath: str | os.PathLike,
-    longest_side_max: Optional[int] = None,
+    params: Any,  # will be type-narrowed in the function
+    browse_paths: nisarqa.BrowseOutputPaths,
+    dem_file: str | os.PathLike | None = None,
 ) -> None:
     """
-    Create and save the wrapped interferogram as a PNG.
+    Create and save the wrapped interferogram browse products as PNG+KML.
 
     Parameters
     ----------
@@ -241,30 +242,50 @@ def make_wrapped_phase_png(
     freq, pol : str
         The frequency and polarization (respectively) pair for the wrapped
         interferogram to save as a PNG.
-    png_filepath : path-like
-        Filename (with path) for the image PNG.
-    longest_side_max : int or None, optional
-        The maximum number of pixels allowed for the longest side of the final
-        2D multilooked image. If None, the longest edge of `arr` will be used.
+    params : nisarqa.IgramBrowseParamGroup and
+            nisarqa.L1RadarBrowseLatLonParamGroup or nisarqa.L2GeoBrowseLatLonParamGroup
+        A structure containing the processing parameters for the browse PNG.
+        Must be an instance of IgramBrowseParamGroup and (via multiple
+        inheritance) also an instance of either:
+            L1RadarBrowseLatLonParamGroup or L2GeoBrowseLatLonParamGroup
+    browse_paths : nisarqa.BrowseOutputPaths
+        Container with output directory and browse/KML filenames.
+    dem_file : path-like or None, optional
+        Digital Elevation Model (DEM) file path in a GDAL-compatible raster
+        format. Will be ignored if `params.output_browse_latlon`
+        is False or if `product` is a Level-2 Geocoded product.
+        Used for Level-1 products when geocoding the EPSG 4326 (lat/lon) browse;
+        if None, a zero-height DEM will be used.
         Defaults to None.
     """
 
-    with product.get_wrapped_igram(freq=freq, pol=pol) as igram_r:
-        phase, cbar_min_max = get_phase_array(
-            phs_or_complex_raster=igram_r,
-            make_square_pixels=False,  # we'll do this while downsampling
-            rewrap=None,
-        )
-
-    plot_2d_array_and_save_to_png(
-        arr=phase,
-        cmap="twilight_shifted",
-        sample_spacing=(igram_r.y_ground_spacing, igram_r.x_ground_spacing),
-        longest_side_max=longest_side_max,
-        png_filepath=png_filepath,
-        vmin=cbar_min_max[0],
-        vmax=cbar_min_max[1],
+    # XXX - Python's type annotations do not currently have a good syntax
+    # for multiple inheritance in combination with a Union.
+    # Instead, use type narrowing to assist type checkers:
+    if not isinstance(params, nisarqa.IgramBrowseParamGroup):
+        raise TypeError(f"{type(params)=}, must be IgramBrowseParamGroup")
+    t = (
+        nisarqa.L1RadarBrowseLatLonParamGroup
+        | nisarqa.L2GeoBrowseLatLonParamGroup
     )
+    if not isinstance(params, t):
+        msg = f"{type(params)=}, must be L1RadarBrowseLatLonParamGroup or L2GeoBrowseLatLonParamGroup"
+        raise TypeError(msg)
+
+    with product.get_wrapped_igram(freq=freq, pol=pol) as igram_r:
+        make_phase_browse(
+            raster=igram_r,
+            rewrap=None,  # Never rewrap wrapped interferograms
+            longest_side_max=params.longest_side_max,
+            resample=params.resample,
+            browse_paths=browse_paths,
+            save_latlon_browse=params.output_browse_latlon,
+            # Parameters for Level-1; will be ignored for Level-2
+            orbit=product.get_orbit(ref_or_sec="reference"),
+            wavelength=product.wavelength(freq=freq),
+            look_side=product.look_direction,
+            dem_file=dem_file,
+        )
 
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

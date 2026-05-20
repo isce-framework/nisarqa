@@ -26,8 +26,6 @@ def plot_2d_array_and_save_to_png(
     arr: npt.ArrayLike,
     png_filepath: str | os.PathLike,
     cmap: str | mpl.colors.Colormap = "viridis",
-    sample_spacing: Optional[tuple[float, float]] = None,
-    longest_side_max: Optional[int] = None,
     *,
     vmin: float | None = None,
     vmax: float | None = None,
@@ -45,39 +43,12 @@ def plot_2d_array_and_save_to_png(
         Colormap to use while plotting the raster. Must be compliant with
         `matplotlib.pyplot.imshow`'s `cmap` parameter.
         Defaults to "viridis".
-    sample_spacing : pair of float or None, optional
-        The Y direction sample spacing and X direction sample spacing
-        of the source array. These values are used to decimate the raster
-        to have square pixels. These values have the same units (e.g. meters).
-        For radar-domain products, Y direction corresponds to azimuth,
-        and X direction corresponds to range.
-        Only the magnitude (absolute value) of the sample spacing is used.
-        Format: (dy, dx)
-        If None, the raster is assumed to have square pixels and so the aspect
-        ratio of `arr` will not change.
-    longest_side_max : int, optional
-        The maximum number of pixels allowed for the longest side of the final
-        2D multilooked image. If None, the longest edge of `arr` will be used.
-        Defaults to None.
     vmin, vmax : float or None, optional
         The vmin and vmax (respectively) to use when plotting the input array
         using `matplotlib.imshow()`. These define the data range that the
         colormap covers. If None, the min and max values (respectively) of the
         input array will be used.
     """
-    if sample_spacing is None:
-        sample_spacing = (1, 1)
-
-    if longest_side_max is None:
-        longest_side_max = max(np.shape(arr))
-
-    # decimate to square pixels
-    ky, kx = nisarqa.compute_square_pixel_nlooks(
-        img_shape=np.shape(arr),
-        sample_spacing=sample_spacing,
-        longest_side_max=longest_side_max,
-    )
-    arr = arr[::ky, ::kx]
 
     # partial function for use by save_mpl_plot_to_png()
     def plot_image(ax: mpl.axes.Axes) -> None:
@@ -254,7 +225,8 @@ def downsample_img_to_size_of_axes_with_stride(
     mode : str, optional
         Downsampling algorithm. One of:
             "decimate" : (default) Pure decimation. For example, if the
-                downsampling stride is determined to be `3`, then every 3rd row
+                downsampling stride is determined to be `3`, then starting
+                with and including row 0 and column 0, every 3rd row
                 and 3rd column will be extracted to form the downsampled image.
             "multilook" : Naive, unweighted multilooking. For example,
                 if the downsampling stride is determined to be `3`,
