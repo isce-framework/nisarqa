@@ -275,7 +275,12 @@ def geocode_radar_raster(
 
         # Get bounding box in target projection's native units
         xs = [c[0] for c in corners_proj]
-        if srs.IsGeographic:
+
+        # Create a SpatialReference object to check output projection type
+        srs_out = osr.SpatialReference()
+        srs_out.ImportFromEPSG(epsg)
+
+        if srs_out.IsGeographic:
             # Ensure that longitudes are unwrapped
             xs = nisarqa.unwrap_longitudes(xs)
 
@@ -296,10 +301,6 @@ def geocode_radar_raster(
 
         # Earth Equatorial Radius (Semi-major Axis) in meters (WGS 84)
         a = 6378137.0
-
-        # Create a SpatialReference object to check output projection type
-        srs = osr.SpatialReference()
-        srs.ImportFromEPSG(epsg)
 
         # ISCE3's update_geogrid() dynamically adds a margin when determining
         # the geogrid to ensure that the swath's corners are all contained.
@@ -335,7 +336,7 @@ def geocode_radar_raster(
             resolution_x, resolution_y : float, float
                 Pixel spacing in native projection units.
             """
-            if srs.IsGeographic():
+            if srs_out.IsGeographic():
                 if not isinstance(avg_latitude, (float, int)):
                     raise ValueError(f"{avg_latitude=}, must be a float.")
 
@@ -476,7 +477,7 @@ def geocode_radar_raster(
         )
 
         # Set output file's projection and geotransform
-        output_ds.SetProjection(srs.ExportToWkt())
+        output_ds.SetProjection(srs_out.ExportToWkt())
 
         output_geotransform = [
             final_geocode_obj.geogrid_start_x,
