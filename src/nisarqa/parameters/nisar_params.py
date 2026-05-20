@@ -1067,6 +1067,9 @@ class L1RadarBrowseLatLonParamGroup(BrowseLatLonParamGroup):
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
         'bicubic', 'nearest', 'biquintic'.
         Ignored if `output_browse_latlon` is False.
+        When output browse image data contains phase discontinuities
+        (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+        other methods can create artifacts when interpolating across the jump.
         Defaults to 'bilinear'.
     """
 
@@ -1077,7 +1080,10 @@ class L1RadarBrowseLatLonParamGroup(BrowseLatLonParamGroup):
                 name="resample",
                 descr="""Resampling method for ISCE3 geocoding. Options: 'sinc',
                 'bilinear', 'bicubic', 'nearest', 'biquintic'.
-                Ignored if `output_browse_latlon` is False.""",
+                Ignored if `output_browse_latlon` is False.
+                When output browse image data contains phase discontinuities
+                (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+                other methods can create artifacts when interpolating across the jump.""",
             )
         },
     )

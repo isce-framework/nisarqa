@@ -489,24 +489,17 @@ class RIFGBrowseParamGroup(
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
         'bicubic', 'nearest', 'biquintic'.
         Ignored if `output_browse_latlon` is False.
-        Strongly recommend 'nearest' for RIFG due to artifacting at
-        phase discontinuities with other interpolation methods.
+        When output browse image data contains phase discontinuities
+        (e.g. RIFG's wrapped interferogram), strongly recommend 'nearest';
+        other methods can create artifacts when interpolating across the jump.
         Defaults to 'nearest'.
     """
 
     # Override resample default for RIFG (phase jumps require nearest neighbor)
-    resample: str = field(
-        default="nearest",
-        metadata={
-            "yaml_attrs": YamlAttrs(
-                name="resample",
-                descr="""Resampling method for ISCE3 geocoding. Options: 'sinc',
-                'bilinear', 'bicubic', 'nearest', 'biquintic'.
-                Ignored if `output_browse_latlon` is False.
-                Strongly recommend 'nearest' for RIFG due to artifacting at
-                phase discontinuities with other interpolation methods.""",
-            )
-        },
+    resample: str = (
+        L1RadarBrowseLatLonParamGroup.get_field_with_updated_default(
+            param_name="resample", default="nearest"
+        )
     )
 
     @staticmethod
