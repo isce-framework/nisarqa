@@ -102,4 +102,5 @@ class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
 
         return center_freq
 
+
 __all__ = nisarqa.get_all(__name__, objects_to_skip)

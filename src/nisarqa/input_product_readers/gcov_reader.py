@@ -37,7 +37,6 @@ class GCOV(NonInsarGeoProduct):
 
         return pols
 
-
     def get_layers_for_browse(self) -> dict[str, list[str]]:
         """
         Assign polarizations to grayscale or RGBA channels for the Browse Image.

@@ -898,6 +898,7 @@ def _get_multilooked_center_coordinates(coords: ArrayLike, nlooks: int):
 
     return decimated
 
+
 @overload
 def compare_raster_metadata(
     grid1: nisarqa.RadarGrid,
