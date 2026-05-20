@@ -37,35 +37,6 @@ class GCOV(NonInsarGeoProduct):
 
         return pols
 
-    def center_freq(self, freq: str) -> float:
-        """
-        The processed center frequency for input product's Frequency `freq`.
-
-        For GCOV products, this is read from the `centerFrequency` dataset
-        in the metadata sourceData swaths group.
-
-        Parameters
-        ----------
-        freq : str
-            Must be either "A" or "B".
-
-        Returns
-        -------
-        center_freq : float
-            The processed center frequency for input product's Frequency `freq`,
-            in hertz.
-        """
-
-        source_group = self._source_data_swaths_freq_path(freq=freq)
-
-        with h5py.File(self.filepath) as f:
-            assert source_group in f
-            try:
-                center_freq = f[source_group]["centerFrequency"][()]
-            except KeyError as e:
-                raise nisarqa.DatasetNotFoundError from e
-
-        return center_freq
 
     def get_layers_for_browse(self) -> dict[str, list[str]]:
         """

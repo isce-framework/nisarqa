@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from functools import cached_property
+import h5py
 
 import nisarqa
 
@@ -71,5 +72,34 @@ class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
 
         return f"{self._source_data_swaths_path}/frequency{freq}"
 
+    def center_freq(self, freq: str) -> float:
+        """
+        The processed center frequency for input product's Frequency `freq`.
+
+        This is read from the `centerFrequency` dataset in the metadata
+        sourceData swaths group.
+
+        Parameters
+        ----------
+        freq : str
+            Must be either "A" or "B".
+
+        Returns
+        -------
+        center_freq : float
+            The processed center frequency for input product's Frequency `freq`,
+            in hertz.
+        """
+
+        source_group = self._source_data_swaths_freq_path(freq=freq)
+
+        with h5py.File(self.filepath) as f:
+            assert source_group in f
+            try:
+                center_freq = f[source_group]["centerFrequency"][()]
+            except KeyError as e:
+                raise nisarqa.DatasetNotFoundError from e
+
+        return center_freq
 
 __all__ = nisarqa.get_all(__name__, objects_to_skip)
