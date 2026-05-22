@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 import nisarqa
@@ -81,7 +81,7 @@ class BrowseOutputPaths:
 
     def with_suffix(self, suffix: str) -> BrowseOutputPaths:
         """
-        Return a new BrowseOutputPaths instance with suffix added to filenames.
+        Return a copy of this instance but with a suffix added to filenames.
 
         Parameters
         ----------
@@ -107,8 +107,8 @@ class BrowseOutputPaths:
         >>> paths_with_suffix.kml_filename
         'BROWSE_A_HH.kml'
         """
-        return BrowseOutputPaths(
-            output_dir=self.output_dir,
+        return replace(
+            self,
             browse_filename=f"{self.browse_stem}{suffix}.png",
             kml_filename=f"{self.kml_stem}{suffix}.kml",
         )
