@@ -225,9 +225,7 @@ def process_backscatter_imgs_and_browse(
     )
 
     log = nisarqa.get_logger()
-    log.info(
-        f"Browse image PNG file saved to {browse_paths.get_png_path()}"
-    )
+    log.info(f"Browse image PNG file saved to {browse_paths.get_png_path()}")
     log.info(f"Browse image KML file saved to {browse_paths.get_kml_path()}")
 
     # Generate EPSG 4326 browse if requested
