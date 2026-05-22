@@ -53,7 +53,7 @@ STATISTICS_THRESHOLD_PERCENTAGE = 95.0
 
 # Suffix used for EPSG 4326 (lat/lon) browse and KML filenames.
 # EPSG 4326 is the coordinate system for longitude/latitude coordinates.
-LATLON_SUFFIX = "LATLON"
+LATLON_SUFFIX = "_LATLON"
 
 # Total number of tracks and frames (inclusive) for NISAR during operations
 NUM_TRACKS = 173  # valid range of [1, 173] confirmed on 2024-07-24

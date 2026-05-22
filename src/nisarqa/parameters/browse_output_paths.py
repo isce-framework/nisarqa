@@ -41,9 +41,9 @@ class BrowseOutputPaths:
     ... )
     >>> paths.primary_browse_path
     PosixPath('/output/qa/BROWSE.png')
-    >>> paths.get_browse_filename(suffix="LATLON")
+    >>> paths.get_browse_filename(suffix="_LATLON")
     'BROWSE_LATLON.png'
-    >>> paths.get_browse_path(suffix="A_HH")
+    >>> paths.get_browse_path(suffix="_A_HH")
     PosixPath('/output/qa/BROWSE_A_HH.png')
     """
 
@@ -83,7 +83,7 @@ class BrowseOutputPaths:
         ----------
         suffix : str or None, optional
             If provided, this suffix will be appended to the stem before the
-            extension. Example: "A_HH" produces "BROWSE_A_HH.png", "LATLON"
+            extension. Example: "_A_HH" produces "BROWSE_A_HH.png", "_LATLON"
             produces "BROWSE_LATLON.png". If None, returns the primary filename.
             Defaults to None.
 
@@ -96,14 +96,14 @@ class BrowseOutputPaths:
         --------
         >>> paths.get_browse_filename()
         'BROWSE.png'
-        >>> paths.get_browse_filename(suffix="A_HH")
+        >>> paths.get_browse_filename(suffix="_A_HH")
         'BROWSE_A_HH.png'
-        >>> paths.get_browse_filename(suffix="LATLON")
+        >>> paths.get_browse_filename(suffix="_LATLON")
         'BROWSE_LATLON.png'
         """
         if suffix is None:
             return self.browse_filename
-        return f"{self.browse_stem}_{suffix}.png"
+        return f"{self.browse_stem}{suffix}.png"
 
     def get_kml_filename(self, suffix: str | None = None) -> str:
         """
@@ -113,7 +113,7 @@ class BrowseOutputPaths:
         ----------
         suffix : str or None, optional
             If provided, this suffix will be appended to the stem before the
-            extension. Example: "A_HH" produces "BROWSE_A_HH.kml", "LATLON"
+            extension. Example: "_A_HH" produces "BROWSE_A_HH.kml", "_LATLON"
             produces "BROWSE_LATLON.kml". If None, returns the primary filename.
             Defaults to None.
 
@@ -126,14 +126,14 @@ class BrowseOutputPaths:
         --------
         >>> paths.get_kml_filename()
         'BROWSE.kml'
-        >>> paths.get_kml_filename(suffix="A_HH")
+        >>> paths.get_kml_filename(suffix="_A_HH")
         'BROWSE_A_HH.kml'
-        >>> paths.get_kml_filename(suffix="LATLON")
+        >>> paths.get_kml_filename(suffix="_LATLON")
         'BROWSE_LATLON.kml'
         """
         if suffix is None:
             return self.kml_filename
-        return f"{self.kml_stem}_{suffix}.kml"
+        return f"{self.kml_stem}{suffix}.kml"
 
     def get_browse_path(self, suffix: str | None = None) -> Path:
         """
@@ -155,9 +155,9 @@ class BrowseOutputPaths:
         --------
         >>> paths.get_browse_path()
         PosixPath('/output/qa/BROWSE.png')
-        >>> paths.get_browse_path(suffix="A_HH")
+        >>> paths.get_browse_path(suffix="_A_HH")
         PosixPath('/output/qa/BROWSE_A_HH.png')
-        >>> paths.get_browse_path(suffix="LATLON")
+        >>> paths.get_browse_path(suffix="_LATLON")
         PosixPath('/output/qa/BROWSE_LATLON.png')
         """
         return self.output_dir / self.get_browse_filename(suffix=suffix)
@@ -182,9 +182,9 @@ class BrowseOutputPaths:
         --------
         >>> paths.get_kml_path()
         PosixPath('/output/qa/BROWSE.kml')
-        >>> paths.get_kml_path(suffix="A_HH")
+        >>> paths.get_kml_path(suffix="_A_HH")
         PosixPath('/output/qa/BROWSE_A_HH.kml')
-        >>> paths.get_kml_path(suffix="LATLON")
+        >>> paths.get_kml_path(suffix="_LATLON")
         PosixPath('/output/qa/BROWSE_LATLON.kml')
         """
         return self.output_dir / self.get_kml_filename(suffix=suffix)
