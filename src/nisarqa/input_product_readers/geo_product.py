@@ -1,11 +1,9 @@
 from __future__ import annotations
 
-from abc import abstractmethod
 from dataclasses import dataclass
 from functools import cached_property
 
 import h5py
-import numpy as np
 
 import nisarqa
 

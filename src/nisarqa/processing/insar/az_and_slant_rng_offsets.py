@@ -1,8 +1,6 @@
 from __future__ import annotations
 
 import os
-from dataclasses import replace
-from pathlib import Path
 from typing import Any, overload
 
 import h5py
@@ -20,7 +18,6 @@ from ..plotting_utils import (
 from .histograms import process_two_histograms
 from .quiver_plots import (
     plot_offsets_quiver_plot_to_pdf,
-    plot_single_quiver_plot_to_png,
     process_offsets_quiver_browse,
 )
 

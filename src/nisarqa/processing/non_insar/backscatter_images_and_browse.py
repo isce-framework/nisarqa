@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import functools
 import os
-from pathlib import Path
 
 import h5py
 import numpy as np
