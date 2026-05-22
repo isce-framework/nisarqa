@@ -112,13 +112,15 @@ def process_backscatter_imgs_and_browse(
 
                 if params.output_individual_pngs:
                     suffix = f"{freq}_{pol}"
+                    browse_paths_freq_pol = browse_paths.with_suffix(suffix)
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
-                        filepath=browse_paths.get_browse_path(suffix=suffix),
+                        filepath=browse_paths_freq_pol.get_png_path(),
                     )
 
                     # Generate the KML that corresponds to the individual PNG
-                    # Compute accurate corners for browse using decimated coordinate vectors
+                    # Compute accurate corners for browse using multilooked
+                    # coordinate vectors
                     indiv_grid = img.grid.downsample(
                         y_stride=nlooks[0],
                         x_stride=nlooks[1],
@@ -126,8 +128,7 @@ def process_backscatter_imgs_and_browse(
                     )
                     if isinstance(img, nisarqa.RadarRaster):
                         indiv_grid.save_kml(
-                            browse_paths=browse_paths,
-                            suffix=suffix,
+                            browse_paths=browse_paths_freq_pol,
                             orbit=product.get_orbit(),
                             wavelength=product.wavelength(freq=freq),
                             look_side=product.look_direction,
@@ -135,8 +136,7 @@ def process_backscatter_imgs_and_browse(
                         )
                     else:
                         indiv_grid.save_kml(
-                            browse_paths=browse_paths,
-                            suffix=suffix,
+                            browse_paths=browse_paths_freq_pol,
                         )
 
                 if params.gamma is not None:
@@ -221,14 +221,14 @@ def process_backscatter_imgs_and_browse(
 
     # Construct the nominal browse image (in input's native coordinate system)
     product.save_browse(
-        pol_imgs=pol_imgs_for_browse, filepath=browse_paths.primary_browse_path
+        pol_imgs=pol_imgs_for_browse, filepath=browse_paths.get_png_path()
     )
 
     log = nisarqa.get_logger()
     log.info(
-        f"Browse image PNG file saved to {browse_paths.primary_browse_path}"
+        f"Browse image PNG file saved to {browse_paths.get_png_path()}"
     )
-    log.info(f"Browse image KML file saved to {browse_paths.primary_kml_path}")
+    log.info(f"Browse image KML file saved to {browse_paths.get_kml_path()}")
 
     # Generate EPSG 4326 browse if requested
     if (
@@ -271,8 +271,8 @@ def process_backscatter_imgs_and_browse(
             pol_imgs_4326[pol] = geocoded_arr
 
         # Save EPSG 4326 browse PNG
-        suffix = nisarqa.LATLON_SUFFIX
-        png_4326_path = browse_paths.get_browse_path(suffix=suffix)
+        browse_paths_latlon = browse_paths.with_suffix(nisarqa.LATLON_SUFFIX)
+        png_4326_path = browse_paths_latlon.get_png_path()
 
         product.save_browse(
             pol_imgs=pol_imgs_4326,
@@ -281,9 +281,9 @@ def process_backscatter_imgs_and_browse(
         log.info(f"EPSG 4326 (lat/lon) browse PNG saved to {png_4326_path}")
 
         # Generate EPSG 4326 KML
-        qa_geogrid_4326.save_kml(browse_paths=browse_paths, suffix=suffix)
+        qa_geogrid_4326.save_kml(browse_paths=browse_paths_latlon)
 
-        kml_4326_path = browse_paths.get_kml_path(suffix=suffix)
+        kml_4326_path = browse_paths_latlon.get_kml_path()
         log.info(f"EPSG 4326 (lat/lon) browse KML saved to {kml_4326_path}")
 
 

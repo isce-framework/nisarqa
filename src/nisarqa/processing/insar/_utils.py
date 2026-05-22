@@ -316,7 +316,7 @@ def make_phase_browse(
     nisarqa.plot_2d_array_and_save_to_png(
         arr=primary_phase,
         cmap="twilight_shifted",
-        png_filepath=browse_paths.primary_browse_path,
+        png_filepath=browse_paths.get_png_path(),
         vmin=primary_cbar[0],
         vmax=primary_cbar[1],
     )
@@ -399,8 +399,8 @@ def make_phase_browse(
         )
 
         # Save EPSG 4326 browse PNG
-        suffix = nisarqa.LATLON_SUFFIX
-        png_4326_path = browse_paths.get_browse_path(suffix=suffix)
+        browse_paths_latlon = browse_paths.with_suffix(nisarqa.LATLON_SUFFIX)
+        png_4326_path = browse_paths_latlon.get_png_path()
 
         nisarqa.plot_2d_array_and_save_to_png(
             arr=epsg4326_phase,
@@ -412,9 +412,9 @@ def make_phase_browse(
         log.info(f"EPSG 4326 (lat/lon) browse PNG saved to {png_4326_path}")
 
         # Save EPSG 4326 KML
-        qa_geogrid_4326.save_kml(browse_paths=browse_paths, suffix=suffix)
+        qa_geogrid_4326.save_kml(browse_paths=browse_paths_latlon)
 
-        kml_4326_path = browse_paths.get_kml_path(suffix=suffix)
+        kml_4326_path = browse_paths_latlon.get_kml_path()
         log.info(f"EPSG 4326 (lat/lon) browse KML saved to {kml_4326_path}")
 
 

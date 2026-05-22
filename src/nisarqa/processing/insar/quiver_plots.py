@@ -326,10 +326,10 @@ def process_offsets_quiver_browse(
             rg_off=rg_off,
             coord_grid=browse_grid,
             quiver_params=params_quiver,
-            png_filepath=browse_paths.primary_browse_path,
+            png_filepath=browse_paths.get_png_path(),
             **proj_params,
         )
-        log.info(f"Browse PNG saved to {browse_paths.primary_browse_path}")
+        log.info(f"Browse PNG saved to {browse_paths.get_png_path()}")
 
         nisarqa.create_dataset_in_h5group(
             h5_file=stats_h5,
@@ -357,7 +357,7 @@ def process_offsets_quiver_browse(
                 dem_file=dem_file,
             )
 
-        log.info(f"Browse KML saved to {browse_paths.primary_kml_path}")
+        log.info(f"Browse KML saved to {browse_paths.get_kml_path()}")
 
         # Generate EPSG 4326 browse if requested
         if params_browse.output_browse_latlon:
@@ -415,8 +415,8 @@ def process_offsets_quiver_browse(
             )
 
             # Generate the EPSG 4326 browse PNG
-            suffix = nisarqa.LATLON_SUFFIX
-            png_4326_path = browse_paths.get_browse_path(suffix=suffix)
+            paths_latlon = browse_paths.with_suffix(nisarqa.LATLON_SUFFIX)
+            png_4326_path = paths_latlon.get_png_path()
 
             plot_single_quiver_plot_to_png(
                 az_off=geocoded_az,
@@ -430,9 +430,9 @@ def process_offsets_quiver_browse(
             log.info(f"EPSG 4326 (lat/lon) browse PNG saved to {png_4326_path}")
 
             # Generate EPSG 4326 KML
-            qa_geogrid_4326.save_kml(browse_paths=browse_paths, suffix=suffix)
+            qa_geogrid_4326.save_kml(browse_paths=paths_latlon)
 
-            kml_4326_path = browse_paths.get_kml_path(suffix=suffix)
+            kml_4326_path = paths_latlon.get_kml_path()
             log.info(f"EPSG 4326 (lat/lon) browse KML saved to {kml_4326_path}")
 
 
