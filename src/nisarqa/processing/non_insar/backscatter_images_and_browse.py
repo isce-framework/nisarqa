@@ -111,7 +111,7 @@ def process_backscatter_imgs_and_browse(
                 )
 
                 if params.output_individual_pngs:
-                    suffix = f"{freq}_{pol}"
+                    suffix = f"_{freq}_{pol}"
                     browse_paths_freq_pol = browse_paths.with_suffix(suffix)
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
