@@ -112,12 +112,11 @@ def extract_phase_from_raster(
         Phase image (float-valued). For complex input, this is the result
         of np.angle(). For real input, this is a copy of the data.
     """
-    phs_img = np.array(phs_or_complex_raster.data, copy=True)
 
     if phs_or_complex_raster.is_complex:
-        phs_img = np.angle(phs_img)
-
-    return phs_img
+        return np.angle(phs_or_complex_raster.data)
+    else:
+        return np.array(phs_or_complex_raster.data, copy=True)
 
 
 def rewrap_phase(
