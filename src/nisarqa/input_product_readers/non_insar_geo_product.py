@@ -25,7 +25,7 @@ class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
         source_data_path : str
             Path to the sourceData group.
                 Standard Format:
-                    "/science/<band>/<product_type>/metadata/sourceData"
+                    "/science/<instrument>/<product_type>/metadata/sourceData"
                 Example:
                     "/science/LSAR/GCOV/metadata/sourceData"
         """
@@ -42,7 +42,7 @@ class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
         source_data_path : str
             Path to the sourceData group.
                 Standard Format:
-                    "/science/<band>/<product_type>/metadata/sourceData/swaths"
+                    "/science/<instrument>/<product_type>/metadata/sourceData/swaths"
                 Example:
                     "/science/LSAR/GCOV/metadata/sourceData/swaths"
         """
@@ -63,7 +63,7 @@ class NonInsarGeoProduct(NonInsarProduct, NisarGeoProduct):
         source_data_path : str
             Path to the sourceData group.
                 Standard Format:
-                    "/science/<band>/<product_type>/metadata/sourceData/swaths/frequency<freq>"
+                    "/science/<instrument>/<product_type>/metadata/sourceData/swaths/frequency<freq>"
                 Example:
                     "/science/LSAR/GCOV/metadata/sourceData/swaths/frequencyA"
         """

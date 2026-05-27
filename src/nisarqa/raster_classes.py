@@ -229,7 +229,7 @@ class Raster(IsComplex):
             RUNW/GUNW: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/alongTrackOffset"
             ROFF/GOFF: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset"
     band : str
-        Name of the band for `img`, e.g. 'LSAR'
+        Name of the band for `img`, e.g. 'L' or 'S'
     freq : str
         Name of the frequency for `img`, e.g. 'A' or 'B'
     """
@@ -383,7 +383,7 @@ class RadarRaster(SARRaster):
             RUNW/GUNW: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/alongTrackOffset"
             ROFF/GOFF: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset"
     band : str
-        name of the band for `img`, e.g. 'LSAR'
+        Name of the band for `img`, e.g. 'L' or 'S'
     freq : str
         name of the frequency for `img`, e.g. 'A' or 'B'
     grid : nisarqa.RadarGrid
@@ -454,7 +454,7 @@ class GeoRaster(SARRaster):
             RUNW/GUNW: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/alongTrackOffset"
             ROFF/GOFF: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset"
     band : str
-        name of the band for `data`, e.g. 'LSAR'
+        Name of the band for `img`, e.g. 'L' or 'S'
     freq : str
         name of the frequency for `data`, e.g. 'A' or 'B'
     grid : nisarqa.GeoGrid
@@ -914,7 +914,7 @@ class RadarRasterWithStats(RadarRaster, StatsMixin):
             RUNW/GUNW: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/alongTrackOffset"
             ROFF/GOFF: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset"
     band : str
-        Name of the band for `img`, e.g. 'LSAR'
+        Name of the band for `img`, e.g. 'L' or 'S'
     freq : str
         Name of the frequency for `img`, e.g. 'A' or 'B'
     grid : nisarqa.RadarGrid
@@ -956,7 +956,7 @@ class GeoRasterWithStats(GeoRaster, StatsMixin):
             RUNW/GUNW: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/alongTrackOffset"
             ROFF/GOFF: "/science/LSAR/QA/data/frequencyA/pixelOffsets/HH/layer1/alongTrackOffset"
     band : str
-        Name of the band for `img`, e.g. 'LSAR'
+        Name of the band for `img`, e.g. 'L' or 'S'
     freq : str
         Name of the frequency for `img`, e.g. 'A' or 'B'
     grid : nisarqa.GeoGrid

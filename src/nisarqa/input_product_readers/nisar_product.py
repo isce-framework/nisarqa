@@ -374,7 +374,7 @@ class NisarProduct(ABC):
         -------
         root : str
             Path to the directory where the product data is stored.
-                Standard Format: "/science/<band>/<product_type>
+                Standard Format: "/science/<instrument>/<product_type>
                 Example:
                     "/science/LSAR/RSLC"
 
@@ -717,7 +717,7 @@ class NisarProduct(ABC):
         root : str
             Path to the directory where the product data is stored.
                 Standard Format:
-                    "science/<band>/<product_type>/<'swaths' OR 'grids'>"
+                    "science/<instrument>/<product_type>/<'swaths' OR 'grids'>"
                 Example:
                     "science/LSAR/RSLC/swaths"
 
@@ -755,7 +755,7 @@ class NisarProduct(ABC):
         -------
         root : str
             Path to the metadata directory.
-                Standard Format: "/science/<band>/<product_type>/metadata
+                Standard Format: "/science/<instrument>/<product_type>/metadata
                 Example:
                     "/science/LSAR/RSLC/metadata"
 
@@ -787,9 +787,9 @@ class NisarProduct(ABC):
         root : str
             Path to the metadata directory.
                 Standard Rxxx Format:
-                    "/science/<band>/<product_type>/metadata/geolocationGrid"
+                    "/science/<instrument>/<product_type>/metadata/geolocationGrid"
                 Standard Gxxx Format:
-                    "/science/<band>/<product_type>/metadata/radarGrid"
+                    "/science/<instrument>/<product_type>/metadata/radarGrid"
                 Example:
                     "/science/LSAR/GSLC/metadata/radarGrid"
         """
@@ -882,7 +882,7 @@ class NisarProduct(ABC):
     @abstractmethod
     def _get_raster_name(self, raster_path: str) -> str:
         """
-        Return a name for the raster, e.g. 'RSLC_LSAR_A_HH'.
+        Return a name for the raster, e.g. 'RSLC_L_A_HH'.
 
         Parameters
         ----------

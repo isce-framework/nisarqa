@@ -43,8 +43,8 @@ class GCOV(NonInsarGeoProduct):
 
         Only on-diagonal terms will be used to create the browse image.
         See `Notes` for details on the possible NISAR modes and assigned
-        channels for LSAR band.
-        SSAR is currently only minimally supported, so only a grayscale image
+        channels for L-band.
+        S-band is currently only minimally supported, so only a grayscale image
         will be created. Prioritization order to select the freq/pol to use:
             For frequency: Freq A then Freq B.
             For polarization: 'HHHH', then 'VVVV', then first pol found.
@@ -99,7 +99,7 @@ class GCOV(NonInsarGeoProduct):
         freq = self.science_freq
         science_pols = self.get_pols(freq=freq)
 
-        # SSAR is not fully supported by QA, so just make a simple grayscale
+        # S-band is not fully supported by QA, so just make a simple grayscale
         if self.band == "S":
             # Prioritize Co-Pol
             if "HHHH" in science_pols:

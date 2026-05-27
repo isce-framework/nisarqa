@@ -277,7 +277,7 @@ class NonInsarProduct(NisarProduct):
 
     def _get_raster_name(self, raster_path: str) -> str:
         """
-        Return a name for the raster, e.g. 'RSLC_LSAR_A_HH'.
+        Return a name for the raster, e.g. 'RSLC_L_A_HH'.
 
         Parameters
         ----------

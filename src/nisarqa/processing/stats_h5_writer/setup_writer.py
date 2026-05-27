@@ -307,11 +307,11 @@ def save_nisar_freq_metadata_to_h5(
 
     If `pols` contains values for Frequency A, then this dataset will
     be created in `stats_h5`:
-        /science/<band>/QA/data/frequencyA/listOfPolarizations
+        /science/<instrument>/QA/data/frequencyA/listOfPolarizations
 
     If `pols` contains values for Frequency B, then this dataset will
     be created in `stats_h5`:
-        /science/<band>/QA/data/frequencyB/listOfPolarizations
+        /science/<instrument>/QA/data/frequencyB/listOfPolarizations
 
     * Note: The paths are pulled from the global nisarqa.STATS_H5_QA_FREQ_GROUP.
     If the value of that global changes, then the path for the

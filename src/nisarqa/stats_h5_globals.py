@@ -10,9 +10,9 @@ STATS_H5_QA_PROCESSING_GROUP = (
     STATS_H5_QA_STATS_H5_BASE_GROUP + processing_group
 )
 STATS_H5_QA_DATA_GROUP = STATS_H5_QA_STATS_H5_BASE_GROUP + data_group
-# Frequency group. Note: There are two '%s' here. The first is for the band,
-# the second for the frequency.
-# Example end result: '/science/%s/QA/data/frequency%s'
+# Frequency group. Note: There are two '%s' here. The first is for the band
+# (e.g. "S" or "L"), the second for the frequency (e.g. "A" or "B").
+# Example end result: '/science/%sSAR/QA/data/frequency%s'
 STATS_H5_QA_FREQ_GROUP = (
     STATS_H5_QA_DATA_GROUP + "/frequency%s"
 )  # Two '%s' here!
