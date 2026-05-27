@@ -13,7 +13,7 @@ class BrowseOutputPaths:
     """
     Container for browse and KML output file paths and naming utilities.
 
-    This class encapsulates the output directory and primary browse/KML
+    This class encapsulates the output directory, PNG, and KML
     filenames, providing convenient methods to generate related filenames.
 
     To add a suffix to the filenames (e.g. "_HH"), use the `with_suffix()`
@@ -27,10 +27,10 @@ class BrowseOutputPaths:
         This directory must already exist.
         Input argument will be cast to Path during post init.
     browse_filename : str
-        The basename of the primary browse image PNG file.
+        The basename of the browse image PNG files.
         Example: "BROWSE.png"
     kml_filename : str
-        The basename of the primary browse image KML file.
+        The basename of the browse image KML file.
         Example: "BROWSE.kml"
 
     Examples

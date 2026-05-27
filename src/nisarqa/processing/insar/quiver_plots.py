@@ -219,7 +219,7 @@ def process_offsets_quiver_browse(
     Generate browse quiver plot PNG and KML for offset products.
 
     This function processes azimuth and slant range offset rasters to create:
-    - A primary browse PNG with quiver plot
+    - A browse PNG with quiver plot in the product's native coordinate grid
     - A KML file with accurate corner coordinates
     - An optional EPSG 4326 (lat/lon) browse PNG and KML
     - Saves decimation metadata to stats.h5
@@ -234,7 +234,7 @@ def process_offsets_quiver_browse(
     params_quiver : nisarqa.QuiverParamGroup
         A structure containing processing parameters to generate quiver plots.
     browse_paths : nisarqa.BrowseOutputPaths
-        Container with output directory and browse/KML filenames.
+        Container with output directory and browse/KML base filenames.
     stats_h5 : h5py.File
         The output file to save QA metrics, etc. to.
     dem_file : path-like or None, optional
@@ -321,15 +321,17 @@ def process_offsets_quiver_browse(
                 )
             )
 
+        paths_native = browse_paths.with_suffix(nisarqa.NATIVE_SUFFIX)
+
         plot_single_quiver_plot_to_png(
             az_off=az_off,
             rg_off=rg_off,
             coord_grid=browse_grid,
             quiver_params=params_quiver,
-            png_filepath=browse_paths.get_png_path(),
+            png_filepath=paths_native.get_png_path(),
             **proj_params,
         )
-        log.info(f"Browse PNG saved to {browse_paths.get_png_path()}")
+        log.info(f"Browse PNG saved to {paths_native.get_png_path()}")
 
         nisarqa.create_dataset_in_h5group(
             h5_file=stats_h5,
@@ -346,18 +348,18 @@ def process_offsets_quiver_browse(
         # Generate KML with accurate corners for the browse image
         if product.is_geocoded:
             # Level-2
-            browse_grid.save_kml(browse_paths=browse_paths)
+            browse_grid.save_kml(browse_paths=paths_native)
         else:
             # Level-1
             browse_grid.save_kml(
-                browse_paths=browse_paths,
+                browse_paths=paths_native,
                 orbit=product.get_orbit(ref_or_sec="reference"),
                 wavelength=product.wavelength(freq=freq),
                 look_side=product.look_direction,
                 dem_file=dem_file,
             )
 
-        log.info(f"Browse KML saved to {browse_paths.get_kml_path()}")
+        log.info(f"Browse KML saved to {paths_native.get_kml_path()}")
 
         # Generate EPSG 4326 browse if requested
         if params_browse.output_browse_latlon:

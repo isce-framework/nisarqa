@@ -476,14 +476,14 @@ class RIFGBrowseParamGroup(
         The maximum number of pixels allowed for the longest side of the final
         2D multilooked browse image. Defaults to 2048 pixels.
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
@@ -526,14 +526,14 @@ class RUNWBrowseParamGroup(
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
         Defaults to 7.
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
@@ -566,14 +566,14 @@ class GUNWBrowseParamGroup(
         Ex: If 3 is provided, the image is rewrapped to the interval [0, 3pi).
         Defaults to 7.
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling algorithm for GDAL reprojection. Options: 'near',
@@ -701,14 +701,14 @@ class ROFFBrowseParamGroup(
         and decimating the raster such that the pixels are roughly square.
         Defaults to None.
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
@@ -748,14 +748,14 @@ class GOFFBrowseParamGroup(
         and decimating the raster such that the pixels are roughly square.
         Defaults to None.
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling algorithm for GDAL reprojection. Options: 'near',

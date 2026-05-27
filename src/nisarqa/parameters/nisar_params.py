@@ -1003,14 +1003,14 @@ class BrowseLatLonParamGroup(YamlParamGroup):
     Parameters
     ----------
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     """
 
@@ -1019,14 +1019,14 @@ class BrowseLatLonParamGroup(YamlParamGroup):
         metadata={
             "yaml_attrs": YamlAttrs(
                 name="output_browse_latlon",
-                descr=f"""True to generate a version of the primary browse PNG+KML that is
+                descr=f"""True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        suffix '{nisarqa.LATLON_SUFFIX}' (e.g., 'BROWSE{nisarqa.LATLON_SUFFIX}.png' and 'BROWSE{nisarqa.LATLON_SUFFIX}.kml').""",
+        native coordinate system). The EPSG 4326 outputs will be suffixed with
+        '{nisarqa.LATLON_SUFFIX}' (e.g., 'BROWSE{nisarqa.LATLON_SUFFIX}.png' and 'BROWSE{nisarqa.LATLON_SUFFIX}.kml').""",
             )
         },
     )
@@ -1054,14 +1054,14 @@ class L1RadarBrowseLatLonParamGroup(BrowseLatLonParamGroup):
     Parameters
     ----------
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling method for ISCE3 geocoding. Options: 'sinc', 'bilinear',
@@ -1111,14 +1111,14 @@ class L2GeoBrowseLatLonParamGroup(BrowseLatLonParamGroup):
     Parameters
     ----------
     output_browse_latlon : bool, optional
-        True to generate a version of the primary browse PNG+KML that is
+        True to generate a version of the native browse PNG+KML that is
         projected to EPSG 4326 (lon/lat) coordinate system for accurate
         geolocation in GIS software.
-        False to only generate primary browse outputs.
-        The EPSG 4326 PNG+KML version will be in addition to the primary
+        False to only generate native browse outputs.
+        The EPSG 4326 PNG+KML version will be in addition to the native
         browse PNG+KML outputs (where the PNG reflects the input product's
-        native coordinate system). The EPSG 4326 outputs will use the
-        primary browse filename suffixed with '_LATLON'.
+        native coordinate system). The EPSG 4326 outputs will be suffixed
+        with '_LATLON'.
         Defaults to False.
     resample : str, optional
         Resampling algorithm for GDAL reprojection. Options: 'near',

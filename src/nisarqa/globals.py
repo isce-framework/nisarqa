@@ -51,6 +51,10 @@ PI_UNICODE = "\u03c0"
 # an error should be logged.
 STATISTICS_THRESHOLD_PERCENTAGE = 95.0
 
+# Suffix used for browse and KML filenames for PNGs represent the input
+# granule's native coordinate grid (range-Doppler, UTM, or polarstereo).
+NATIVE_SUFFIX = "_NATIVE"
+
 # Suffix used for EPSG 4326 (lat/lon) browse and KML filenames.
 # EPSG 4326 is the coordinate system for longitude/latitude coordinates.
 LATLON_SUFFIX = "_LATLON"
@@ -162,6 +166,7 @@ __all__ = [
     "FIG_SIZE_TWO_PLOTS_PER_PAGE",
     "FIG_SIZE_THREE_PLOTS_PER_PAGE_STACKED",
     "PI_UNICODE",
+    "NATIVE_SUFFIX",
     "LATLON_SUFFIX",
     "NUM_TRACKS",
     "NUM_FRAMES",

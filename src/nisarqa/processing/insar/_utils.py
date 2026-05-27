@@ -229,8 +229,10 @@ def make_phase_browse(
     phase rasters. It extracts the phase, decimates to square pixels, applies
     rewrapping at the appropriate stage, and saves the browse products.
 
-    For the primary browse: decimates → rewraps (if needed) → saves PNG+KML
-    For the EPSG 4326 browse: decimates → geocodes/reprojects → rewraps (if needed) → saves PNG+KML
+    For the native browse:
+        decimates -> rewraps (if needed) -> saves PNG+KML
+    For the EPSG 4326 browse:
+        decimates -> geocodes/reprojects -> rewraps (if needed) -> saves PNG+KML
 
     Parameters
     ----------
@@ -249,9 +251,9 @@ def make_phase_browse(
         Resampling method for EPSG 4326 (lat/lon) browse generation.
         Common options: 'bilinear', 'cubic', 'nearest', etc.
     browse_paths : nisarqa.BrowseOutputPaths
-        Container with output directory and browse/KML filenames.
+        Container with output directory and browse/KML base filenames.
     save_latlon_browse : bool
-        If False, only save the primary browse PNG+KML in the raster's native grid.
+        If False, only save the browse PNG+KML in the raster's native grid.
         If True, additionally save a version of the browse PNG+KML in
         EPSG 4326 (lat/lon).
     orbit : isce3.core.Orbit or None, optional
@@ -298,27 +300,29 @@ def make_phase_browse(
         )
     )
 
-    # === PRIMARY BROWSE ===
-    # Apply rewrapping if needed for primary browse
+    # === NATIVE BROWSE ===
+    # Apply rewrapping if needed for native browse
     if raster.is_complex or rewrap is None:
-        primary_phase = decimated_phase
+        native_phase = decimated_phase
     else:
-        primary_phase = rewrap_phase(decimated_phase, rewrap)
+        native_phase = rewrap_phase(decimated_phase, rewrap)
 
-    # Determine colorbar for primary browse
-    primary_cbar = determine_phase_colorbar(
+    # Determine colorbar for native browse
+    native_cbar = determine_phase_colorbar(
         is_complex=raster.is_complex,
         rewrap=rewrap if not raster.is_complex else None,
-        phase=primary_phase,
+        phase=native_phase,
     )
 
-    # Save primary browse PNG
+    browse_paths_native = browse_paths.with_suffix(nisarqa.NATIVE_SUFFIX)
+
+    # Save native browse PNG
     nisarqa.plot_2d_array_and_save_to_png(
-        arr=primary_phase,
+        arr=native_phase,
         cmap="twilight_shifted",
-        png_filepath=browse_paths.get_png_path(),
-        vmin=primary_cbar[0],
-        vmax=primary_cbar[1],
+        png_filepath=browse_paths_native.get_png_path(),
+        vmin=native_cbar[0],
+        vmax=native_cbar[1],
     )
 
     # Downsample the grid to match the decimated phase array
@@ -338,15 +342,15 @@ def make_phase_browse(
         f" {len(browse_grid.x_pixel_centers)=}."
     )
 
-    # Save KML for the primary browse PNG
+    # Save KML for the native browse PNG
     if isinstance(raster.grid, nisarqa.GeoGrid):
         # Level-2: Geocoded product
-        browse_grid.save_kml(browse_paths=browse_paths)
+        browse_grid.save_kml(browse_paths=browse_paths_native)
     else:
         # Level-1: Radar product
         assert isinstance(raster.grid, nisarqa.RadarGrid)
         browse_grid.save_kml(
-            browse_paths=browse_paths,
+            browse_paths=browse_paths_native,
             orbit=orbit,
             wavelength=wavelength,
             look_side=look_side,

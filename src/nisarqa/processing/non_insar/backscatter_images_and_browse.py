@@ -87,7 +87,9 @@ def process_backscatter_imgs_and_browse(
     pol_imgs_for_browse = {}
 
     # Store browse grid one time
-    primary_browse_grid = None
+    native_browse_grid = None
+
+    native_paths = browse_paths.with_suffix(nisarqa.NATIVE_SUFFIX)
 
     # Process each image in the dataset
     for freq in product.freqs:
@@ -112,7 +114,7 @@ def process_backscatter_imgs_and_browse(
 
                 if params.output_individual_pngs:
                     suffix = f"_{freq}_{pol}"
-                    browse_paths_freq_pol = browse_paths.with_suffix(suffix)
+                    browse_paths_freq_pol = native_paths.with_suffix(suffix)
                     nisarqa.plot_to_grayscale_png(
                         img_arr=corrected_img,
                         filepath=browse_paths_freq_pol.get_png_path(),
@@ -193,40 +195,40 @@ def process_backscatter_imgs_and_browse(
                     # ...keep the multilooked, color-corrected image in memory
                     pol_imgs_for_browse[pol] = corrected_img
 
-                    # Save the primary browse KML. Do this once, since all
-                    # primary browse rasters share the same grid.
-                    if primary_browse_grid is None:
+                    # Save the native browse KML. Do this once, since all
+                    # native browse rasters share the same grid.
+                    if native_browse_grid is None:
 
-                        primary_browse_grid = img.grid.downsample(
+                        native_browse_grid = img.grid.downsample(
                             y_stride=nlooks[0],
                             x_stride=nlooks[1],
                             mode="multilook",
                         )
                         if isinstance(img, nisarqa.RadarRaster):
-                            primary_browse_grid.save_kml(
-                                browse_paths=browse_paths,
+                            native_browse_grid.save_kml(
+                                browse_paths=native_paths,
                                 orbit=product.get_orbit(),
                                 wavelength=product.wavelength(freq=freq),
                                 look_side=product.look_direction,
                                 dem_file=dem_file,
                             )
                         else:
-                            primary_browse_grid.save_kml(
-                                browse_paths=browse_paths
+                            native_browse_grid.save_kml(
+                                browse_paths=native_paths
                             )
 
                         # XXX - Keep these, in case we make lat/lon browse below
-                        primary_browse_freq = freq  # For L1 products
-                        primary_browse_fill = img.fill_value  # For L2 products
+                        native_browse_freq = freq  # For L1 products
+                        native_browse_fill = img.fill_value  # For L2 products
 
     # Construct the nominal browse image (in input's native coordinate system)
     product.save_browse(
-        pol_imgs=pol_imgs_for_browse, filepath=browse_paths.get_png_path()
+        pol_imgs=pol_imgs_for_browse, filepath=native_paths.get_png_path()
     )
 
     log = nisarqa.get_logger()
-    log.info(f"Browse image PNG file saved to {browse_paths.get_png_path()}")
-    log.info(f"Browse image KML file saved to {browse_paths.get_kml_path()}")
+    log.info(f"Browse image PNG file saved to {native_paths.get_png_path()}")
+    log.info(f"Browse image KML file saved to {native_paths.get_kml_path()}")
 
     # Generate EPSG 4326 browse if requested
     if (
@@ -242,14 +244,14 @@ def process_backscatter_imgs_and_browse(
                 # Level-2: Reproject using GDAL
                 # Convert fill_value to float (take real part if complex)
                 fill_val = (
-                    np.real(primary_browse_fill)
-                    if np.iscomplexobj(primary_browse_fill)
-                    else primary_browse_fill
+                    np.real(native_browse_fill)
+                    if np.iscomplexobj(native_browse_fill)
+                    else native_browse_fill
                 )
                 geocoded_arr, qa_geogrid_4326 = nisarqa.reproject_geo_raster(
                     image_array=img_arr,
                     fill_value=fill_val,
-                    geogrid=primary_browse_grid,
+                    geogrid=native_browse_grid,
                     output_epsg=4326,
                     resample=browse_latlon_params.resample,
                 )
@@ -257,9 +259,9 @@ def process_backscatter_imgs_and_browse(
                 # Level-1: Geocode using ISCE3
                 geocoded_arr, qa_geogrid_4326 = nisarqa.geocode_radar_raster(
                     radar_array=img_arr,
-                    radargrid=primary_browse_grid,
+                    radargrid=native_browse_grid,
                     orbit=product.get_orbit(),
-                    wavelength=product.wavelength(freq=primary_browse_freq),
+                    wavelength=product.wavelength(freq=native_browse_freq),
                     look_side=product.look_direction,
                     epsg=4326,
                     dem_file=dem_file,
