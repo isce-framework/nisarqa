@@ -1040,16 +1040,16 @@ def get_offset_values_in_projected_coordinates(
             # To convert from LLH back to the projected coordinates of the
             # input arrays, use the forward() method of the same `proj`
             # object we created above.
-            x_shift, y_shift, _ = proj.forward([lon, lat, 0])
+            x_shifted, y_shifted, _ = proj.forward([lon, lat, 0])
 
             # Handle longitude wrapping for EPSG 4326.
-            # If the image crosses the antimeridian, the output x_shift from
+            # If the image crosses the antimeridian, the output x_shifted from
             # the coordinate transformations might be in a different 360 degree
             # period than the input x_coord. For example:
             # - Input x_coord = 246 degree (using [0, 360] convention)
-            # - Output x_shift = -114 degree (normalized to [-180, 180])
+            # - Output x_shifted = -114 degree (normalized to [-180, 180])
             # This would cause a spurious ~360 degree offset.
-            # Adjust x_shift to be in the same 360 degree period as x_coord.
+            # Adjust x_shifted to be in the same 360 degree period as x_coord.
             if geo_grid.is_geographic and geo_grid.crosses_antimeridian:
                 if np.any(arrow_tails_x > 180) and np.any(arrow_tails_x < -180):
                     raise NotImplementedError(
@@ -1060,21 +1060,21 @@ def get_offset_values_in_projected_coordinates(
                     )
                 elif np.any(arrow_tails_x > 180):
                     # longitude interval is (typically) [0, 360]
-                    x_shift = nisarqa.wrap_to_interval(
-                        val=x_shift, start=0, stop=360
+                    x_shifted = nisarqa.wrap_to_interval(
+                        val=x_shifted, start=0, stop=360
                     )
                 elif np.any(arrow_tails_x < -180):
                     # longitude interval is (typically) [-360, 0]
-                    x_shift = nisarqa.wrap_to_interval(
-                        val=x_shift, start=-360, stop=0
+                    x_shifted = nisarqa.wrap_to_interval(
+                        val=x_shifted, start=-360, stop=0
                     )
                 else:
                     assert False, "Unreachable code reached"
 
             # 6) Compute new offset values in projected coordinates:
             #       (x_1 - x_0, y_1 - y_0)
-            arrow_x_offsets[i, j] = x_shift - x_coord
-            arrow_y_offsets[i, j] = y_shift - y_coord
+            arrow_x_offsets[i, j] = x_shifted - x_coord
+            arrow_y_offsets[i, j] = y_shifted - y_coord
 
     return arrow_x_offsets, arrow_y_offsets
 
