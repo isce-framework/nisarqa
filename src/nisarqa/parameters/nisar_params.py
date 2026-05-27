@@ -1026,7 +1026,7 @@ class BrowseLatLonParamGroup(YamlParamGroup):
         The EPSG 4326 PNG+KML version will be in addition to the primary
         browse PNG+KML outputs (where the PNG reflects the input product's
         native coordinate system). The EPSG 4326 outputs will use the
-        suffix '_{nisarqa.LATLON_SUFFIX}' (e.g., 'BROWSE_{nisarqa.LATLON_SUFFIX}.png' and 'BROWSE_{nisarqa.LATLON_SUFFIX}.kml').""",
+        suffix '{nisarqa.LATLON_SUFFIX}' (e.g., 'BROWSE{nisarqa.LATLON_SUFFIX}.png' and 'BROWSE{nisarqa.LATLON_SUFFIX}.kml').""",
             )
         },
     )
