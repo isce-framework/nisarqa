@@ -786,12 +786,17 @@ def create_unique_subdirectory(
                     # occur on NFS due to "silly rename" (.nfsXXXXX files)
                     if exc_value.errno in (errno.ENOTEMPTY, errno.EEXIST):
                         # Log but don't raise - allow clean exit on NFS
-                        log.warning(
+                        msg = (
                             f"nisarqa Could not delete '{error_path}': "
                             f" {exc_value}. This may occur on Network File"
                             " Systems where files are temporarily renamed"
                             " before deletion."
                         )
+                        log.warning(msg)
+                        # Also issue a warning to console; users do not
+                        # initially look at the log file, and get confused
+                        # when they see lingering-but-empty scratch folders
+                        warnings.warn(msg, ResourceWarning)
                     else:
                         # Some other OSError - raise it
                         log.error(f"Error deleting '{error_path}': {exc_value}")
