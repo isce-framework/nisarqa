@@ -796,7 +796,7 @@ def create_unique_subdirectory(
                         # Also issue a warning to console; users do not
                         # initially look at the log file, and get confused
                         # when they see lingering-but-empty scratch folders
-                        warnings.warn(msg, ResourceWarning)
+                        warnings.warn(msg, RuntimeWarning)
                     else:
                         # Some other OSError - raise it
                         log.error(f"Error deleting '{error_path}': {exc_value}")
