@@ -40,7 +40,7 @@ class AbsCalParamGroup(YamlParamGroup, HDF5ParamGroup):
         data to extract centered around the target position for fitting a
         quadratic polynomial to the peak. Note that this is the size in samples
         *after upsampling*. Must be >= 3. Defaults to 5.
-    power_method : {'box', 'integrated'}, optional
+    power_method : {'box', 'adjusted_box', 'integrated'}, optional
         The method for estimating the target signal power.
 
         'box':
@@ -49,6 +49,12 @@ class AbsCalParamGroup(YamlParamGroup, HDF5ParamGroup):
           rectangular function. The total power is estimated by multiplying the
           peak power by the 3dB response widths in along-track and cross-track
           directions.
+
+        'adjusted_box':
+          Similar to 'box' but adjusted to account for the effects of
+          apodization windows in range and azimuth. This should give
+          results more comparable with methods that integrate sidelobes
+          (e.g., ESA).
 
         'integrated':
           Measures power using the integrated power method. The total power is
@@ -178,6 +184,12 @@ class AbsCalParamGroup(YamlParamGroup, HDF5ParamGroup):
                   multiplying the peak power by the 3dB response widths in
                   along-track and cross-track directions.
 
+                'adjusted_box':
+                  Similar to 'box' but adjusted to account for the effects of
+                  apodization windows in range and azimuth. This should give
+                  results more comparable with methods that integrate sidelobes
+                  (e.g., ESA).
+
                 'integrated':
                   Measures power using the integrated power method. The total
                   power is measured by summing the power of bins whose power
@@ -257,7 +269,7 @@ class AbsCalParamGroup(YamlParamGroup, HDF5ParamGroup):
             raise TypeError(
                 f"`power_method` must be a str, got {type(self.power_method)}"
             )
-        power_method_choices = {"box", "integrated"}
+        power_method_choices = {"box", "adjusted_box", "integrated"}
         if self.power_method not in power_method_choices:
             raise ValueError(
                 f"`power_method` must be one of {power_method_choices}, got"
