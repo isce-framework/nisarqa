@@ -1,7 +1,7 @@
 import inspect
 import sys
 
-__version__ = "17.1.0"
+__version__ = "17.2.0"
 
 
 def get_all(name, objects_to_skip=None, skip_private=True):
