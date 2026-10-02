@@ -3,13 +3,13 @@ Quality Assurance software for NISAR
 
 For the upcoming [NISAR mission](https://nisar.jpl.nasa.gov/),
 eight types of L1/L2 data products will be generated.
-This Quality Assurance (QA) software is designed to look at the data products
-produced one at a time. For each product, the QA code can:
+This Quality Assurance (QA) software is designed to look at the data granules
+produced one at a time. For each granule, the QA code can:
 - Verify the metadata matches the product spec
 - Generate metrics, a PDF report, and a summary CSV describing the quality
-of the product
-- Run CalTools processes on RSLC products
-- Produce a browse image PNG with sidecar KML file for that product
+of the granule
+- Run CalTools processes on RSLC granules
+- Produce a browse image PNG with sidecar KML file for that granule
 
 # Minimum PreRequisites:
 See `environment.yaml` for required packages.
@@ -115,7 +115,7 @@ SKIP=flake8,black git commit -m "foo"  # temporarily disable flake8 and black
 Because the QA code is uniquely written for each product type, each product
 also has a unique runconfig yaml file template and default settings.
 
-The runconfig is where a user specifies the filepath to the input NISAR product,
+The runconfig is where a user specifies the filepath to the input NISAR granule,
 which workflows to run, what units to use for a given metric, and so forth.
 
 To get a product's example runconfig file that has been populated with
@@ -134,11 +134,11 @@ nisarqa dumpconfig gcov
 
 ## Expected Outputs
 
-For each NISAR product, if all workflows are requested via the `workflows`
+For each NISAR granule, if all workflows are requested via the `workflows`
 parameter in the runconfig, the QA code will generate six output files
 and store them in the directory specified by `qa_output_dir` in the runconfig:
 
-1) `BROWSE.png` - RGB browse image for the input NISAR product
+1) `BROWSE.png` - RGB browse image for the input NISAR granule
 2) `BROWSE.kml` - geolocation information for `BROWSE.png`
 3) `REPORT.pdf` - graphical summary PDF containing histograms,
                   low-res images of the input datasets, etc.
